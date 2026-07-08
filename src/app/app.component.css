@@ -370,6 +370,7 @@ footer a:hover {
 
 .signin-form,
 .location-form,
+.contact-form,
 .upload-description {
   display: grid;
   gap: 14px;
@@ -377,6 +378,7 @@ footer a:hover {
 
 .signin-form label,
 .location-form label,
+.contact-form label,
 .upload-description label,
 .admin-image label {
   color: #39434c;
@@ -387,6 +389,7 @@ footer a:hover {
 
 .signin-form input,
 .location-form input,
+.contact-form input,
 .upload-description input,
 .admin-image input {
   border: 1px solid #c8c2b8;
@@ -678,6 +681,7 @@ footer a {
 
   .manager-header,
   .upload-row,
+  .contact-form,
   footer {
     align-items: stretch;
     flex-direction: column;

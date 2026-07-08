@@ -104,6 +104,23 @@ describe('AppComponent', () => {
     expect(nextApp.galleryImages[0].title).toBe('Saved repair photo');
   });
 
+  it('should save contact numbers and build call links after reload', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    app.callNumberDraft = '011 222 3333';
+    app.whatsappNumberDraft = '082 444 5555';
+
+    app.saveContactNumbers();
+
+    const nextFixture = TestBed.createComponent(AppComponent);
+    const nextApp = nextFixture.componentInstance;
+    nextApp.ngOnInit();
+    expect(nextApp.callNumber).toBe('011 222 3333');
+    expect(nextApp.whatsappNumber).toBe('082 444 5555');
+    expect(nextApp.callHref).toBe('tel:0112223333');
+    expect(nextApp.whatsappHref).toBe('https://wa.me/27824445555');
+  });
+
   it('should render the mechanic brand', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();

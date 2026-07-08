@@ -22,9 +22,13 @@ export class AppComponent implements OnInit {
   readonly descriptionLimit = 50;
   readonly currentYear = new Date().getFullYear();
   readonly defaultLocation = 'Meyerton, Gauteng, South Africa';
+  readonly defaultCallNumber = '067 825 2864';
+  readonly defaultWhatsappNumber = '073 015 1945';
   private readonly galleryStorageKey = 'abautomobile-gallery-images';
   private readonly galleryInitializedStorageKey = 'abautomobile-gallery-initialized';
   private readonly locationStorageKey = 'abautomobile-workshop-location';
+  private readonly callNumberStorageKey = 'abautomobile-call-number';
+  private readonly whatsappNumberStorageKey = 'abautomobile-whatsapp-number';
   private readonly adminUsername = 'mechanic';
   private readonly adminPassword = 'workshop2026';
 
@@ -73,6 +77,10 @@ export class AppComponent implements OnInit {
   galleryImages: GalleryImage[] = [];
   workshopLocation = this.defaultLocation;
   locationDraft = this.defaultLocation;
+  callNumber = this.defaultCallNumber;
+  whatsappNumber = this.defaultWhatsappNumber;
+  callNumberDraft = this.defaultCallNumber;
+  whatsappNumberDraft = this.defaultWhatsappNumber;
   isSignedIn = false;
   showAdmin = false;
   signInError = '';
@@ -90,10 +98,22 @@ export class AppComponent implements OnInit {
     this.galleryImages = this.loadGallery();
     this.workshopLocation = localStorage.getItem(this.locationStorageKey) || this.defaultLocation;
     this.locationDraft = this.workshopLocation;
+    this.callNumber = localStorage.getItem(this.callNumberStorageKey) || this.defaultCallNumber;
+    this.whatsappNumber = localStorage.getItem(this.whatsappNumberStorageKey) || this.defaultWhatsappNumber;
+    this.callNumberDraft = this.callNumber;
+    this.whatsappNumberDraft = this.whatsappNumber;
   }
 
   get mapUrl(): string {
     return 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(this.workshopLocation);
+  }
+
+  get callHref(): string {
+    return 'tel:' + this.toPhoneHref(this.callNumber);
+  }
+
+  get whatsappHref(): string {
+    return 'https://wa.me/' + this.toWhatsappHref(this.whatsappNumber);
   }
 
   openAdmin(event?: Event): void {
@@ -192,6 +212,17 @@ export class AppComponent implements OnInit {
     localStorage.setItem(this.locationStorageKey, nextLocation);
   }
 
+  saveContactNumbers(): void {
+    const nextCallNumber = this.callNumberDraft.trim() || this.defaultCallNumber;
+    const nextWhatsappNumber = this.whatsappNumberDraft.trim() || this.defaultWhatsappNumber;
+    this.callNumber = nextCallNumber;
+    this.whatsappNumber = nextWhatsappNumber;
+    this.callNumberDraft = nextCallNumber;
+    this.whatsappNumberDraft = nextWhatsappNumber;
+    localStorage.setItem(this.callNumberStorageKey, nextCallNumber);
+    localStorage.setItem(this.whatsappNumberStorageKey, nextWhatsappNumber);
+  }
+
   private loadGallery(): GalleryImage[] {
     const storedGallery = localStorage.getItem(this.galleryStorageKey);
     const hasSavedGallery = localStorage.getItem(this.galleryInitializedStorageKey) === 'true';
@@ -240,5 +271,14 @@ export class AppComponent implements OnInit {
 
   private toShortDescription(value: string): string {
     return (value || '').trim().slice(0, this.descriptionLimit);
+  }
+
+  private toPhoneHref(value: string): string {
+    return value.replace(/[^\d+]/g, '');
+  }
+
+  private toWhatsappHref(value: string): string {
+    const cleanedNumber = value.replace(/\D/g, '');
+    return cleanedNumber.startsWith('0') ? '27' + cleanedNumber.slice(1) : cleanedNumber;
   }
 }
