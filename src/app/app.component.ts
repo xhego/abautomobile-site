@@ -51,7 +51,7 @@ export class AppComponent implements OnInit {
   ];
 
   promises = [
-    'Mobile support around Johannesburg and surrounding Gauteng areas.',
+    'Workshop service in Meyerton, plus mobile support around surrounding Gauteng areas.',
     'Clear communication before work starts and before extra parts are fitted.',
     'A tidy finish so the vehicle leaves cleaner, safer and ready for the road.'
   ];
