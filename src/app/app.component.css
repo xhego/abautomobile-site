@@ -100,7 +100,7 @@ footer a:hover {
 }
 
 .hero {
-  background: linear-gradient(90deg, rgba(12, 17, 22, 0.88), rgba(12, 17, 22, 0.46)), url('/assets/img/motor.jpg') center/cover;
+  background: linear-gradient(90deg, rgba(12, 17, 22, 0.88), rgba(12, 17, 22, 0.46)), url('../assets/img/motor.jpg') center/cover;
   color: #ffffff;
   min-height: 86vh;
   padding: 150px 6vw 72px;
@@ -155,7 +155,8 @@ footer a:hover {
 .primary-action,
 .secondary-action,
 .signin-form button,
-.location-form button {
+.location-form button,
+.contact-form button {
   border: 0;
   border-radius: 5px;
   cursor: pointer;
@@ -166,7 +167,8 @@ footer a:hover {
 
 .primary-action,
 .signin-form button,
-.location-form button {
+.location-form button,
+.contact-form button {
   background: #f2b84b;
   color: #111820;
 }
