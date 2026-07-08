@@ -73,6 +73,37 @@ describe('AppComponent', () => {
     expect(app.adminNotice).toContain('Gallery refreshed');
   });
 
+  it('should keep removed images removed after reload', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    app.galleryImages = [{ srcImg: 'assets/remove-me.jpg', title: 'Remove me' }];
+
+    app.removeImage(0);
+
+    const nextFixture = TestBed.createComponent(AppComponent);
+    const nextApp = nextFixture.componentInstance;
+    nextApp.ngOnInit();
+    expect(nextApp.galleryImages.length).toBe(0);
+  });
+
+  it('should keep added images after reload', async () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    const input = document.createElement('input');
+    const file = new File(['image-bytes'], 'reload-photo.jpg', { type: 'image/jpeg' });
+    app.galleryImages = [];
+    app.descriptionDraft = 'Saved repair photo';
+    Object.defineProperty(input, 'files', { value: [file] });
+
+    await app.onFilesSelected({ target: input } as unknown as Event);
+
+    const nextFixture = TestBed.createComponent(AppComponent);
+    const nextApp = nextFixture.componentInstance;
+    nextApp.ngOnInit();
+    expect(nextApp.galleryImages.length).toBe(1);
+    expect(nextApp.galleryImages[0].title).toBe('Saved repair photo');
+  });
+
   it('should render the mechanic brand', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();

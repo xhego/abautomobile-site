@@ -23,6 +23,7 @@ export class AppComponent implements OnInit {
   readonly currentYear = new Date().getFullYear();
   readonly defaultLocation = 'Meyerton, Gauteng, South Africa';
   private readonly galleryStorageKey = 'abautomobile-gallery-images';
+  private readonly galleryInitializedStorageKey = 'abautomobile-gallery-initialized';
   private readonly locationStorageKey = 'abautomobile-workshop-location';
   private readonly adminUsername = 'mechanic';
   private readonly adminPassword = 'workshop2026';
@@ -193,13 +194,14 @@ export class AppComponent implements OnInit {
 
   private loadGallery(): GalleryImage[] {
     const storedGallery = localStorage.getItem(this.galleryStorageKey);
+    const hasSavedGallery = localStorage.getItem(this.galleryInitializedStorageKey) === 'true';
     if (!storedGallery) {
-      return this.defaultImages.slice(0, this.maxImages);
+      return hasSavedGallery ? [] : this.defaultImages.slice(0, this.maxImages);
     }
 
     try {
       const parsedGallery = JSON.parse(storedGallery) as GalleryImage[];
-      if (Array.isArray(parsedGallery) && parsedGallery.length) {
+      if (Array.isArray(parsedGallery)) {
         return parsedGallery.filter(item => item && item.srcImg).map(item => ({
           srcImg: item.srcImg,
           title: this.toShortDescription(item.title)
@@ -207,6 +209,7 @@ export class AppComponent implements OnInit {
       }
     } catch (error) {
       localStorage.removeItem(this.galleryStorageKey);
+      localStorage.removeItem(this.galleryInitializedStorageKey);
     }
 
     return this.defaultImages.slice(0, this.maxImages);
@@ -214,6 +217,7 @@ export class AppComponent implements OnInit {
 
   private saveGallery(): void {
     localStorage.setItem(this.galleryStorageKey, JSON.stringify(this.galleryImages.slice(0, this.maxImages)));
+    localStorage.setItem(this.galleryInitializedStorageKey, 'true');
   }
 
   private refreshAdminGallery(message: string): void {
