@@ -1,0 +1,209 @@
+{
+  "$schema": "./node_modules/@angular/cli/lib/config/schema.json",
+  "version": 1,
+  "newProjectRoot": "projects",
+  "projects": {
+    "abautomobile": {
+      "projectType": "application",
+      "schematics": {
+        "@schematics/angular:application": {
+          "strict": true
+        }
+      },
+      "root": "",
+      "sourceRoot": "src",
+      "prefix": "app",
+      "architect": {
+        "build": {
+          "builder": "@angular/build:application",
+          "options": {
+            "outputPath": "dist/abautomobile",
+            "index": "src/index.html",
+            "polyfills": [
+              "zone.js"
+            ],
+            "tsConfig": "tsconfig.app.json",
+            "assets": [
+              "src/favicon.ico",
+              {
+                "glob": "motor.jpg",
+                "input": "src/assets/img",
+                "output": "/assets/img/"
+              },
+              {
+                "glob": "dignostics.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "Engine.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "Golf4.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "HyndaiE.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "HyndaiEngine.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "timingBelt.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "PoloWheel.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "workman.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "workman2.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "Corsa.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              }
+            ],
+            "styles": [
+              "src/assets/fonts/font-awesome.min.css",
+              "src/styles.css"
+            ],
+            "scripts": [],
+            "browser": "src/main.ts"
+          },
+          "configurations": {
+            "production": {
+              "budgets": [
+                {
+                  "type": "initial",
+                  "maximumWarning": "700kb",
+                  "maximumError": "1mb"
+                },
+                {
+                  "type": "anyComponentStyle",
+                  "maximumWarning": "12kb",
+                  "maximumError": "20kb"
+                }
+              ],
+              "outputHashing": "all"
+            },
+            "development": {
+              "optimization": false,
+              "extractLicenses": false,
+              "sourceMap": true
+            }
+          },
+          "defaultConfiguration": "production"
+        },
+        "serve": {
+          "builder": "@angular/build:dev-server",
+          "configurations": {
+            "production": {
+              "buildTarget": "abautomobile:build:production"
+            },
+            "development": {
+              "buildTarget": "abautomobile:build:development"
+            }
+          },
+          "defaultConfiguration": "development"
+        },
+        "extract-i18n": {
+          "builder": "@angular/build:extract-i18n",
+          "options": {
+            "buildTarget": "abautomobile:build"
+          }
+        },
+        "test": {
+          "builder": "@angular/build:karma",
+          "options": {
+            "polyfills": [
+              "zone.js",
+              "zone.js/testing"
+            ],
+            "tsConfig": "tsconfig.spec.json",
+            "assets": [
+              "src/favicon.ico",
+              {
+                "glob": "motor.jpg",
+                "input": "src/assets/img",
+                "output": "/assets/img/"
+              },
+              {
+                "glob": "dignostics.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "Engine.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "Golf4.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "HyndaiE.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "HyndaiEngine.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "timingBelt.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "PoloWheel.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "workman.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "workman2.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              },
+              {
+                "glob": "Corsa.jpg",
+                "input": "src/assets/img/ABAuto",
+                "output": "/assets/img/ABAuto/"
+              }
+            ],
+            "styles": [
+              "src/assets/fonts/font-awesome.min.css",
+              "src/styles.css"
+            ],
+            "scripts": []
+          }
+        }
+      }
+    }
+  }
+}

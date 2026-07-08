@@ -1,0 +1,183 @@
+<div class="site-shell" id="page-top">
+  <nav class="topbar">
+    <a class="brand" href="#page-top" aria-label="AB's Auto Mobile Mechanic home">
+      <span class="brand-mark">AB</span>
+      <span>
+        <strong>AB's Auto Mobile Mechanic</strong>
+        <small>Mobile workshop | Meyerton</small>
+      </span>
+    </a>
+    <div class="nav-links" aria-label="Primary navigation">
+      <a href="#services">Services</a>
+      <a href="#work">Work</a>
+      <a href="#location">Location</a>
+      <a href="#admin" (click)="openAdmin($event)">Sign in</a>
+      <a class="call-link" href="tel:+27678252864"><i class="fa fa-phone"></i> 067 825 2864</a>
+    </div>
+  </nav>
+
+  <header class="hero">
+    <div class="hero-content">
+      <p class="eyebrow">Professional mobile mechanic</p>
+      <h1>Clean, reliable vehicle repairs where you need them.</h1>
+      <p class="hero-copy">Diagnostics, servicing, engine work and suspension repairs for drivers across Johannesburg and surrounding Gauteng areas.</p>
+      <div class="hero-actions">
+        <a class="primary-action" href="tel:+27678252864"><i class="fa fa-phone"></i> Book a call</a>
+        <a class="secondary-action" href="https://wa.me/27730151945" target="_blank" rel="noopener"><i class="fa fa-whatsapp"></i> WhatsApp</a>
+      </div>
+      <div class="hero-proof" aria-label="Workshop highlights">
+        <span><strong>2016</strong> established</span>
+        <span><strong>Mobile</strong> service</span>
+        <span><strong>10</strong> live gallery images</span>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="section intro-section" id="services">
+      <div class="section-heading">
+        <p class="eyebrow">Workshop services</p>
+        <h2>Built for everyday drivers and serious repairs.</h2>
+        <p>AB's Auto Mobile Mechanic keeps the experience simple: clear diagnostics, clean workmanship, dependable parts and repair advice you can understand.</p>
+      </div>
+      <div class="service-grid">
+        <article class="service-card" *ngFor="let service of services">
+          <span class="service-icon"><i class="fa" [ngClass]="service.icon"></i></span>
+          <h3>{{ service.title }}</h3>
+          <p>{{ service.description }}</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section split-section">
+      <div>
+        <p class="eyebrow">The standard</p>
+        <h2>Professional care without the workshop runaround.</h2>
+      </div>
+      <div class="promise-list">
+        <div class="promise-item" *ngFor="let promise of promises">
+          <i class="fa fa-check"></i>
+          <span>{{ promise }}</span>
+        </div>
+      </div>
+    </section>
+
+    <section class="section gallery-section" id="work">
+      <div class="section-heading compact-heading">
+        <p class="eyebrow">Recent work</p>
+        <h2>Gallery</h2>
+        <p>Only {{ maxImages }} images can be live on the site at once, keeping the one-page site quick and focused.</p>
+      </div>
+      <div class="gallery-grid">
+        <figure class="work-card" *ngFor="let image of galleryImages; let i = index">
+          <img [src]="image.srcImg" [alt]="image.title || 'Workshop repair photo ' + (i + 1)">
+          <figcaption>{{ image.title || 'Workshop repair photo ' + (i + 1) }}</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <section class="section location-section" id="location">
+      <div class="location-copy">
+        <p class="eyebrow">Workshop location</p>
+        <h2>{{ workshopLocation }}</h2>
+        <p>Workshop support based in Meyerton, with mobile mechanic call-outs coordinated by phone or WhatsApp.</p>
+        <div class="contact-list">
+          <a href="tel:+27678252864"><i class="fa fa-phone"></i> 067 825 2864</a>
+          <a href="https://wa.me/27730151945" target="_blank" rel="noopener"><i class="fa fa-whatsapp"></i> 073 015 1945</a>
+          <a href="mailto:ab@abautomobile.co.za"><i class="fa fa-envelope-o"></i> ab@abautomobile.co.za</a>
+        </div>
+      </div>
+      <a class="map-panel" [href]="mapUrl" target="_blank" rel="noopener" aria-label="Open workshop location in Google Maps">
+        <i class="fa fa-map-marker"></i>
+        <span>Open workshop location</span>
+        <small>{{ workshopLocation }}</small>
+      </a>
+    </section>
+
+    <section class="section admin-section" id="admin" *ngIf="showAdmin || isSignedIn">
+      <div class="admin-copy">
+        <p class="eyebrow">Mechanic sign in</p>
+        <h2>Manage site images and location.</h2>
+        <p>For this one-page demo, changes are saved in this browser. Keep the gallery lean by staying under the {{ maxImages }} image limit.</p>
+      </div>
+
+      <div class="admin-panel" *ngIf="!isSignedIn">
+        <form (ngSubmit)="signIn()" class="signin-form">
+          <label>
+            Username
+            <input type="text" name="username" [(ngModel)]="login.username" autocomplete="username" required>
+          </label>
+          <label>
+            Password
+            <input type="password" name="password" [(ngModel)]="login.password" autocomplete="current-password" required>
+          </label>
+          <button type="submit">Sign in</button>
+          <p class="form-message" *ngIf="signInError">{{ signInError }}</p>
+        </form>
+        <p class="demo-access">Demo access: mechanic / workshop2026</p>
+      </div>
+
+      <div class="admin-panel manager-panel" *ngIf="isSignedIn">
+        <div class="manager-header">
+          <div>
+            <strong>{{ galleryImages.length }} / {{ maxImages }} images live</strong>
+            <span>Images added here are stored locally for the client preview.</span>
+          </div>
+          <button type="button" class="ghost-button" (click)="signOut()">Sign out</button>
+        </div>
+
+        <div class="upload-tools" [class.is-processing]="isProcessingImages">
+          <div class="upload-description">
+            <label>
+              Short description
+              <input type="text" name="descriptionDraft" [(ngModel)]="descriptionDraft" [attr.maxlength]="descriptionLimit" placeholder="Short image description">
+            </label>
+            <span>{{ descriptionDraft.length }} / {{ descriptionLimit }}</span>
+          </div>
+          <div class="upload-row">
+            <label class="file-button" [class.disabled]="galleryImages.length >= maxImages || isProcessingImages">
+              <i class="fa fa-upload"></i>
+              Add images
+              <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" [disabled]="galleryImages.length >= maxImages || isProcessingImages">
+            </label>
+            <button type="button" class="ghost-button" (click)="resetGallery()" [disabled]="isProcessingImages">Reset gallery</button>
+          </div>
+          <div class="processing-state" *ngIf="isProcessingImages" aria-live="polite">
+            <span class="loader-dot"></span>
+            <span>Processing image...</span>
+          </div>
+        </div>
+        <p class="form-message" *ngIf="uploadError">{{ uploadError }}</p>
+        <p class="form-success" *ngIf="adminNotice">{{ adminNotice }}</p>
+
+        <div class="admin-gallery" [attr.data-refresh]="adminRefreshKey">
+          <div class="admin-image" *ngFor="let image of galleryImages; let i = index">
+            <img [src]="image.srcImg" [alt]="image.title || 'Gallery image ' + (i + 1)">
+            <label>
+              Description
+              <input type="text" [(ngModel)]="image.title" name="image-title-{{ i }}" [attr.maxlength]="descriptionLimit" (ngModelChange)="updateImageTitle(i, $event)">
+            </label>
+            <button type="button" aria-label="Remove image" (click)="removeImage(i)" [disabled]="isProcessingImages"><i class="fa fa-trash"></i></button>
+          </div>
+        </div>
+
+        <form class="location-form" (ngSubmit)="saveLocation()">
+          <label>
+            Workshop location
+            <input type="text" name="location" [(ngModel)]="locationDraft" placeholder="Workshop address or service area">
+          </label>
+          <button type="submit">Save location</button>
+        </form>
+      </div>
+    </section>
+  </main>
+
+  <a class="floating-call" href="tel:+27678252864" aria-label="Call AB's Auto Mobile Mechanic">
+    <i class="fa fa-phone"></i>
+  </a>
+
+  <footer>
+    <span>Copyright © AB's Auto Mobile Mechanic {{ currentYear }}</span>
+    <a href="https://www.facebook.com/AbNDABA/" target="_blank" rel="noopener"><i class="fa fa-facebook"></i></a>
+  </footer>
+</div>

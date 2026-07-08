@@ -1,0 +1,82 @@
+import { CommonModule } from '@angular/common';
+import { FormsModule } from '@angular/forms';
+import { TestBed } from '@angular/core/testing';
+import { RouterModule } from '@angular/router';
+import { AppComponent } from './app.component';
+
+describe('AppComponent', () => {
+  beforeEach(async () => {
+    localStorage.clear();
+
+    await TestBed.configureTestingModule({
+      imports: [
+        CommonModule,
+        FormsModule,
+        RouterModule.forRoot([])
+      ],
+      declarations: [
+        AppComponent
+      ],
+    }).compileComponents();
+  });
+
+  it('should create the app', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    expect(app).toBeTruthy();
+  });
+
+  it('should keep the default gallery at 10 images', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const app = fixture.componentInstance;
+    expect(app.galleryImages.length).toBe(app.maxImages);
+  });
+
+
+  it('should hide mechanic sign in until the nav action is clicked', async () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    let compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('#admin')).toBeNull();
+
+    fixture.componentInstance.openAdmin();
+    await fixture.whenStable();
+    fixture.detectChanges();
+    expect(fixture.componentInstance.showAdmin).toBeTrue();
+  });
+
+  it('should cap edited image descriptions at 50 characters', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    app.galleryImages = [{ srcImg: 'assets/test.jpg', title: '' }];
+
+    app.updateImageTitle(0, 'x'.repeat(60));
+
+    expect(app.galleryImages[0].title.length).toBe(app.descriptionLimit);
+  });
+
+  it('should add uploaded images with a capped description and refresh admin', async () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    const input = document.createElement('input');
+    const file = new File(['image-bytes'], 'repair-photo.jpg', { type: 'image/jpeg' });
+    app.galleryImages = [];
+    app.descriptionDraft = 'Mobile repair completed with diagnostic checks'.repeat(2);
+    Object.defineProperty(input, 'files', { value: [file] });
+
+    await app.onFilesSelected({ target: input } as unknown as Event);
+
+    expect(app.galleryImages.length).toBe(1);
+    expect(app.galleryImages[0].title.length).toBe(app.descriptionLimit);
+    expect(app.adminRefreshKey).toBe(1);
+    expect(app.adminNotice).toContain('Gallery refreshed');
+  });
+
+  it('should render the mechanic brand', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.brand strong')?.textContent).toContain("AB's Auto Mobile Mechanic");
+  });
+});
