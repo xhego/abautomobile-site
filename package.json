@@ -6,7 +6,7 @@
     "start": "ng serve",
     "build": "ng build",
     "test": "ng test",
-    "build:pages": "ng build --base-href /"
+    "build:pages": "ng build --base-href /abautomobile-site/"
   },
   "private": true,
   "dependencies": {

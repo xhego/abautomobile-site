@@ -37,10 +37,8 @@ jobs:
       - name: Build
         run: npm run build:pages
 
-      - name: Add Pages files
-        run: |
-          touch dist/abautomobile/browser/.nojekyll
-          printf 'www.abautomobile.co.za\n' > dist/abautomobile/browser/CNAME
+      - name: Add Pages marker
+        run: touch dist/abautomobile/browser/.nojekyll
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
