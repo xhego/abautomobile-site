@@ -24,11 +24,13 @@ export class AppComponent implements OnInit {
   readonly defaultLocation = 'Meyerton, Gauteng, South Africa';
   readonly defaultCallNumber = '067 825 2864';
   readonly defaultWhatsappNumber = '073 015 1945';
+  readonly defaultEmailAddress = 'ab@abautomobile.co.za';
   private readonly galleryStorageKey = 'abautomobile-gallery-images';
   private readonly galleryInitializedStorageKey = 'abautomobile-gallery-initialized';
   private readonly locationStorageKey = 'abautomobile-workshop-location';
   private readonly callNumberStorageKey = 'abautomobile-call-number';
   private readonly whatsappNumberStorageKey = 'abautomobile-whatsapp-number';
+  private readonly emailAddressStorageKey = 'abautomobile-email-address';
   private readonly adminUsername = 'mechanic';
   private readonly adminPassword = 'workshop2026';
 
@@ -79,8 +81,10 @@ export class AppComponent implements OnInit {
   locationDraft = this.defaultLocation;
   callNumber = this.defaultCallNumber;
   whatsappNumber = this.defaultWhatsappNumber;
+  emailAddress = this.defaultEmailAddress;
   callNumberDraft = this.defaultCallNumber;
   whatsappNumberDraft = this.defaultWhatsappNumber;
+  emailAddressDraft = this.defaultEmailAddress;
   isSignedIn = false;
   showAdmin = false;
   signInError = '';
@@ -100,8 +104,10 @@ export class AppComponent implements OnInit {
     this.locationDraft = this.workshopLocation;
     this.callNumber = localStorage.getItem(this.callNumberStorageKey) || this.defaultCallNumber;
     this.whatsappNumber = localStorage.getItem(this.whatsappNumberStorageKey) || this.defaultWhatsappNumber;
+    this.emailAddress = localStorage.getItem(this.emailAddressStorageKey) || this.defaultEmailAddress;
     this.callNumberDraft = this.callNumber;
     this.whatsappNumberDraft = this.whatsappNumber;
+    this.emailAddressDraft = this.emailAddress;
   }
 
   get mapUrl(): string {
@@ -114,6 +120,10 @@ export class AppComponent implements OnInit {
 
   get whatsappHref(): string {
     return 'https://wa.me/' + this.toWhatsappHref(this.whatsappNumber);
+  }
+
+  get emailHref(): string {
+    return 'mailto:' + this.emailAddress.trim();
   }
 
   openAdmin(event?: Event): void {
@@ -199,12 +209,6 @@ export class AppComponent implements OnInit {
     this.uploadError = '';
   }
 
-  resetGallery(): void {
-    this.galleryImages = this.defaultImages.slice(0, this.maxImages);
-    this.refreshAdminGallery('Gallery refreshed with the default images.');
-    this.uploadError = '';
-  }
-
   saveLocation(): void {
     const nextLocation = this.locationDraft.trim() || this.defaultLocation;
     this.workshopLocation = nextLocation;
@@ -212,15 +216,19 @@ export class AppComponent implements OnInit {
     localStorage.setItem(this.locationStorageKey, nextLocation);
   }
 
-  saveContactNumbers(): void {
+  saveContactDetails(): void {
     const nextCallNumber = this.callNumberDraft.trim() || this.defaultCallNumber;
     const nextWhatsappNumber = this.whatsappNumberDraft.trim() || this.defaultWhatsappNumber;
+    const nextEmailAddress = this.emailAddressDraft.trim() || this.defaultEmailAddress;
     this.callNumber = nextCallNumber;
     this.whatsappNumber = nextWhatsappNumber;
+    this.emailAddress = nextEmailAddress;
     this.callNumberDraft = nextCallNumber;
     this.whatsappNumberDraft = nextWhatsappNumber;
+    this.emailAddressDraft = nextEmailAddress;
     localStorage.setItem(this.callNumberStorageKey, nextCallNumber);
     localStorage.setItem(this.whatsappNumberStorageKey, nextWhatsappNumber);
+    localStorage.setItem(this.emailAddressStorageKey, nextEmailAddress);
   }
 
   private loadGallery(): GalleryImage[] {

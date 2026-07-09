@@ -104,21 +104,34 @@ describe('AppComponent', () => {
     expect(nextApp.galleryImages[0].title).toBe('Saved repair photo');
   });
 
-  it('should save contact numbers and build call links after reload', () => {
+  it('should not render a reset gallery action for signed-in admin', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.componentInstance.showAdmin = true;
+    fixture.componentInstance.isSignedIn = true;
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).not.toContain('Reset gallery');
+  });
+
+  it('should save contact details and build links after reload', () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
     app.callNumberDraft = '011 222 3333';
     app.whatsappNumberDraft = '082 444 5555';
+    app.emailAddressDraft = 'service@abautomobile.co.za';
 
-    app.saveContactNumbers();
+    app.saveContactDetails();
 
     const nextFixture = TestBed.createComponent(AppComponent);
     const nextApp = nextFixture.componentInstance;
     nextApp.ngOnInit();
     expect(nextApp.callNumber).toBe('011 222 3333');
     expect(nextApp.whatsappNumber).toBe('082 444 5555');
+    expect(nextApp.emailAddress).toBe('service@abautomobile.co.za');
     expect(nextApp.callHref).toBe('tel:0112223333');
     expect(nextApp.whatsappHref).toBe('https://wa.me/27824445555');
+    expect(nextApp.emailHref).toBe('mailto:service@abautomobile.co.za');
   });
 
   it('should render the mechanic brand', () => {

@@ -84,7 +84,7 @@
         <div class="contact-list">
           <a [href]="callHref"><i class="fa fa-phone"></i> {{ callNumber }}</a>
           <a [href]="whatsappHref" target="_blank" rel="noopener"><i class="fa fa-whatsapp"></i> {{ whatsappNumber }}</a>
-          <a href="mailto:ab@abautomobile.co.za"><i class="fa fa-envelope-o"></i> ab@abautomobile.co.za</a>
+          <a [href]="emailHref"><i class="fa fa-envelope-o"></i> {{ emailAddress }}</a>
         </div>
       </div>
       <a class="map-panel" [href]="mapUrl" target="_blank" rel="noopener" aria-label="Open workshop location in Google Maps">
@@ -140,7 +140,6 @@
               Add images
               <input type="file" accept="image/*" multiple (change)="onFilesSelected($event)" [disabled]="galleryImages.length >= maxImages || isProcessingImages">
             </label>
-            <button type="button" class="ghost-button" (click)="resetGallery()" [disabled]="isProcessingImages">Reset gallery</button>
           </div>
           <div class="processing-state" *ngIf="isProcessingImages" aria-live="polite">
             <span class="loader-dot"></span>
@@ -169,7 +168,7 @@
           <button type="submit">Save location</button>
         </form>
 
-        <form class="contact-form" (ngSubmit)="saveContactNumbers()">
+        <form class="contact-form" (ngSubmit)="saveContactDetails()">
           <label>
             Call number
             <input type="tel" name="callNumber" [(ngModel)]="callNumberDraft" placeholder="067 825 2864">
@@ -178,7 +177,11 @@
             WhatsApp number
             <input type="tel" name="whatsappNumber" [(ngModel)]="whatsappNumberDraft" placeholder="073 015 1945">
           </label>
-          <button type="submit">Save phone numbers</button>
+          <label>
+            Email address
+            <input type="email" name="emailAddress" [(ngModel)]="emailAddressDraft" placeholder="ab@abautomobile.co.za">
+          </label>
+          <button type="submit">Save contact details</button>
         </form>
       </div>
     </section>
