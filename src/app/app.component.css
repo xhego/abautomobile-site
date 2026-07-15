@@ -416,12 +416,6 @@ footer a:hover {
   color: #1f6f43 !important;
 }
 
-.demo-access {
-  color: #717a82;
-  font-size: 13px;
-  margin: 14px 0 0;
-}
-
 .manager-panel {
   display: grid;
   gap: 20px;
