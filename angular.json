@@ -25,6 +25,8 @@
             "tsConfig": "tsconfig.app.json",
             "assets": [
               "src/favicon.ico",
+              "src/robots.txt",
+              "src/sitemap.xml",
               {
                 "glob": "motor.jpg",
                 "input": "src/assets/img",
@@ -140,6 +142,8 @@
             "tsConfig": "tsconfig.spec.json",
             "assets": [
               "src/favicon.ico",
+              "src/robots.txt",
+              "src/sitemap.xml",
               {
                 "glob": "motor.jpg",
                 "input": "src/assets/img",
