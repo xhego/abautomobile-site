@@ -20,7 +20,8 @@
   display: flex;
   justify-content: space-between;
   left: 0;
-  padding: 14px 6vw;
+  min-height: 112px;
+  padding: 18px 6vw;
   position: fixed;
   right: 0;
   top: 0;
@@ -53,7 +54,6 @@ footer a:hover {
   text-decoration: none;
 }
 
-.brand-mark,
 .service-icon {
   align-items: center;
   background: #f2b84b;
@@ -63,10 +63,12 @@ footer a:hover {
   justify-content: center;
 }
 
-.brand-mark {
-  border-radius: 6px;
-  height: 44px;
-  width: 44px;
+.brand-logo {
+  display: block;
+  flex: 0 0 auto;
+  height: 82px;
+  object-fit: contain;
+  width: 82px;
 }
 
 .brand strong,
@@ -103,7 +105,7 @@ footer a:hover {
   background: linear-gradient(90deg, rgba(12, 17, 22, 0.88), rgba(12, 17, 22, 0.46)), url('../assets/img/motor.jpg') center/cover;
   color: #ffffff;
   min-height: 86vh;
-  padding: 150px 6vw 72px;
+  padding: 180px 6vw 72px;
 }
 
 .hero-content,

@@ -33,6 +33,11 @@
                 "output": "/assets/img/"
               },
               {
+                "glob": "ab-auto-logo.png",
+                "input": "src/assets/img",
+                "output": "/assets/img/"
+              },
+              {
                 "glob": "dignostics.jpg",
                 "input": "src/assets/img/ABAuto",
                 "output": "/assets/img/ABAuto/"
@@ -146,6 +151,11 @@
               "src/sitemap.xml",
               {
                 "glob": "motor.jpg",
+                "input": "src/assets/img",
+                "output": "/assets/img/"
+              },
+              {
+                "glob": "ab-auto-logo.png",
                 "input": "src/assets/img",
                 "output": "/assets/img/"
               },
