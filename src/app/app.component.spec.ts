@@ -3,10 +3,37 @@ import { FormsModule } from '@angular/forms';
 import { TestBed } from '@angular/core/testing';
 import { RouterModule } from '@angular/router';
 import { AppComponent } from './app.component';
+import { SupabaseSiteService } from './supabase-site.service';
 
 describe('AppComponent', () => {
+  const supabaseMock = {
+    isConfigured: false,
+    signIn: jasmine.createSpy('signIn').and.resolveTo(),
+    signOut: jasmine.createSpy('signOut').and.resolveTo(),
+    loadSettings: jasmine.createSpy('loadSettings').and.resolveTo(null),
+    saveSettings: jasmine.createSpy('saveSettings').and.resolveTo(),
+    loadGallery: jasmine.createSpy('loadGallery').and.resolveTo(null),
+    uploadGalleryImage: jasmine.createSpy('uploadGalleryImage').and.resolveTo({
+      id: 'test-image',
+      srcImg: 'assets/test.jpg',
+      title: 'Saved repair photo',
+      storagePath: 'gallery/test.jpg',
+      sortOrder: 1
+    }),
+    updateGalleryTitle: jasmine.createSpy('updateGalleryTitle').and.resolveTo(),
+    removeGalleryImage: jasmine.createSpy('removeGalleryImage').and.resolveTo()
+  };
+
   beforeEach(async () => {
     localStorage.clear();
+    supabaseMock.signIn.calls.reset();
+    supabaseMock.signOut.calls.reset();
+    supabaseMock.loadSettings.calls.reset();
+    supabaseMock.saveSettings.calls.reset();
+    supabaseMock.loadGallery.calls.reset();
+    supabaseMock.uploadGalleryImage.calls.reset();
+    supabaseMock.updateGalleryTitle.calls.reset();
+    supabaseMock.removeGalleryImage.calls.reset();
 
     await TestBed.configureTestingModule({
       imports: [
@@ -16,6 +43,9 @@ describe('AppComponent', () => {
       ],
       declarations: [
         AppComponent
+      ],
+      providers: [
+        { provide: SupabaseSiteService, useValue: supabaseMock }
       ],
     }).compileComponents();
   });
