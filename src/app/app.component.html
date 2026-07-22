@@ -10,6 +10,7 @@
     <div class="nav-links" aria-label="Primary navigation">
       <a href="#services">Services</a>
       <a href="#work">Work</a>
+      <a href="#all-work">Gallery</a>
       <a href="#location">Location</a>
       <a href="#terms">Terms</a>
       <a href="#admin" (click)="openAdmin($event)">Sign in</a>
@@ -29,7 +30,7 @@
       <div class="hero-proof" aria-label="Workshop highlights">
         <span><strong>2016</strong> established</span>
         <span><strong>Mobile</strong> service</span>
-        <span><strong>10</strong> live gallery images</span>
+        <span><strong>{{ maxImages }}</strong> live gallery images</span>
       </div>
     </div>
   </header>
@@ -67,13 +68,28 @@
       <div class="section-heading compact-heading">
         <p class="eyebrow">Recent work</p>
         <h2>Gallery</h2>
-        <p>Only {{ maxImages }} images can be live on the site at once, keeping the one-page site quick and focused.</p>
+        <p>Recent workshop and mobile repair photos from AB's Auto Mobile Mechanic (Pty) Ltd.</p>
+        <a class="gallery-link" href="#all-work">View full gallery</a>
       </div>
-      <div class="gallery-grid">
-        <figure class="work-card" *ngFor="let image of galleryImages; let i = index">
+      <div class="gallery-grid preview-gallery-grid">
+        <button class="work-card gallery-button" type="button" *ngFor="let image of landingGalleryImages; let i = index" (click)="openGalleryImage(i)">
           <img [src]="image.srcImg" [alt]="image.title || 'Workshop repair photo ' + (i + 1)">
-          <figcaption>{{ image.title || 'Workshop repair photo ' + (i + 1) }}</figcaption>
-        </figure>
+          <span>{{ image.title || 'Workshop repair photo ' + (i + 1) }}</span>
+        </button>
+      </div>
+    </section>
+
+    <section class="section full-gallery-section" id="all-work">
+      <div class="section-heading compact-heading">
+        <p class="eyebrow">All workshop photos</p>
+        <h2>Full gallery</h2>
+        <p>{{ galleryImages.length }} repair photo{{ galleryImages.length === 1 ? '' : 's' }} live on the site.</p>
+      </div>
+      <div class="gallery-grid full-gallery-grid">
+        <button class="work-card gallery-button" type="button" *ngFor="let image of galleryImages; let i = index" (click)="openGalleryImage(i)">
+          <img [src]="image.srcImg" [alt]="image.title || 'Workshop repair photo ' + (i + 1)">
+          <span>{{ image.title || 'Workshop repair photo ' + (i + 1) }}</span>
+        </button>
       </div>
     </section>
 
@@ -174,13 +190,16 @@
         <form (ngSubmit)="signIn()" class="signin-form">
           <label>
             Email
-            <input type="email" name="username" [(ngModel)]="login.username" autocomplete="username" required>
+            <input type="email" name="username" [(ngModel)]="login.username" autocomplete="username" [disabled]="isSigningIn" required>
           </label>
           <label>
             Password
-            <input type="password" name="password" [(ngModel)]="login.password" autocomplete="current-password" required>
+            <input type="password" name="password" [(ngModel)]="login.password" autocomplete="current-password" [disabled]="isSigningIn" required>
           </label>
-          <button type="submit">Sign in</button>
+          <button type="submit" [disabled]="isSigningIn">
+            <span class="loader-dot button-loader" *ngIf="isSigningIn"></span>
+            <span>{{ isSigningIn ? 'Signing in...' : 'Sign in' }}</span>
+          </button>
           <p class="form-message" *ngIf="signInError">{{ signInError }}</p>
         </form>
       </div>
@@ -258,6 +277,16 @@
   <a class="floating-call" [href]="callHref" aria-label="Call AB's Auto Mobile Mechanic (Pty) Ltd">
     <i class="fa fa-phone"></i>
   </a>
+
+  <div class="lightbox-backdrop" *ngIf="activeGalleryImage as activeImage" (click)="closeGalleryImage()">
+    <div class="lightbox-panel" role="dialog" aria-modal="true" aria-label="Gallery image preview" (click)="$event.stopPropagation()">
+      <button class="lightbox-close" type="button" aria-label="Close image preview" (click)="closeGalleryImage()">&times;</button>
+      <button class="lightbox-nav lightbox-prev" type="button" aria-label="Previous image" (click)="showPreviousImage()">&#8249;</button>
+      <img [src]="activeImage.srcImg" [alt]="activeImage.title || 'Workshop repair photo preview'">
+      <button class="lightbox-nav lightbox-next" type="button" aria-label="Next image" (click)="showNextImage()">&#8250;</button>
+      <p>{{ activeImage.title || 'Workshop repair photo' }}</p>
+    </div>
+  </div>
 
   <footer>
     <span>Copyright © AB's Auto Mobile Mechanic (Pty) Ltd {{ currentYear }}</span>

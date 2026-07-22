@@ -24,8 +24,8 @@ returns trigger
 language plpgsql
 as $$
 begin
-  if (select count(*) from public.gallery_images) >= 10 then
-    raise exception 'Only 10 gallery images can be live at once.';
+  if (select count(*) from public.gallery_images) >= 50 then
+    raise exception 'Only 50 gallery images can be live at once.';
   end if;
 
   new.title := left(coalesce(new.title, ''), 50);
@@ -34,7 +34,8 @@ end;
 $$;
 
 drop trigger if exists gallery_images_max_10 on public.gallery_images;
-create trigger gallery_images_max_10
+drop trigger if exists gallery_images_max_50 on public.gallery_images;
+create trigger gallery_images_max_50
 before insert on public.gallery_images
 for each row
 execute function public.prevent_gallery_overflow();

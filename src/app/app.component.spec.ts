@@ -56,11 +56,16 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should keep the default gallery at 10 images', () => {
+  it('should keep the admin gallery limit at 50 images with a 10 image landing preview', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const app = fixture.componentInstance;
-    expect(app.galleryImages.length).toBe(app.maxImages);
+    app.galleryImages = Array.from({ length: app.maxImages }, (_, index) => ({
+      srcImg: 'assets/test-' + index + '.jpg',
+      title: 'Repair ' + index
+    }));
+    expect(app.maxImages).toBe(50);
+    expect(app.landingGalleryImages.length).toBe(app.landingImageLimit);
   });
 
 
@@ -101,6 +106,24 @@ describe('AppComponent', () => {
     expect(app.galleryImages[0].title.length).toBe(app.descriptionLimit);
     expect(app.adminRefreshKey).toBe(1);
     expect(app.adminNotice).toContain('Gallery refreshed');
+  });
+
+  it('should open, navigate and close gallery images', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    app.galleryImages = [
+      { srcImg: 'assets/first.jpg', title: 'First' },
+      { srcImg: 'assets/second.jpg', title: 'Second' }
+    ];
+
+    app.openGalleryImage(0);
+    expect(app.activeGalleryImage?.title).toBe('First');
+    app.showNextImage();
+    expect(app.activeGalleryImage?.title).toBe('Second');
+    app.showPreviousImage();
+    expect(app.activeGalleryImage?.title).toBe('First');
+    app.closeGalleryImage();
+    expect(app.activeGalleryImage).toBeNull();
   });
 
   it('should keep removed images removed after reload', () => {

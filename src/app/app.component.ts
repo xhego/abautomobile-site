@@ -22,7 +22,8 @@ interface ServiceItem {
   styleUrls: ['./app.component.css']
 })
 export class AppComponent implements OnInit {
-  readonly maxImages = 10;
+  readonly maxImages = 50;
+  readonly landingImageLimit = 10;
   readonly descriptionLimit = 50;
   readonly currentYear = new Date().getFullYear();
   readonly defaultLocation = 'Meyerton, Gauteng, South Africa';
@@ -95,8 +96,10 @@ export class AppComponent implements OnInit {
   uploadError = '';
   adminNotice = '';
   descriptionDraft = '';
+  isSigningIn = false;
   isProcessingImages = false;
   adminRefreshKey = 0;
+  activeGalleryIndex: number | null = null;
   login = {
     username: '',
     password: ''
@@ -129,6 +132,14 @@ export class AppComponent implements OnInit {
     return this.siteService.isConfigured;
   }
 
+  get landingGalleryImages(): GalleryImage[] {
+    return this.galleryImages.slice(0, this.landingImageLimit);
+  }
+
+  get activeGalleryImage(): GalleryImage | null {
+    return this.activeGalleryIndex === null ? null : this.galleryImages[this.activeGalleryIndex] || null;
+  }
+
   openAdmin(event?: Event): void {
     if (event) {
       event.preventDefault();
@@ -141,6 +152,7 @@ export class AppComponent implements OnInit {
   async signIn(): Promise<void> {
     const username = this.login.username.trim();
     this.signInError = '';
+    this.isSigningIn = true;
 
     try {
       if (this.siteService.isConfigured) {
@@ -155,6 +167,8 @@ export class AppComponent implements OnInit {
       this.login.password = '';
     } catch (error) {
       this.signInError = 'Incorrect sign-in details.';
+    } finally {
+      this.isSigningIn = false;
     }
   }
 
@@ -174,7 +188,7 @@ export class AppComponent implements OnInit {
     this.adminNotice = '';
 
     if (availableSlots <= 0) {
-      this.uploadError = 'The gallery already has 10 images. Remove one before adding another.';
+      this.uploadError = 'The gallery already has ' + this.maxImages + ' images. Remove one before adding another.';
       input.value = '';
       return;
     }
@@ -197,7 +211,7 @@ export class AppComponent implements OnInit {
       this.galleryImages = this.galleryImages.concat(images).slice(0, this.maxImages);
       this.descriptionDraft = '';
       this.refreshAdminGallery('Gallery refreshed with ' + images.length + ' new image' + (images.length === 1 ? '.' : 's.'));
-      this.uploadError = skippedCount > 0 ? 'Only the first ' + availableSlots + ' images were added to keep the gallery at 10.' : '';
+      this.uploadError = skippedCount > 0 ? 'Only the first ' + availableSlots + ' images were added to keep the gallery at ' + this.maxImages + '.' : '';
     } catch (error) {
       this.uploadError = 'One of those images could not be added.';
     } finally {
@@ -246,7 +260,38 @@ export class AppComponent implements OnInit {
     }
 
     this.galleryImages = this.galleryImages.filter((_, itemIndex) => itemIndex !== index);
+    if (this.activeGalleryIndex !== null) {
+      this.activeGalleryIndex = null;
+    }
     this.refreshAdminGallery('Gallery refreshed after removing an image.');
+  }
+
+  openGalleryImage(index: number): void {
+    if (index < 0 || index >= this.galleryImages.length) {
+      return;
+    }
+
+    this.activeGalleryIndex = index;
+  }
+
+  closeGalleryImage(): void {
+    this.activeGalleryIndex = null;
+  }
+
+  showPreviousImage(): void {
+    if (!this.galleryImages.length || this.activeGalleryIndex === null) {
+      return;
+    }
+
+    this.activeGalleryIndex = (this.activeGalleryIndex - 1 + this.galleryImages.length) % this.galleryImages.length;
+  }
+
+  showNextImage(): void {
+    if (!this.galleryImages.length || this.activeGalleryIndex === null) {
+      return;
+    }
+
+    this.activeGalleryIndex = (this.activeGalleryIndex + 1) % this.galleryImages.length;
   }
 
   async saveLocation(): Promise<void> {

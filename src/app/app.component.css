@@ -161,10 +161,14 @@ footer a:hover {
 .signin-form button,
 .location-form button,
 .contact-form button {
+  align-items: center;
   border: 0;
   border-radius: 5px;
   cursor: pointer;
+  display: inline-flex;
+  gap: 10px;
   font-weight: 800;
+  justify-content: center;
   padding: 14px 20px;
   text-decoration: none;
 }
@@ -297,15 +301,49 @@ footer a:hover {
   text-align: left;
 }
 
+.gallery-link {
+  background: #172029;
+  border-radius: 5px;
+  color: #ffffff;
+  display: inline-flex;
+  font-weight: 800;
+  margin-top: 4px;
+  padding: 12px 14px;
+  text-decoration: none;
+}
+
+.gallery-link:hover {
+  background: #26323d;
+  color: #f2b84b;
+}
+
 .gallery-grid {
   grid-template-columns: repeat(5, minmax(0, 1fr));
 }
 
 .work-card {
   background: #f4f2ed;
+  border: 1px solid transparent;
   border-radius: 8px;
   margin: 0;
   overflow: hidden;
+}
+
+.gallery-button {
+  color: inherit;
+  cursor: pointer;
+  font: inherit;
+  padding: 0;
+  text-align: left;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+  width: 100%;
+}
+
+.gallery-button:hover,
+.gallery-button:focus-visible {
+  border-color: #f2b84b;
+  outline: none;
+  transform: translateY(-2px);
 }
 
 .work-card img,
@@ -316,11 +354,20 @@ footer a:hover {
   width: 100%;
 }
 
-.work-card figcaption {
+.work-card span {
   color: #3d464e;
+  display: block;
   font-size: 14px;
   font-weight: 700;
   padding: 12px;
+}
+
+.full-gallery-section {
+  background: #f4f2ed;
+}
+
+.full-gallery-grid {
+  grid-template-columns: repeat(auto-fit, minmax(170px, 1fr));
 }
 
 .location-section {
@@ -528,6 +575,20 @@ footer a:hover {
   width: 18px;
 }
 
+.button-loader {
+  border-color: rgba(17, 24, 32, 0.24);
+  border-top-color: #111820;
+  height: 16px;
+  width: 16px;
+}
+
+.signin-form button:disabled,
+.location-form button:disabled,
+.contact-form button:disabled {
+  cursor: wait;
+  opacity: 0.72;
+}
+
 @keyframes loader-spin {
   to {
     transform: rotate(360deg);
@@ -647,6 +708,81 @@ footer a:hover {
   z-index: 30;
 }
 
+.lightbox-backdrop {
+  align-items: center;
+  background: rgba(5, 7, 9, 0.86);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 24px;
+  position: fixed;
+  z-index: 60;
+}
+
+.lightbox-panel {
+  background: #10161c;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.45);
+  max-height: 90vh;
+  max-width: 1040px;
+  padding: 18px;
+  position: relative;
+  width: min(100%, 1040px);
+}
+
+.lightbox-panel img {
+  display: block;
+  max-height: 72vh;
+  object-fit: contain;
+  width: 100%;
+}
+
+.lightbox-panel p {
+  color: #ffffff;
+  font-weight: 800;
+  margin: 14px 48px 0;
+  text-align: center;
+}
+
+.lightbox-close,
+.lightbox-nav {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.92);
+  border: 0;
+  border-radius: 50%;
+  color: #10161c;
+  cursor: pointer;
+  display: flex;
+  font-weight: 800;
+  justify-content: center;
+  position: absolute;
+}
+
+.lightbox-close {
+  font-size: 28px;
+  height: 38px;
+  right: 14px;
+  top: 14px;
+  width: 38px;
+}
+
+.lightbox-nav {
+  font-size: 42px;
+  height: 52px;
+  top: 50%;
+  transform: translateY(-50%);
+  width: 52px;
+}
+
+.lightbox-prev {
+  left: 20px;
+}
+
+.lightbox-next {
+  right: 20px;
+}
+
 footer {
   background: #10161c;
   color: #b7c1c9;
@@ -733,14 +869,43 @@ footer a {
   }
 
   .service-grid,
-  .gallery-grid,
   .admin-gallery {
     grid-template-columns: 1fr;
+  }
+
+  .gallery-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .preview-gallery-grid .work-card:nth-child(n+3) {
+    display: none;
   }
 
   .admin-image img,
   .work-card img {
     height: 240px;
+  }
+
+  .preview-gallery-grid .work-card img {
+    height: 180px;
+  }
+
+  .lightbox-backdrop {
+    padding: 12px;
+  }
+
+  .lightbox-panel {
+    padding: 12px;
+  }
+
+  .lightbox-nav {
+    height: 42px;
+    width: 42px;
+  }
+
+  .lightbox-panel p {
+    margin-left: 42px;
+    margin-right: 42px;
   }
 
   .manager-header,
