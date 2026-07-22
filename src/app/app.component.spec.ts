@@ -25,6 +25,7 @@ describe('AppComponent', () => {
   };
 
   beforeEach(async () => {
+    history.pushState({}, '', '/');
     localStorage.clear();
     supabaseMock.signIn.calls.reset();
     supabaseMock.signOut.calls.reset();
@@ -124,6 +125,27 @@ describe('AppComponent', () => {
     expect(app.activeGalleryImage?.title).toBe('First');
     app.closeGalleryImage();
     expect(app.activeGalleryImage).toBeNull();
+  });
+
+  it('should keep the full gallery off the landing page', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.querySelector('.gallery-page-main')).toBeNull();
+    expect(compiled.querySelector('.preview-gallery-grid')).not.toBeNull();
+  });
+
+  it('should render the full gallery on the gallery page', () => {
+    history.pushState({}, '', '/gallery');
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+
+    const app = fixture.componentInstance;
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(app.isGalleryPage).toBeTrue();
+    expect(compiled.querySelector('.gallery-page-main')).not.toBeNull();
+    expect(compiled.querySelector('.preview-gallery-grid')).toBeNull();
   });
 
   it('should keep removed images removed after reload', () => {

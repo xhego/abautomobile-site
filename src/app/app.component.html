@@ -1,6 +1,6 @@
 <div class="site-shell" id="page-top">
   <nav class="topbar">
-    <a class="brand" href="#page-top" aria-label="AB's Auto Mobile Mechanic (Pty) Ltd home">
+    <a class="brand" href="/" aria-label="AB's Auto Mobile Mechanic (Pty) Ltd home">
       <img class="brand-logo" src="assets/img/ab-auto-logo.png" alt="AB's Auto Mobile Mechanic (Pty) Ltd logo">
       <span>
         <strong>AB's Auto Mobile Mechanic (Pty) Ltd</strong>
@@ -8,17 +8,17 @@
       </span>
     </a>
     <div class="nav-links" aria-label="Primary navigation">
-      <a href="#services">Services</a>
-      <a href="#work">Work</a>
-      <a href="#all-work">Gallery</a>
-      <a href="#location">Location</a>
-      <a href="#terms">Terms</a>
-      <a href="#admin" (click)="openAdmin($event)">Sign in</a>
+      <a href="/#services">Services</a>
+      <a href="/#work">Work</a>
+      <a href="/gallery">Gallery</a>
+      <a href="/#location">Location</a>
+      <a href="/#terms">Terms</a>
+      <a href="/#admin" (click)="openAdmin($event)">Sign in</a>
       <a class="call-link" [href]="callHref"><i class="fa fa-phone"></i> {{ callNumber }}</a>
     </div>
   </nav>
 
-  <header class="hero">
+  <header class="hero" *ngIf="!isGalleryPage">
     <div class="hero-content">
       <p class="eyebrow">Professional mobile mechanic in Meyerton and surrounding Gauteng areas</p>
       <h1>Clean, reliable vehicle repairs where you need them.</h1>
@@ -35,7 +35,7 @@
     </div>
   </header>
 
-  <main>
+  <main *ngIf="!isGalleryPage">
     <section class="section intro-section" id="services">
       <div class="section-heading">
         <p class="eyebrow">Workshop services</p>
@@ -69,24 +69,10 @@
         <p class="eyebrow">Recent work</p>
         <h2>Gallery</h2>
         <p>Recent workshop and mobile repair photos from AB's Auto Mobile Mechanic (Pty) Ltd.</p>
-        <a class="gallery-link" href="#all-work">View full gallery</a>
+        <a class="gallery-link" href="/gallery">View full gallery</a>
       </div>
       <div class="gallery-grid preview-gallery-grid">
         <button class="work-card gallery-button" type="button" *ngFor="let image of landingGalleryImages; let i = index" (click)="openGalleryImage(i)">
-          <img [src]="image.srcImg" [alt]="image.title || 'Workshop repair photo ' + (i + 1)">
-          <span>{{ image.title || 'Workshop repair photo ' + (i + 1) }}</span>
-        </button>
-      </div>
-    </section>
-
-    <section class="section full-gallery-section" id="all-work">
-      <div class="section-heading compact-heading">
-        <p class="eyebrow">All workshop photos</p>
-        <h2>Full gallery</h2>
-        <p>{{ galleryImages.length }} repair photo{{ galleryImages.length === 1 ? '' : 's' }} live on the site.</p>
-      </div>
-      <div class="gallery-grid full-gallery-grid">
-        <button class="work-card gallery-button" type="button" *ngFor="let image of galleryImages; let i = index" (click)="openGalleryImage(i)">
           <img [src]="image.srcImg" [alt]="image.title || 'Workshop repair photo ' + (i + 1)">
           <span>{{ image.title || 'Workshop repair photo ' + (i + 1) }}</span>
         </button>
@@ -270,6 +256,23 @@
           </label>
           <button type="submit">Save contact details</button>
         </form>
+      </div>
+    </section>
+  </main>
+
+  <main class="gallery-page-main" *ngIf="isGalleryPage">
+    <section class="section full-gallery-section" id="all-work">
+      <div class="section-heading compact-heading">
+        <p class="eyebrow">All workshop photos</p>
+        <h1>Full gallery</h1>
+        <p>{{ galleryImages.length }} repair photo{{ galleryImages.length === 1 ? '' : 's' }} live on the site.</p>
+        <a class="gallery-link" href="/">Back to home</a>
+      </div>
+      <div class="gallery-grid full-gallery-grid">
+        <button class="work-card gallery-button" type="button" *ngFor="let image of galleryImages; let i = index" (click)="openGalleryImage(i)">
+          <img [src]="image.srcImg" [alt]="image.title || 'Workshop repair photo ' + (i + 1)">
+          <span>{{ image.title || 'Workshop repair photo ' + (i + 1) }}</span>
+        </button>
       </div>
     </section>
   </main>

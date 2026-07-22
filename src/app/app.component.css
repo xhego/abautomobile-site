@@ -219,6 +219,20 @@ footer a:hover {
   font-size: 40px;
 }
 
+.gallery-page-main {
+  min-height: calc(100vh - 72px);
+  padding-top: 122px;
+}
+
+.gallery-page-main h1 {
+  color: #172029;
+  font-size: 46px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.05;
+  margin: 0;
+}
+
 .section p {
   color: #5d6871;
   line-height: 1.7;
@@ -860,8 +874,13 @@ footer a {
   }
 
   .hero h1,
-  .section h2 {
+  .section h2,
+  .gallery-page-main h1 {
     font-size: 34px;
+  }
+
+  .gallery-page-main {
+    padding-top: 0;
   }
 
   .section {

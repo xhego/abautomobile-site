@@ -98,6 +98,7 @@ export class AppComponent implements OnInit {
   descriptionDraft = '';
   isSigningIn = false;
   isProcessingImages = false;
+  isGalleryPage = false;
   adminRefreshKey = 0;
   activeGalleryIndex: number | null = null;
   login = {
@@ -108,6 +109,7 @@ export class AppComponent implements OnInit {
   constructor(private readonly siteService: SupabaseSiteService) {}
 
   ngOnInit(): void {
+    this.isGalleryPage = this.isCurrentGalleryPage();
     this.loadLocalFallback();
     void this.loadRemoteContent();
   }
@@ -143,6 +145,11 @@ export class AppComponent implements OnInit {
   openAdmin(event?: Event): void {
     if (event) {
       event.preventDefault();
+    }
+
+    if (this.isGalleryPage) {
+      window.location.href = '/#admin';
+      return;
     }
 
     this.showAdmin = true;
@@ -451,5 +458,9 @@ export class AppComponent implements OnInit {
   private toWhatsappHref(value: string): string {
     const cleanedNumber = value.replace(/\D/g, '');
     return cleanedNumber.startsWith('0') ? '27' + cleanedNumber.slice(1) : cleanedNumber;
+  }
+
+  private isCurrentGalleryPage(): boolean {
+    return window.location.pathname.replace(/\/$/, '') === '/gallery';
   }
 }
