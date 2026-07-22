@@ -11,6 +11,7 @@
       <a href="#services">Services</a>
       <a href="#work">Work</a>
       <a href="#location">Location</a>
+      <a href="#terms">Terms</a>
       <a href="#admin" (click)="openAdmin($event)">Sign in</a>
       <a class="call-link" [href]="callHref"><i class="fa fa-phone"></i> {{ callNumber }}</a>
     </div>
@@ -92,6 +93,49 @@
         <span>Open workshop location</span>
         <small>{{ workshopLocation }}</small>
       </a>
+    </section>
+
+    <section class="section terms-section" id="terms">
+      <div class="section-heading">
+        <p class="eyebrow">Terms and conditions</p>
+        <h2>Vehicle repairs, call-outs and workshop terms.</h2>
+        <p>These terms apply to diagnostics, servicing, repairs, mobile call-outs and workshop work carried out by AB's Auto Mobile Mechanic (Pty) Ltd.</p>
+      </div>
+
+      <div class="terms-grid">
+        <article class="terms-card">
+          <h3>Quotes and authorisation</h3>
+          <p>Prices given before work begins are estimates unless confirmed as a final written quote. No additional work, parts or labour will be carried out without customer approval by quote, WhatsApp, phone, email, written instruction or verbal instruction.</p>
+        </article>
+        <article class="terms-card">
+          <h3>Diagnostics and inspection</h3>
+          <p>A diagnostic, inspection or call-out fee may apply and will be communicated before the work is carried out. Some faults may only become visible after further testing, dismantling or repair work.</p>
+        </article>
+        <article class="terms-card">
+          <h3>Payment and release</h3>
+          <p>Payment is due when the agreed work is completed and before the vehicle, keys or parts are released, unless otherwise agreed in writing. Deposits may be required for special-order parts.</p>
+        </article>
+        <article class="terms-card">
+          <h3>Collection and storage</h3>
+          <p>Customers must collect the vehicle within the agreed period after being notified that work is complete. Storage is charged at R250 per day if a vehicle is not collected within 2 days after completion notice, unless another collection arrangement is agreed in writing.</p>
+        </article>
+        <article class="terms-card">
+          <h3>Parts and replaced items</h3>
+          <p>Where practical, replaced parts may be returned to the customer on request, unless the customer waives this, the part is subject to a warranty or core exchange claim, or safe/legal disposal is required.</p>
+        </article>
+        <article class="terms-card">
+          <h3>Warranty and exclusions</h3>
+          <p>Workmanship and supplied parts are handled in line with applicable South African consumer protection laws. Warranty does not cover misuse, neglect, overheating, incorrect fluids, racing, unauthorised modifications, customer-supplied defective parts, or third-party work after repair.</p>
+        </article>
+        <article class="terms-card">
+          <h3>Mobile call-outs</h3>
+          <p>Mobile work depends on availability, travel distance, weather, safety and access to a suitable working area. If a repair cannot be completed safely on-site, the vehicle may need to move to the workshop or another suitable repair location.</p>
+        </article>
+        <article class="terms-card">
+          <h3>Disputes and acceptance</h3>
+          <p>AB's Auto Mobile Mechanic (Pty) Ltd aims to resolve concerns fairly and directly. If a matter cannot be resolved, customers may approach the Motor Industry Ombudsman of South Africa where applicable. Booking a service or authorising work means these terms are accepted.</p>
+        </article>
+      </div>
     </section>
 
     <section class="section admin-section" id="admin" *ngIf="showAdmin || isSignedIn">

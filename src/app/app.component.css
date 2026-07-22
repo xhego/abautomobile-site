@@ -327,6 +327,51 @@ footer a:hover {
   align-items: stretch;
 }
 
+.terms-section {
+  background: #172029;
+  color: #ffffff;
+  max-width: none;
+}
+
+.terms-section > * {
+  margin-left: auto;
+  margin-right: auto;
+  max-width: 1160px;
+}
+
+.terms-section h2 {
+  color: #ffffff;
+}
+
+.terms-section p {
+  color: #cbd4db;
+}
+
+.terms-grid {
+  display: grid;
+  gap: 16px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 34px;
+}
+
+.terms-card {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  padding: 22px;
+}
+
+.terms-card h3 {
+  color: #ffffff;
+  font-size: 18px;
+  margin: 0 0 10px;
+}
+
+.terms-card p {
+  font-size: 14px;
+  margin: 0;
+}
+
 .contact-list {
   align-items: flex-start;
   flex-direction: column;
@@ -635,6 +680,10 @@ footer a {
   .split-section,
   .location-section,
   .admin-section {
+    grid-template-columns: 1fr;
+  }
+
+  .terms-grid {
     grid-template-columns: 1fr;
   }
 }
