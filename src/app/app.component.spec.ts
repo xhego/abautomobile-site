@@ -138,6 +138,6 @@ describe('AppComponent', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('.brand strong')?.textContent).toContain("AB's Auto Mobile Mechanic");
+    expect(compiled.querySelector('.brand strong')?.textContent).toContain("AB's Auto Mobile Mechanic (Pty) Ltd");
   });
 });
