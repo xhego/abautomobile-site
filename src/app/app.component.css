@@ -369,7 +369,17 @@ footer a:hover {
 
 .terms-card p {
   font-size: 14px;
-  margin: 0;
+  margin: 0 0 10px;
+}
+
+.terms-card p:last-child {
+  margin-bottom: 0;
+}
+
+.terms-note {
+  border-left: 4px solid #f2b84b;
+  margin-top: 24px;
+  padding-left: 16px;
 }
 
 .contact-list {
