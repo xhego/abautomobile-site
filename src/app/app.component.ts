@@ -35,7 +35,7 @@ export class AppComponent implements OnInit {
   private readonly callNumberStorageKey = 'abautomobile-call-number';
   private readonly whatsappNumberStorageKey = 'abautomobile-whatsapp-number';
   private readonly emailAddressStorageKey = 'abautomobile-email-address';
-  private readonly adminUsername = 'mechanic';
+  private readonly adminUsername = 'abautomobile@gmail.com';
   private readonly adminPassword = 'workshop2026';
 
   services: ServiceItem[] = [
