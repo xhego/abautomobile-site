@@ -1,6 +1,20 @@
 # Abautomobile
 
-This project was generated with [Angular CLI](https://github.com/angular/angular-cli) version 11.2.1.
+AB's Auto Mobile Mechanic (Pty) Ltd one-page site.
+
+## Supabase setup
+
+Admin images and contact details are designed to persist through Supabase.
+
+1. Create a Supabase project.
+2. Open the Supabase SQL editor and run `supabase-setup.sql`.
+3. In Supabase Auth, create the mechanic admin user with an email and password.
+4. Copy the project URL and anon/public key into:
+   - `src/environments/environment.ts`
+   - `src/environments/environment.prod.ts`
+5. Build and deploy.
+
+The `gallery` bucket is public for image viewing. Table and storage writes require an authenticated Supabase user.
 
 ## Development server
 

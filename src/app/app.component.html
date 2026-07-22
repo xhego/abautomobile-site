@@ -97,15 +97,15 @@
     <section class="section admin-section" id="admin" *ngIf="showAdmin || isSignedIn">
       <div class="admin-copy">
         <p class="eyebrow">Mechanic sign in</p>
-        <h2>Manage site images and location.</h2>
-        <p>For this one-page demo, changes are saved in this browser. Keep the gallery lean by staying under the {{ maxImages }} image limit.</p>
+        <h2>Manage site images and workshop details.</h2>
+        <p>Signed-in updates are saved to Supabase for all visitors. Keep the gallery lean by staying under the {{ maxImages }} image limit.</p>
       </div>
 
       <div class="admin-panel" *ngIf="!isSignedIn">
         <form (ngSubmit)="signIn()" class="signin-form">
           <label>
-            Username
-            <input type="text" name="username" [(ngModel)]="login.username" autocomplete="username" required>
+            Email
+            <input type="email" name="username" [(ngModel)]="login.username" autocomplete="username" required>
           </label>
           <label>
             Password
@@ -120,7 +120,7 @@
         <div class="manager-header">
           <div>
             <strong>{{ galleryImages.length }} / {{ maxImages }} images live</strong>
-            <span>Images added here are stored locally for the client preview.</span>
+            <span>{{ usesRemoteBackend ? 'Images and site details are saved for all visitors.' : 'Supabase is not configured yet, so changes are saved in this browser.' }}</span>
           </div>
           <button type="button" class="ghost-button" (click)="signOut()">Sign out</button>
         </div>
@@ -142,7 +142,7 @@
           </div>
           <div class="processing-state" *ngIf="isProcessingImages" aria-live="polite">
             <span class="loader-dot"></span>
-            <span>Processing image...</span>
+            <span>Processing image upload...</span>
           </div>
         </div>
         <p class="form-message" *ngIf="uploadError">{{ uploadError }}</p>

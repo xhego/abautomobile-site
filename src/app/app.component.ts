@@ -1,8 +1,12 @@
 import { Component, OnInit } from '@angular/core';
+import { SupabaseSiteService } from './supabase-site.service';
 
 interface GalleryImage {
+  id?: string;
   srcImg: string;
   title: string;
+  storagePath?: string;
+  sortOrder?: number;
 }
 
 interface ServiceItem {
@@ -98,16 +102,11 @@ export class AppComponent implements OnInit {
     password: ''
   };
 
+  constructor(private readonly siteService: SupabaseSiteService) {}
+
   ngOnInit(): void {
-    this.galleryImages = this.loadGallery();
-    this.workshopLocation = localStorage.getItem(this.locationStorageKey) || this.defaultLocation;
-    this.locationDraft = this.workshopLocation;
-    this.callNumber = localStorage.getItem(this.callNumberStorageKey) || this.defaultCallNumber;
-    this.whatsappNumber = localStorage.getItem(this.whatsappNumberStorageKey) || this.defaultWhatsappNumber;
-    this.emailAddress = localStorage.getItem(this.emailAddressStorageKey) || this.defaultEmailAddress;
-    this.callNumberDraft = this.callNumber;
-    this.whatsappNumberDraft = this.whatsappNumber;
-    this.emailAddressDraft = this.emailAddress;
+    this.loadLocalFallback();
+    void this.loadRemoteContent();
   }
 
   get mapUrl(): string {
@@ -126,6 +125,10 @@ export class AppComponent implements OnInit {
     return 'mailto:' + this.emailAddress.trim();
   }
 
+  get usesRemoteBackend(): boolean {
+    return this.siteService.isConfigured;
+  }
+
   openAdmin(event?: Event): void {
     if (event) {
       event.preventDefault();
@@ -135,20 +138,28 @@ export class AppComponent implements OnInit {
     setTimeout(() => document.getElementById('admin')?.scrollIntoView({ behavior: 'smooth' }));
   }
 
-  signIn(): void {
-    const username = this.login.username.trim().toLowerCase();
-    if (username === this.adminUsername && this.login.password === this.adminPassword) {
+  async signIn(): Promise<void> {
+    const username = this.login.username.trim();
+    this.signInError = '';
+
+    try {
+      if (this.siteService.isConfigured) {
+        await this.siteService.signIn(username, this.login.password);
+      } else if (username.toLowerCase() !== this.adminUsername || this.login.password !== this.adminPassword) {
+        this.signInError = 'Incorrect sign-in details.';
+        return;
+      }
+
       this.isSignedIn = true;
       this.showAdmin = true;
-      this.signInError = '';
       this.login.password = '';
-      return;
+    } catch (error) {
+      this.signInError = 'Incorrect sign-in details.';
     }
-
-    this.signInError = 'Incorrect sign-in details.';
   }
 
-  signOut(): void {
+  async signOut(): Promise<void> {
+    await this.siteService.signOut();
     this.isSignedIn = false;
     this.showAdmin = false;
     this.login = { username: '', password: '' };
@@ -180,7 +191,9 @@ export class AppComponent implements OnInit {
     this.isProcessingImages = true;
 
     try {
-      const images = await Promise.all(selectedFiles.map(file => this.readImageFile(file, description)));
+      const images = this.siteService.isConfigured
+        ? await this.uploadRemoteImages(selectedFiles, description)
+        : await Promise.all(selectedFiles.map(file => this.readImageFile(file, description)));
       this.galleryImages = this.galleryImages.concat(images).slice(0, this.maxImages);
       this.descriptionDraft = '';
       this.refreshAdminGallery('Gallery refreshed with ' + images.length + ' new image' + (images.length === 1 ? '.' : 's.'));
@@ -193,30 +206,57 @@ export class AppComponent implements OnInit {
     }
   }
 
-  updateImageTitle(index: number, title: string): void {
+  async updateImageTitle(index: number, title: string): Promise<void> {
     const image = this.galleryImages[index];
     if (!image) {
       return;
     }
 
     image.title = this.toShortDescription(title);
-    this.saveGallery();
+    if (!this.siteService.isConfigured || !image.id) {
+      this.saveGallery();
+      return;
+    }
+
+    try {
+      await this.siteService.updateGalleryTitle(image.id, image.title);
+      this.adminNotice = 'Image description saved.';
+    } catch (error) {
+      this.uploadError = 'That image description could not be saved.';
+    }
   }
 
-  removeImage(index: number): void {
+  async removeImage(index: number): Promise<void> {
+    const image = this.galleryImages[index];
+    if (!image) {
+      return;
+    }
+
+    this.uploadError = '';
+    if (this.siteService.isConfigured && image.id) {
+      this.isProcessingImages = true;
+      try {
+        await this.siteService.removeGalleryImage(image.id, image.storagePath || '');
+      } catch (error) {
+        this.uploadError = 'That image could not be removed.';
+        this.isProcessingImages = false;
+        return;
+      }
+      this.isProcessingImages = false;
+    }
+
     this.galleryImages = this.galleryImages.filter((_, itemIndex) => itemIndex !== index);
     this.refreshAdminGallery('Gallery refreshed after removing an image.');
-    this.uploadError = '';
   }
 
-  saveLocation(): void {
+  async saveLocation(): Promise<void> {
     const nextLocation = this.locationDraft.trim() || this.defaultLocation;
     this.workshopLocation = nextLocation;
     this.locationDraft = nextLocation;
-    localStorage.setItem(this.locationStorageKey, nextLocation);
+    await this.persistSettings();
   }
 
-  saveContactDetails(): void {
+  async saveContactDetails(): Promise<void> {
     const nextCallNumber = this.callNumberDraft.trim() || this.defaultCallNumber;
     const nextWhatsappNumber = this.whatsappNumberDraft.trim() || this.defaultWhatsappNumber;
     const nextEmailAddress = this.emailAddressDraft.trim() || this.defaultEmailAddress;
@@ -226,12 +266,85 @@ export class AppComponent implements OnInit {
     this.callNumberDraft = nextCallNumber;
     this.whatsappNumberDraft = nextWhatsappNumber;
     this.emailAddressDraft = nextEmailAddress;
-    localStorage.setItem(this.callNumberStorageKey, nextCallNumber);
-    localStorage.setItem(this.whatsappNumberStorageKey, nextWhatsappNumber);
-    localStorage.setItem(this.emailAddressStorageKey, nextEmailAddress);
+    await this.persistSettings();
   }
 
-  private loadGallery(): GalleryImage[] {
+  private loadLocalFallback(): void {
+    this.galleryImages = this.loadLocalGallery();
+    this.workshopLocation = localStorage.getItem(this.locationStorageKey) || this.defaultLocation;
+    this.locationDraft = this.workshopLocation;
+    this.callNumber = localStorage.getItem(this.callNumberStorageKey) || this.defaultCallNumber;
+    this.whatsappNumber = localStorage.getItem(this.whatsappNumberStorageKey) || this.defaultWhatsappNumber;
+    this.emailAddress = localStorage.getItem(this.emailAddressStorageKey) || this.defaultEmailAddress;
+    this.callNumberDraft = this.callNumber;
+    this.whatsappNumberDraft = this.whatsappNumber;
+    this.emailAddressDraft = this.emailAddress;
+  }
+
+  private async loadRemoteContent(): Promise<void> {
+    if (!this.siteService.isConfigured) {
+      return;
+    }
+
+    try {
+      const [settings, gallery] = await Promise.all([
+        this.siteService.loadSettings(),
+        this.siteService.loadGallery(this.maxImages)
+      ]);
+
+      if (settings) {
+        this.workshopLocation = settings.location || this.defaultLocation;
+        this.callNumber = settings.callNumber || this.defaultCallNumber;
+        this.whatsappNumber = settings.whatsappNumber || this.defaultWhatsappNumber;
+        this.emailAddress = settings.emailAddress || this.defaultEmailAddress;
+        this.locationDraft = this.workshopLocation;
+        this.callNumberDraft = this.callNumber;
+        this.whatsappNumberDraft = this.whatsappNumber;
+        this.emailAddressDraft = this.emailAddress;
+      }
+
+      if (gallery) {
+        this.galleryImages = gallery.map(image => ({
+          ...image,
+          title: this.toShortDescription(image.title)
+        }));
+      }
+    } catch (error) {
+      this.adminNotice = 'Using fallback content until Supabase is reachable.';
+    }
+  }
+
+  private async persistSettings(): Promise<void> {
+    if (!this.siteService.isConfigured) {
+      localStorage.setItem(this.locationStorageKey, this.workshopLocation);
+      localStorage.setItem(this.callNumberStorageKey, this.callNumber);
+      localStorage.setItem(this.whatsappNumberStorageKey, this.whatsappNumber);
+      localStorage.setItem(this.emailAddressStorageKey, this.emailAddress);
+      this.adminNotice = 'Site information saved in this browser.';
+      return;
+    }
+
+    try {
+      await this.siteService.saveSettings({
+        location: this.workshopLocation,
+        callNumber: this.callNumber,
+        whatsappNumber: this.whatsappNumber,
+        emailAddress: this.emailAddress
+      });
+      this.adminNotice = 'Site information saved for all visitors.';
+    } catch (error) {
+      this.uploadError = 'Site information could not be saved.';
+    }
+  }
+
+  private async uploadRemoteImages(files: File[], description: string): Promise<GalleryImage[]> {
+    const startIndex = this.galleryImages.length;
+    return Promise.all(files.map((file, index) =>
+      this.siteService.uploadGalleryImage(file, description, startIndex + index + 1)
+    ));
+  }
+
+  private loadLocalGallery(): GalleryImage[] {
     const storedGallery = localStorage.getItem(this.galleryStorageKey);
     const hasSavedGallery = localStorage.getItem(this.galleryInitializedStorageKey) === 'true';
     if (!storedGallery) {
@@ -242,6 +355,7 @@ export class AppComponent implements OnInit {
       const parsedGallery = JSON.parse(storedGallery) as GalleryImage[];
       if (Array.isArray(parsedGallery)) {
         return parsedGallery.filter(item => item && item.srcImg).map(item => ({
+          ...item,
           srcImg: item.srcImg,
           title: this.toShortDescription(item.title)
         })).slice(0, this.maxImages);
@@ -255,6 +369,10 @@ export class AppComponent implements OnInit {
   }
 
   private saveGallery(): void {
+    if (this.siteService.isConfigured) {
+      return;
+    }
+
     localStorage.setItem(this.galleryStorageKey, JSON.stringify(this.galleryImages.slice(0, this.maxImages)));
     localStorage.setItem(this.galleryInitializedStorageKey, 'true');
   }
