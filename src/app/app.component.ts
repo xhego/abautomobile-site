@@ -1,4 +1,4 @@
-import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { StoredGalleryImage, SupabaseSiteService } from './supabase-site.service';
 
 interface GalleryImage {
@@ -119,7 +119,10 @@ export class AppComponent implements OnDestroy, OnInit {
     password: ''
   };
 
-  constructor(private readonly siteService: SupabaseSiteService) {}
+  constructor(
+    private readonly siteService: SupabaseSiteService,
+    private readonly changeDetector: ChangeDetectorRef
+  ) {}
 
   ngOnInit(): void {
     this.setCurrentPage();
@@ -262,11 +265,13 @@ export class AppComponent implements OnDestroy, OnInit {
 
     if (!username || !this.login.password) {
       this.signInError = 'Enter the admin email and password.';
+      this.renderState();
       return;
     }
 
     this.isSigningIn = true;
     this.startSignInSlowTimer();
+    this.renderState();
 
     try {
       if (!this.siteService.isConfigured) {
@@ -284,13 +289,16 @@ export class AppComponent implements OnDestroy, OnInit {
       this.login.password = '';
       this.signInStatus = '';
       this.resetAdminInactivityTimer();
+      this.renderState();
     } catch (error) {
       this.signInError = error instanceof Error && error.message.indexOf('taking too long') > -1
         ? error.message
         : 'Incorrect sign-in details.';
+      this.renderState();
     } finally {
       this.clearSignInSlowTimer();
       this.isSigningIn = false;
+      this.renderState();
     }
   }
 
@@ -302,6 +310,7 @@ export class AppComponent implements OnDestroy, OnInit {
     this.uploadError = '';
     this.adminNotice = '';
     this.signInStatus = '';
+    this.renderState();
 
     try {
       await this.withTimeout(
@@ -311,6 +320,7 @@ export class AppComponent implements OnDestroy, OnInit {
       );
     } catch (error) {
       this.signInError = 'Signed out locally. Please refresh if admin access still appears active.';
+      this.renderState();
     }
   }
 
@@ -642,6 +652,7 @@ export class AppComponent implements OnDestroy, OnInit {
     this.clearSignInSlowTimer();
     this.signInSlowTimer = setTimeout(() => {
       this.signInStatus = 'Still connecting to secure admin sign in...';
+      this.renderState();
     }, this.slowSignInNoticeMs);
   }
 
@@ -664,6 +675,11 @@ export class AppComponent implements OnDestroy, OnInit {
 
     await this.signOut();
     this.signInError = 'Signed out after 10 minutes of inactivity.';
+    this.renderState();
+  }
+
+  private renderState(): void {
+    this.changeDetector.detectChanges();
   }
 
   private readImageFile(file: File, description: string): Promise<GalleryImage> {
