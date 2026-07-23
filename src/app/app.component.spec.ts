@@ -91,6 +91,23 @@ describe('AppComponent', () => {
     expect(compiled.textContent).toContain('Back to home');
   });
 
+  it('should allow the mechanic to reveal and hide the sign in password', () => {
+    history.pushState({}, '', '/signin');
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const passwordInput = compiled.querySelector('input[name="password"]') as HTMLInputElement;
+    const toggle = compiled.querySelector('.password-toggle') as HTMLButtonElement;
+
+    expect(passwordInput.type).toBe('password');
+    toggle.click();
+    fixture.detectChanges();
+    expect(passwordInput.type).toBe('text');
+    toggle.click();
+    fixture.detectChanges();
+    expect(passwordInput.type).toBe('password');
+  });
+
   it('should cap edited image descriptions at 50 characters', () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;

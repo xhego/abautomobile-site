@@ -536,6 +536,43 @@ footer a:hover {
   width: 100%;
 }
 
+.password-field {
+  display: block;
+  position: relative;
+}
+
+.password-field input {
+  padding-right: 48px;
+}
+
+.password-toggle {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  color: #5d6871;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 17px;
+  height: 38px;
+  justify-content: center;
+  padding: 0;
+  position: absolute;
+  right: 5px;
+  top: 4px;
+  width: 38px;
+}
+
+.password-toggle:hover,
+.password-toggle:focus-visible {
+  color: #c9871c;
+  outline: none;
+}
+
+.password-toggle:disabled {
+  cursor: not-allowed;
+  opacity: 0.45;
+}
+
 .form-message,
 .form-success {
   font-weight: 800;

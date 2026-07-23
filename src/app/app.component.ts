@@ -98,6 +98,7 @@ export class AppComponent implements OnInit {
   descriptionDraft = '';
   isSigningIn = false;
   isProcessingImages = false;
+  showPassword = false;
   isGalleryPage = false;
   isSignInPage = false;
   activeSection = '';

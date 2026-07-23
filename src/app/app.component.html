@@ -183,7 +183,12 @@
           </label>
           <label>
             Password
-            <input type="password" name="password" [(ngModel)]="login.password" autocomplete="current-password" [disabled]="isSigningIn" required>
+            <span class="password-field">
+              <input [type]="showPassword ? 'text' : 'password'" name="password" [(ngModel)]="login.password" autocomplete="current-password" [disabled]="isSigningIn" required>
+              <button class="password-toggle" type="button" (click)="showPassword = !showPassword" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'" [attr.aria-pressed]="showPassword" [disabled]="isSigningIn">
+                <i class="fa" [ngClass]="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+              </button>
+            </span>
           </label>
           <button type="submit" [disabled]="isSigningIn">
             <span class="loader-dot button-loader" *ngIf="isSigningIn"></span>
