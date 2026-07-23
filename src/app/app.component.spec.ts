@@ -57,7 +57,7 @@ describe('AppComponent', () => {
     expect(app).toBeTruthy();
   });
 
-  it('should keep the admin gallery limit at 50 images with a 10 image landing preview', () => {
+  it('should keep the admin gallery limit at 50 images with a 5 image landing preview', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const app = fixture.componentInstance;
@@ -70,16 +70,25 @@ describe('AppComponent', () => {
   });
 
 
-  it('should hide mechanic sign in until the nav action is clicked', async () => {
+  it('should keep mechanic sign in off the landing page', () => {
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
-    let compiled = fixture.nativeElement as HTMLElement;
-    expect(compiled.querySelector('#admin')).toBeNull();
+    const compiled = fixture.nativeElement as HTMLElement;
 
-    fixture.componentInstance.openAdmin();
-    await fixture.whenStable();
+    expect(compiled.querySelector('#admin')).toBeNull();
+    expect(compiled.querySelector('.signin-page-main')).toBeNull();
+  });
+
+  it('should render sign in on its own page with a home link', () => {
+    history.pushState({}, '', '/signin');
+    const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
-    expect(fixture.componentInstance.showAdmin).toBeTrue();
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(fixture.componentInstance.isSignInPage).toBeTrue();
+    expect(compiled.querySelector('.signin-page-main')).not.toBeNull();
+    expect(compiled.querySelector('#admin')).not.toBeNull();
+    expect(compiled.textContent).toContain('Back to home');
   });
 
   it('should cap edited image descriptions at 50 characters', () => {
@@ -146,6 +155,15 @@ describe('AppComponent', () => {
     expect(app.isGalleryPage).toBeTrue();
     expect(compiled.querySelector('.gallery-page-main')).not.toBeNull();
     expect(compiled.querySelector('.preview-gallery-grid')).toBeNull();
+  });
+
+  it('should not include gallery in the main navigation', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const navText = compiled.querySelector('.nav-links')?.textContent || '';
+    expect(navText).not.toContain('Gallery');
   });
 
   it('should keep removed images removed after reload', () => {

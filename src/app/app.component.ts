@@ -1,4 +1,4 @@
-import { Component, OnInit } from '@angular/core';
+import { Component, HostListener, OnInit } from '@angular/core';
 import { SupabaseSiteService } from './supabase-site.service';
 
 interface GalleryImage {
@@ -23,7 +23,7 @@ interface ServiceItem {
 })
 export class AppComponent implements OnInit {
   readonly maxImages = 50;
-  readonly landingImageLimit = 10;
+  readonly landingImageLimit = 5;
   readonly descriptionLimit = 50;
   readonly currentYear = new Date().getFullYear();
   readonly defaultLocation = 'Meyerton, Gauteng, South Africa';
@@ -99,6 +99,8 @@ export class AppComponent implements OnInit {
   isSigningIn = false;
   isProcessingImages = false;
   isGalleryPage = false;
+  isSignInPage = false;
+  activeSection = '';
   adminRefreshKey = 0;
   activeGalleryIndex: number | null = null;
   login = {
@@ -109,9 +111,10 @@ export class AppComponent implements OnInit {
   constructor(private readonly siteService: SupabaseSiteService) {}
 
   ngOnInit(): void {
-    this.isGalleryPage = this.isCurrentGalleryPage();
+    this.setCurrentPage();
     this.loadLocalFallback();
     void this.loadRemoteContent();
+    setTimeout(() => this.updateActiveSection());
   }
 
   get mapUrl(): string {
@@ -147,13 +150,30 @@ export class AppComponent implements OnInit {
       event.preventDefault();
     }
 
-    if (this.isGalleryPage) {
-      window.location.href = '/#admin';
+    if (!this.isSignInPage) {
+      window.location.href = '/signin';
       return;
     }
 
     this.showAdmin = true;
-    setTimeout(() => document.getElementById('admin')?.scrollIntoView({ behavior: 'smooth' }));
+  }
+
+  isActiveNav(section: string): boolean {
+    if (section === 'signin') {
+      return this.isSignInPage;
+    }
+
+    return !this.isGalleryPage && !this.isSignInPage && this.activeSection === section;
+  }
+
+  @HostListener('window:scroll')
+  onWindowScroll(): void {
+    this.updateActiveSection();
+  }
+
+  @HostListener('window:hashchange')
+  onHashChange(): void {
+    setTimeout(() => this.updateActiveSection());
   }
 
   async signIn(): Promise<void> {
@@ -460,7 +480,29 @@ export class AppComponent implements OnInit {
     return cleanedNumber.startsWith('0') ? '27' + cleanedNumber.slice(1) : cleanedNumber;
   }
 
-  private isCurrentGalleryPage(): boolean {
-    return window.location.pathname.replace(/\/$/, '') === '/gallery';
+  private setCurrentPage(): void {
+    const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
+    this.isGalleryPage = currentPath === '/gallery';
+    this.isSignInPage = currentPath === '/signin';
+    this.showAdmin = this.isSignInPage;
+  }
+
+  private updateActiveSection(): void {
+    if (this.isGalleryPage || this.isSignInPage) {
+      this.activeSection = '';
+      return;
+    }
+
+    const sections = ['services', 'work', 'location', 'terms'];
+    const activeOffset = 170;
+    const currentSection = sections.reduce((active, sectionId) => {
+      const section = document.getElementById(sectionId);
+      if (!section) {
+        return active;
+      }
+
+      return section.getBoundingClientRect().top <= activeOffset ? sectionId : active;
+    }, '');
+    this.activeSection = currentSection || (window.location.hash ? window.location.hash.replace('#', '') : '');
   }
 }

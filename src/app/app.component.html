@@ -8,17 +8,16 @@
       </span>
     </a>
     <div class="nav-links" aria-label="Primary navigation">
-      <a href="/#services">Services</a>
-      <a href="/#work">Work</a>
-      <a href="/gallery">Gallery</a>
-      <a href="/#location">Location</a>
-      <a href="/#terms">Terms</a>
-      <a href="/#admin" (click)="openAdmin($event)">Sign in</a>
+      <a href="/#services" [class.active]="isActiveNav('services')">Services</a>
+      <a href="/#work" [class.active]="isActiveNav('work')">Work</a>
+      <a href="/#location" [class.active]="isActiveNav('location')">Location</a>
+      <a href="/#terms" [class.active]="isActiveNav('terms')">Terms</a>
+      <a href="/signin" [class.active]="isActiveNav('signin')">Sign in</a>
       <a class="call-link" [href]="callHref"><i class="fa fa-phone"></i> {{ callNumber }}</a>
     </div>
   </nav>
 
-  <header class="hero" *ngIf="!isGalleryPage">
+  <header class="hero" *ngIf="!isGalleryPage && !isSignInPage">
     <div class="hero-content">
       <p class="eyebrow">Professional mobile mechanic in Meyerton and surrounding Gauteng areas</p>
       <h1>Clean, reliable vehicle repairs where you need them.</h1>
@@ -35,7 +34,7 @@
     </div>
   </header>
 
-  <main *ngIf="!isGalleryPage">
+  <main *ngIf="!isGalleryPage && !isSignInPage">
     <section class="section intro-section" id="services">
       <div class="section-heading">
         <p class="eyebrow">Workshop services</p>
@@ -165,11 +164,15 @@
       <p class="terms-note">This website summary is intended to support clear communication with customers and does not remove any rights or responsibilities that apply under South African law.</p>
     </section>
 
-    <section class="section admin-section" id="admin" *ngIf="showAdmin || isSignedIn">
+  </main>
+
+  <main class="signin-page-main" *ngIf="isSignInPage">
+    <section class="section admin-section" id="admin">
       <div class="admin-copy">
         <p class="eyebrow">Mechanic sign in</p>
         <h2>Manage site images and workshop details.</h2>
         <p>Signed-in updates are saved to Supabase for all visitors. Keep the gallery lean by staying under the {{ maxImages }} image limit.</p>
+        <a class="gallery-link" href="/">Back to home</a>
       </div>
 
       <div class="admin-panel" *ngIf="!isSignedIn">
@@ -265,7 +268,7 @@
       <div class="section-heading compact-heading">
         <p class="eyebrow">All workshop photos</p>
         <h1>Full gallery</h1>
-        <p>{{ galleryImages.length }} repair photo{{ galleryImages.length === 1 ? '' : 's' }} live on the site.</p>
+        <p>Recent workshop and mobile repair photos from AB's Auto Mobile Mechanic (Pty) Ltd.</p>
         <a class="gallery-link" href="/">Back to home</a>
       </div>
       <div class="gallery-grid full-gallery-grid">

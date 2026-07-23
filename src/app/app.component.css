@@ -93,7 +93,14 @@ footer a:hover {
   color: #edf1f4;
   font-size: 14px;
   font-weight: 700;
+  border-bottom: 2px solid transparent;
+  padding-bottom: 4px;
   text-decoration: none;
+}
+
+.nav-links a.active {
+  border-bottom-color: #f2b84b;
+  color: #f2b84b;
 }
 
 .call-link {
@@ -219,12 +226,14 @@ footer a:hover {
   font-size: 40px;
 }
 
-.gallery-page-main {
+.gallery-page-main,
+.signin-page-main {
   min-height: calc(100vh - 72px);
   padding-top: 122px;
 }
 
-.gallery-page-main h1 {
+.gallery-page-main h1,
+.signin-page-main h1 {
   color: #172029;
   font-size: 46px;
   font-weight: 800;
@@ -833,6 +842,10 @@ footer a {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
 
+  .preview-gallery-grid .work-card:nth-child(n+4) {
+    display: none;
+  }
+
   .admin-gallery {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -875,11 +888,13 @@ footer a {
 
   .hero h1,
   .section h2,
-  .gallery-page-main h1 {
+  .gallery-page-main h1,
+  .signin-page-main h1 {
     font-size: 34px;
   }
 
-  .gallery-page-main {
+  .gallery-page-main,
+  .signin-page-main {
     padding-top: 0;
   }
 
