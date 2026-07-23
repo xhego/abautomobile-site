@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { fakeAsync, TestBed, tick } from '@angular/core/testing';
+import { fakeAsync, flushMicrotasks, TestBed, tick } from '@angular/core/testing';
 import { RouterModule } from '@angular/router';
 import { AppComponent } from './app.component';
 import { SupabaseSiteService } from './supabase-site.service';
@@ -28,6 +28,7 @@ describe('AppComponent', () => {
     history.pushState({}, '', '/');
     localStorage.clear();
     supabaseMock.signIn.calls.reset();
+    supabaseMock.isConfigured = false;
     supabaseMock.signOut.calls.reset();
     supabaseMock.loadSettings.calls.reset();
     supabaseMock.saveSettings.calls.reset();
@@ -107,6 +108,28 @@ describe('AppComponent', () => {
     fixture.detectChanges();
     expect(passwordInput.type).toBe('password');
   });
+
+  it('should stop the sign in loader if remote sign in does not return', fakeAsync(() => {
+    supabaseMock.isConfigured = true;
+    supabaseMock.signIn.and.returnValue(new Promise(() => undefined));
+    history.pushState({}, '', '/signin');
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const app = fixture.componentInstance;
+    app.login = {
+      username: 'abautomobile@gmail.com',
+      password: 'workshop2026'
+    };
+
+    void app.signIn();
+    expect(app.isSigningIn).toBeTrue();
+    tick(25000);
+    flushMicrotasks();
+
+    expect(app.isSigningIn).toBeFalse();
+    expect(app.isSignedIn).toBeFalse();
+    expect(app.signInError).toContain('taking too long');
+  }));
 
   it('should cap edited image descriptions at 50 characters', () => {
     const fixture = TestBed.createComponent(AppComponent);

@@ -38,6 +38,7 @@ export class AppComponent implements OnInit {
   private readonly emailAddressStorageKey = 'abautomobile-email-address';
   private readonly adminUsername = 'abautomobile@gmail.com';
   private readonly adminPassword = 'workshop2026';
+  private readonly signInTimeoutMs = 25000;
 
   services: ServiceItem[] = [
     {
@@ -235,7 +236,11 @@ export class AppComponent implements OnInit {
 
     try {
       if (this.siteService.isConfigured) {
-        await this.siteService.signIn(username, this.login.password);
+        await this.withTimeout(
+          this.siteService.signIn(username, this.login.password),
+          this.signInTimeoutMs,
+          'Sign in is taking too long. Please check the connection and try again.'
+        );
       } else if (username.toLowerCase() !== this.adminUsername || this.login.password !== this.adminPassword) {
         this.signInError = 'Incorrect sign-in details.';
         return;
@@ -245,7 +250,9 @@ export class AppComponent implements OnInit {
       this.showAdmin = true;
       this.login.password = '';
     } catch (error) {
-      this.signInError = 'Incorrect sign-in details.';
+      this.signInError = error instanceof Error && error.message.indexOf('taking too long') > -1
+        ? error.message
+        : 'Incorrect sign-in details.';
     } finally {
       this.isSigningIn = false;
     }
@@ -530,6 +537,19 @@ export class AppComponent implements OnInit {
   private toWhatsappHref(value: string): string {
     const cleanedNumber = value.replace(/\D/g, '');
     return cleanedNumber.startsWith('0') ? '27' + cleanedNumber.slice(1) : cleanedNumber;
+  }
+
+  private withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {
+    let timeoutId: ReturnType<typeof setTimeout> | undefined;
+    const timeoutPromise = new Promise<T>((_, reject) => {
+      timeoutId = setTimeout(() => reject(new Error(errorMessage)), timeoutMs);
+    });
+
+    return Promise.race([promise, timeoutPromise]).finally(() => {
+      if (timeoutId) {
+        clearTimeout(timeoutId);
+      }
+    });
   }
 
   private scrollToSection(section: string): void {
