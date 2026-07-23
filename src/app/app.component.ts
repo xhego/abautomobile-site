@@ -114,7 +114,10 @@ export class AppComponent implements OnInit {
     this.setCurrentPage();
     this.loadLocalFallback();
     void this.loadRemoteContent();
-    setTimeout(() => this.updateActiveSection());
+    setTimeout(() => {
+      this.scrollToCurrentHash();
+      this.updateActiveSection();
+    });
   }
 
   get mapUrl(): string {
@@ -167,7 +170,7 @@ export class AppComponent implements OnInit {
     window.history.pushState({}, '', '/#' + section);
 
     setTimeout(() => {
-      document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      this.scrollToSection(section);
       this.activeSection = section;
     });
   }
@@ -208,7 +211,10 @@ export class AppComponent implements OnInit {
   @HostListener('window:hashchange')
   onHashChange(): void {
     this.setCurrentPage();
-    setTimeout(() => this.updateActiveSection());
+    setTimeout(() => {
+      this.scrollToCurrentHash();
+      this.updateActiveSection();
+    });
   }
 
   @HostListener('window:popstate')
@@ -519,6 +525,29 @@ export class AppComponent implements OnInit {
   private toWhatsappHref(value: string): string {
     const cleanedNumber = value.replace(/\D/g, '');
     return cleanedNumber.startsWith('0') ? '27' + cleanedNumber.slice(1) : cleanedNumber;
+  }
+
+  private scrollToSection(section: string): void {
+    const sectionElement = document.getElementById(section);
+    if (!sectionElement) {
+      return;
+    }
+
+    const topbar = document.querySelector('.topbar');
+    const navHeight = topbar?.getBoundingClientRect().height || 0;
+    const offset = navHeight > 0 && topbar && window.getComputedStyle(topbar).position === 'fixed'
+      ? navHeight + 24
+      : 18;
+    const top = sectionElement.getBoundingClientRect().top + window.scrollY - offset;
+    window.scrollTo({ top: Math.max(top, 0), behavior: 'smooth' });
+  }
+
+  private scrollToCurrentHash(): void {
+    if (this.isGalleryPage || this.isSignInPage || !window.location.hash) {
+      return;
+    }
+
+    this.scrollToSection(window.location.hash.replace('#', ''));
   }
 
   private setCurrentPage(): void {
