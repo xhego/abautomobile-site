@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { TestBed } from '@angular/core/testing';
+import { fakeAsync, TestBed, tick } from '@angular/core/testing';
 import { RouterModule } from '@angular/router';
 import { AppComponent } from './app.component';
 import { SupabaseSiteService } from './supabase-site.service';
@@ -156,6 +156,42 @@ describe('AppComponent', () => {
     expect(compiled.querySelector('.gallery-page-main')).not.toBeNull();
     expect(compiled.querySelector('.preview-gallery-grid')).toBeNull();
   });
+
+  it('should return from gallery to a home section when a section nav link is clicked', fakeAsync(() => {
+    history.pushState({}, '', '/gallery');
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+
+    const app = fixture.componentInstance;
+    app.navigateToSection('work', new MouseEvent('click'));
+    fixture.detectChanges();
+    tick();
+
+    expect(window.location.pathname).toBe('/');
+    expect(window.location.hash).toBe('#work');
+    expect(app.isGalleryPage).toBeFalse();
+    expect(app.isSignInPage).toBeFalse();
+    expect(app.activeSection).toBe('work');
+    expect((fixture.nativeElement as HTMLElement).querySelector('#work')).not.toBeNull();
+  }));
+
+  it('should return from sign in to a home section when a section nav link is clicked', fakeAsync(() => {
+    history.pushState({}, '', '/signin');
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+
+    const app = fixture.componentInstance;
+    app.navigateToSection('terms', new MouseEvent('click'));
+    fixture.detectChanges();
+    tick();
+
+    expect(window.location.pathname).toBe('/');
+    expect(window.location.hash).toBe('#terms');
+    expect(app.isSignInPage).toBeFalse();
+    expect(app.showAdmin).toBeFalse();
+    expect(app.activeSection).toBe('terms');
+    expect((fixture.nativeElement as HTMLElement).querySelector('#terms')).not.toBeNull();
+  }));
 
   it('should not include gallery in the main navigation', () => {
     const fixture = TestBed.createComponent(AppComponent);

@@ -150,12 +150,46 @@ export class AppComponent implements OnInit {
       event.preventDefault();
     }
 
-    if (!this.isSignInPage) {
-      window.location.href = '/signin';
-      return;
-    }
+    this.navigateToPage('signin');
 
     this.showAdmin = true;
+  }
+
+  navigateToSection(section: string, event?: Event): void {
+    if (event) {
+      event.preventDefault();
+    }
+
+    this.isGalleryPage = false;
+    this.isSignInPage = false;
+    this.showAdmin = false;
+    this.activeSection = section;
+    window.history.pushState({}, '', '/#' + section);
+
+    setTimeout(() => {
+      document.getElementById(section)?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      this.activeSection = section;
+    });
+  }
+
+  navigateToPage(page: 'home' | 'gallery' | 'signin', event?: Event): void {
+    if (event) {
+      event.preventDefault();
+    }
+
+    this.isGalleryPage = page === 'gallery';
+    this.isSignInPage = page === 'signin';
+    this.showAdmin = this.isSignInPage;
+    this.activeSection = '';
+
+    const nextPath = page === 'home' ? '/' : '/' + page;
+    window.history.pushState({}, '', nextPath);
+
+    if (page === 'home') {
+      setTimeout(() => window.scrollTo({ top: 0, behavior: 'smooth' }));
+    } else {
+      setTimeout(() => window.scrollTo({ top: 0 }));
+    }
   }
 
   isActiveNav(section: string): boolean {
@@ -173,6 +207,13 @@ export class AppComponent implements OnInit {
 
   @HostListener('window:hashchange')
   onHashChange(): void {
+    this.setCurrentPage();
+    setTimeout(() => this.updateActiveSection());
+  }
+
+  @HostListener('window:popstate')
+  onPopState(): void {
+    this.setCurrentPage();
     setTimeout(() => this.updateActiveSection());
   }
 

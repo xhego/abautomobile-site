@@ -1,6 +1,6 @@
 <div class="site-shell" id="page-top">
   <nav class="topbar">
-    <a class="brand" href="/" aria-label="AB's Auto Mobile Mechanic (Pty) Ltd home">
+    <a class="brand" href="/" (click)="navigateToPage('home', $event)" aria-label="AB's Auto Mobile Mechanic (Pty) Ltd home">
       <img class="brand-logo" src="assets/img/ab-auto-logo.png" alt="AB's Auto Mobile Mechanic (Pty) Ltd logo">
       <span>
         <strong>AB's Auto Mobile Mechanic (Pty) Ltd</strong>
@@ -8,11 +8,11 @@
       </span>
     </a>
     <div class="nav-links" aria-label="Primary navigation">
-      <a href="/#services" [class.active]="isActiveNav('services')">Services</a>
-      <a href="/#work" [class.active]="isActiveNav('work')">Work</a>
-      <a href="/#location" [class.active]="isActiveNav('location')">Location</a>
-      <a href="/#terms" [class.active]="isActiveNav('terms')">Terms</a>
-      <a href="/signin" [class.active]="isActiveNav('signin')">Sign in</a>
+      <a href="/#services" (click)="navigateToSection('services', $event)" [class.active]="isActiveNav('services')">Services</a>
+      <a href="/#work" (click)="navigateToSection('work', $event)" [class.active]="isActiveNav('work')">Work</a>
+      <a href="/#location" (click)="navigateToSection('location', $event)" [class.active]="isActiveNav('location')">Location</a>
+      <a href="/#terms" (click)="navigateToSection('terms', $event)" [class.active]="isActiveNav('terms')">Terms</a>
+      <a href="/signin" (click)="navigateToPage('signin', $event)" [class.active]="isActiveNav('signin')">Sign in</a>
       <a class="call-link" [href]="callHref"><i class="fa fa-phone"></i> {{ callNumber }}</a>
     </div>
   </nav>
@@ -68,7 +68,7 @@
         <p class="eyebrow">Recent work</p>
         <h2>Gallery</h2>
         <p>Recent workshop and mobile repair photos from AB's Auto Mobile Mechanic (Pty) Ltd.</p>
-        <a class="gallery-link" href="/gallery">View full gallery</a>
+        <a class="gallery-link" href="/gallery" (click)="navigateToPage('gallery', $event)">View full gallery</a>
       </div>
       <div class="gallery-grid preview-gallery-grid">
         <button class="work-card gallery-button" type="button" *ngFor="let image of landingGalleryImages; let i = index" (click)="openGalleryImage(i)">
@@ -172,7 +172,7 @@
         <p class="eyebrow">Mechanic sign in</p>
         <h2>Manage site images and workshop details.</h2>
         <p>Signed-in updates are saved to Supabase for all visitors. Keep the gallery lean by staying under the {{ maxImages }} image limit.</p>
-        <a class="gallery-link" href="/">Back to home</a>
+        <a class="gallery-link" href="/" (click)="navigateToPage('home', $event)">Back to home</a>
       </div>
 
       <div class="admin-panel" *ngIf="!isSignedIn">
@@ -269,7 +269,7 @@
         <p class="eyebrow">All workshop photos</p>
         <h1>Full gallery</h1>
         <p>Recent workshop and mobile repair photos from AB's Auto Mobile Mechanic (Pty) Ltd.</p>
-        <a class="gallery-link" href="/">Back to home</a>
+        <a class="gallery-link" href="/" (click)="navigateToPage('home', $event)">Back to home</a>
       </div>
       <div class="gallery-grid full-gallery-grid">
         <button class="work-card gallery-button" type="button" *ngFor="let image of galleryImages; let i = index" (click)="openGalleryImage(i)">
