@@ -399,4 +399,17 @@ describe('AppComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('.brand strong')?.textContent).toContain("AB's Auto Mobile Mechanic (Pty) Ltd");
   });
+
+  it('should include expanded motor repair terms clauses', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+    const termsText = ((fixture.nativeElement as HTMLElement).querySelector('#terms')?.textContent || '').replace(/\s+/g, ' ');
+
+    expect(termsText).toContain('signature, telephone, SMS, WhatsApp, email');
+    expect(termsText).toContain('same effect as signed authorisation');
+    expect(termsText).toContain('photograph the vehicle');
+    expect(termsText).toContain('supplier delays, courier delays, weather, power failures');
+    expect(termsText).toContain('unsafe, unlawful');
+    expect(termsText).toContain('extended period without communication');
+  });
 });
