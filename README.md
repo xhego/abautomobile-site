@@ -16,6 +16,17 @@ Admin images and contact details are designed to persist through Supabase.
 
 The `gallery` bucket is public for image viewing. Table and storage writes require an authenticated Supabase user.
 
+## Workshop management setup
+
+The Supabase workshop management specification is documented in `docs/workshop-management-supabase-spec.md`.
+
+When you are ready to create the full workshop database foundation, open the Supabase SQL editor and run:
+
+1. `supabase-setup.sql`
+2. `supabase-workshop-management.sql`
+
+The workshop setup creates private operational tables, RLS permission helpers, status/payment functions, scheduling guards, and private Storage buckets for vehicle photos and workshop documents.
+
 ## Development server
 
 Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
