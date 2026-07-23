@@ -574,13 +574,18 @@ footer a:hover {
 }
 
 .form-message,
-.form-success {
+.form-success,
+.form-status {
   font-weight: 800;
   margin: 4px 0 0;
 }
 
 .form-message {
   color: #a13b27 !important;
+}
+
+.form-status {
+  color: #5d6871 !important;
 }
 
 .form-success {

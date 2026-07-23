@@ -1,5 +1,5 @@
 import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
-import { SupabaseSiteService } from './supabase-site.service';
+import { StoredGalleryImage, SupabaseSiteService } from './supabase-site.service';
 
 interface GalleryImage {
   id?: string;
@@ -36,11 +36,13 @@ export class AppComponent implements OnDestroy, OnInit {
   private readonly callNumberStorageKey = 'abautomobile-call-number';
   private readonly whatsappNumberStorageKey = 'abautomobile-whatsapp-number';
   private readonly emailAddressStorageKey = 'abautomobile-email-address';
-  private readonly adminUsername = 'abautomobile@gmail.com';
-  private readonly adminPassword = 'workshop2026';
-  private readonly signInTimeoutMs = 25000;
+  private readonly signInTimeoutMs = 22000;
   private readonly adminInactivityMs = 10 * 60 * 1000;
+  private readonly slowSignInNoticeMs = 6000;
+  private readonly maxUploadBytes = 5 * 1024 * 1024;
+  private readonly allowedImageTypes = new Set(['image/jpeg', 'image/png', 'image/webp', 'image/gif']);
   private adminInactivityTimer: ReturnType<typeof setTimeout> | undefined;
+  private signInSlowTimer: ReturnType<typeof setTimeout> | undefined;
 
   services: ServiceItem[] = [
     {
@@ -96,6 +98,7 @@ export class AppComponent implements OnDestroy, OnInit {
   isSignedIn = false;
   showAdmin = false;
   signInError = '';
+  signInStatus = '';
   uploadError = '';
   adminNotice = '';
   descriptionDraft = '';
@@ -130,6 +133,7 @@ export class AppComponent implements OnDestroy, OnInit {
 
   ngOnDestroy(): void {
     this.clearAdminInactivityTimer();
+    this.clearSignInSlowTimer();
   }
 
   get mapUrl(): string {
@@ -248,43 +252,60 @@ export class AppComponent implements OnDestroy, OnInit {
   }
 
   async signIn(): Promise<void> {
+    if (this.isSigningIn) {
+      return;
+    }
+
     const username = this.login.username.trim();
     this.signInError = '';
+    this.signInStatus = '';
     this.isSigningIn = true;
+    this.startSignInSlowTimer();
 
     try {
-      if (this.siteService.isConfigured) {
-        await this.withTimeout(
-          this.siteService.signIn(username, this.login.password),
-          this.signInTimeoutMs,
-          'Sign in is taking too long. Please check the connection and try again.'
-        );
-      } else if (username.toLowerCase() !== this.adminUsername || this.login.password !== this.adminPassword) {
-        this.signInError = 'Incorrect sign-in details.';
+      if (!this.siteService.isConfigured) {
+        this.signInError = 'Admin sign in is not configured.';
         return;
       }
 
+      await this.withTimeout(
+        this.siteService.signIn(username, this.login.password),
+        this.signInTimeoutMs,
+        'Sign in is taking too long. Please check the connection and try again.'
+      );
       this.isSignedIn = true;
       this.showAdmin = true;
       this.login.password = '';
+      this.signInStatus = '';
       this.resetAdminInactivityTimer();
     } catch (error) {
       this.signInError = error instanceof Error && error.message.indexOf('taking too long') > -1
         ? error.message
         : 'Incorrect sign-in details.';
     } finally {
+      this.clearSignInSlowTimer();
       this.isSigningIn = false;
     }
   }
 
   async signOut(): Promise<void> {
     this.clearAdminInactivityTimer();
-    await this.siteService.signOut();
     this.isSignedIn = false;
     this.showAdmin = false;
     this.login = { username: '', password: '' };
     this.uploadError = '';
     this.adminNotice = '';
+    this.signInStatus = '';
+
+    try {
+      await this.withTimeout(
+        this.siteService.signOut(),
+        this.signInTimeoutMs,
+        'Sign out is taking too long.'
+      );
+    } catch (error) {
+      this.signInError = 'Signed out locally. Please refresh if admin access still appears active.';
+    }
   }
 
   markAdminActivity(): void {
@@ -306,7 +327,10 @@ export class AppComponent implements OnDestroy, OnInit {
   async onFilesSelected(event: Event): Promise<void> {
     this.markAdminActivity();
     const input = event.target as HTMLInputElement;
-    const files = Array.from(input.files || []).filter(file => file.type.indexOf('image/') === 0);
+    const selectedInputFiles = Array.from(input.files || []);
+    const rejectedTypeCount = selectedInputFiles.filter(file => !this.allowedImageTypes.has(file.type)).length;
+    const rejectedSizeCount = selectedInputFiles.filter(file => this.allowedImageTypes.has(file.type) && file.size > this.maxUploadBytes).length;
+    const files = selectedInputFiles.filter(file => this.allowedImageTypes.has(file.type) && file.size <= this.maxUploadBytes);
     const availableSlots = this.maxImages - this.galleryImages.length;
     this.uploadError = '';
     this.adminNotice = '';
@@ -318,7 +342,9 @@ export class AppComponent implements OnDestroy, OnInit {
     }
 
     if (!files.length) {
-      this.uploadError = 'Choose an image file to add.';
+      this.uploadError = rejectedTypeCount || rejectedSizeCount
+        ? 'Use JPG, PNG, WebP or GIF images under 5 MB.'
+        : 'Choose an image file to add.';
       input.value = '';
       return;
     }
@@ -329,13 +355,27 @@ export class AppComponent implements OnDestroy, OnInit {
     this.isProcessingImages = true;
 
     try {
-      const images = this.siteService.isConfigured
+      const uploadResult = this.siteService.isConfigured
         ? await this.uploadRemoteImages(selectedFiles, description)
-        : await Promise.all(selectedFiles.map(file => this.readImageFile(file, description)));
+        : {
+            images: await Promise.all(selectedFiles.map(file => this.readImageFile(file, description))),
+            failedCount: 0
+          };
+      const images = uploadResult.images;
+      if (!images.length && uploadResult.failedCount > 0) {
+        throw new Error('All selected image uploads failed.');
+      }
+
       this.galleryImages = this.galleryImages.concat(images).slice(0, this.maxImages);
       this.descriptionDraft = '';
       this.refreshAdminGallery('Gallery refreshed with ' + images.length + ' new image' + (images.length === 1 ? '.' : 's.'));
-      this.uploadError = skippedCount > 0 ? 'Only the first ' + availableSlots + ' images were added to keep the gallery at ' + this.maxImages + '.' : '';
+      const notices = [
+        uploadResult.failedCount > 0 ? uploadResult.failedCount + ' image' + (uploadResult.failedCount === 1 ? ' could' : 's could') + ' not be added.' : '',
+        skippedCount > 0 ? 'Only the first ' + availableSlots + ' images were added to keep the gallery at ' + this.maxImages + '.' : '',
+        rejectedTypeCount > 0 ? rejectedTypeCount + ' unsupported file' + (rejectedTypeCount === 1 ? ' was' : 's were') + ' skipped.' : '',
+        rejectedSizeCount > 0 ? rejectedSizeCount + ' file' + (rejectedSizeCount === 1 ? ' was' : 's were') + ' over 5 MB and skipped.' : ''
+      ].filter(Boolean);
+      this.uploadError = notices.join(' ');
     } catch (error) {
       this.uploadError = 'One of those images could not be added.';
     } finally {
@@ -526,11 +566,19 @@ export class AppComponent implements OnDestroy, OnInit {
     }
   }
 
-  private async uploadRemoteImages(files: File[], description: string): Promise<GalleryImage[]> {
+  private async uploadRemoteImages(files: File[], description: string): Promise<{ images: GalleryImage[]; failedCount: number }> {
     const startIndex = this.galleryImages.length;
-    return Promise.all(files.map((file, index) =>
+    const results = await Promise.allSettled(files.map((file, index) =>
       this.siteService.uploadGalleryImage(file, description, startIndex + index + 1)
     ));
+    const images = results
+      .filter((result): result is PromiseFulfilledResult<StoredGalleryImage> => result.status === 'fulfilled')
+      .map(result => result.value);
+
+    return {
+      images,
+      failedCount: results.length - images.length
+    };
   }
 
   private loadLocalGallery(): GalleryImage[] {
@@ -581,6 +629,20 @@ export class AppComponent implements OnDestroy, OnInit {
     if (this.adminInactivityTimer) {
       clearTimeout(this.adminInactivityTimer);
       this.adminInactivityTimer = undefined;
+    }
+  }
+
+  private startSignInSlowTimer(): void {
+    this.clearSignInSlowTimer();
+    this.signInSlowTimer = setTimeout(() => {
+      this.signInStatus = 'Still connecting to secure admin sign in...';
+    }, this.slowSignInNoticeMs);
+  }
+
+  private clearSignInSlowTimer(): void {
+    if (this.signInSlowTimer) {
+      clearTimeout(this.signInSlowTimer);
+      this.signInSlowTimer = undefined;
     }
   }
 

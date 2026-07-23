@@ -36,8 +36,18 @@ interface GalleryImageRow {
 @Injectable({ providedIn: 'root' })
 export class SupabaseSiteService {
   private readonly settingsId = 'main';
+  private readonly requestTimeoutMs = 20000;
   private readonly client: SupabaseClient | null = environment.supabaseUrl && environment.supabaseAnonKey
-    ? createClient(environment.supabaseUrl, environment.supabaseAnonKey)
+    ? createClient(environment.supabaseUrl, environment.supabaseAnonKey, {
+        auth: {
+          autoRefreshToken: true,
+          detectSessionInUrl: false,
+          persistSession: true
+        },
+        global: {
+          fetch: (input, init) => this.fetchWithTimeout(input, init)
+        }
+      })
     : null;
 
   get isConfigured(): boolean {
@@ -219,5 +229,28 @@ export class SupabaseSiteService {
     const extension = fileName.includes('.') ? fileName.split('.').pop() : 'jpg';
     const safeExtension = (extension || 'jpg').replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'jpg';
     return 'gallery/' + Date.now() + '-' + crypto.randomUUID() + '.' + safeExtension;
+  }
+
+  private async fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.requestTimeoutMs);
+    const upstreamSignal = init?.signal;
+
+    if (upstreamSignal) {
+      if (upstreamSignal.aborted) {
+        controller.abort();
+      } else {
+        upstreamSignal.addEventListener('abort', () => controller.abort(), { once: true });
+      }
+    }
+
+    try {
+      return await fetch(input, {
+        ...init,
+        signal: controller.signal
+      });
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 }

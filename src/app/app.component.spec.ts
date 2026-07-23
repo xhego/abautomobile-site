@@ -132,18 +132,34 @@ describe('AppComponent', () => {
     const app = fixture.componentInstance;
     app.login = {
       username: 'abautomobile@gmail.com',
-      password: 'workshop2026'
+      password: 'admin-password'
     };
 
     void app.signIn();
     expect(app.isSigningIn).toBeTrue();
-    tick(25000);
+    tick(6000);
+    expect(app.signInStatus).toContain('Still connecting');
+    tick(16000);
     flushMicrotasks();
 
     expect(app.isSigningIn).toBeFalse();
     expect(app.isSignedIn).toBeFalse();
     expect(app.signInError).toContain('taking too long');
   }));
+
+  it('should not allow fallback admin sign in when Supabase is not configured', async () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    app.login = {
+      username: 'abautomobile@gmail.com',
+      password: 'admin-password'
+    };
+
+    await app.signIn();
+
+    expect(app.isSignedIn).toBeFalse();
+    expect(app.signInError).toContain('not configured');
+  });
 
   it('should auto sign out after 10 minutes of admin inactivity', fakeAsync(() => {
     const fixture = TestBed.createComponent(AppComponent);
@@ -203,6 +219,22 @@ describe('AppComponent', () => {
     expect(app.galleryImages[0].title.length).toBe(app.descriptionLimit);
     expect(app.adminRefreshKey).toBe(1);
     expect(app.adminNotice).toContain('Gallery refreshed');
+  });
+
+  it('should reject unsupported or oversized image uploads before saving', async () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    const input = document.createElement('input');
+    const svgFile = new File(['<svg></svg>'], 'bad.svg', { type: 'image/svg+xml' });
+    const largeFile = new File([new ArrayBuffer((5 * 1024 * 1024) + 1)], 'large.jpg', { type: 'image/jpeg' });
+    app.galleryImages = [];
+    Object.defineProperty(input, 'files', { value: [svgFile, largeFile] });
+
+    await app.onFilesSelected({ target: input } as unknown as Event);
+
+    expect(app.galleryImages.length).toBe(0);
+    expect(app.uploadError).toContain('JPG, PNG, WebP or GIF');
+    expect(supabaseMock.uploadGalleryImage).not.toHaveBeenCalled();
   });
 
   it('should open, navigate and close gallery images', () => {

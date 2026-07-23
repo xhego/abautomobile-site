@@ -194,6 +194,7 @@
             <span class="loader-dot button-loader" *ngIf="isSigningIn"></span>
             <span>{{ isSigningIn ? 'Signing in...' : 'Sign in' }}</span>
           </button>
+          <p class="form-status" *ngIf="signInStatus">{{ signInStatus }}</p>
           <p class="form-message" *ngIf="signInError">{{ signInError }}</p>
         </form>
       </div>

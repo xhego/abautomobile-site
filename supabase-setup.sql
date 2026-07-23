@@ -33,6 +33,14 @@ begin
 end;
 $$;
 
+create or replace function public.is_ab_auto_admin()
+returns boolean
+language sql
+stable
+as $$
+  select coalesce(auth.jwt() ->> 'email', '') = 'abautomobile@gmail.com';
+$$;
+
 drop trigger if exists gallery_images_max_10 on public.gallery_images;
 drop trigger if exists gallery_images_max_50 on public.gallery_images;
 create trigger gallery_images_max_50
@@ -66,8 +74,8 @@ create policy "Authenticated admin can manage site settings"
 on public.site_settings
 for all
 to authenticated
-using (true)
-with check (true);
+using (public.is_ab_auto_admin())
+with check (public.is_ab_auto_admin());
 
 drop policy if exists "Public can read gallery images" on public.gallery_images;
 create policy "Public can read gallery images"
@@ -81,8 +89,8 @@ create policy "Authenticated admin can manage gallery images"
 on public.gallery_images
 for all
 to authenticated
-using (true)
-with check (true);
+using (public.is_ab_auto_admin())
+with check (public.is_ab_auto_admin());
 
 drop policy if exists "Public can read gallery storage" on storage.objects;
 create policy "Public can read gallery storage"
@@ -96,19 +104,19 @@ create policy "Authenticated admin can upload gallery storage"
 on storage.objects
 for insert
 to authenticated
-with check (bucket_id = 'gallery');
+with check (bucket_id = 'gallery' and public.is_ab_auto_admin());
 
 drop policy if exists "Authenticated admin can update gallery storage" on storage.objects;
 create policy "Authenticated admin can update gallery storage"
 on storage.objects
 for update
 to authenticated
-using (bucket_id = 'gallery')
-with check (bucket_id = 'gallery');
+using (bucket_id = 'gallery' and public.is_ab_auto_admin())
+with check (bucket_id = 'gallery' and public.is_ab_auto_admin());
 
 drop policy if exists "Authenticated admin can delete gallery storage" on storage.objects;
 create policy "Authenticated admin can delete gallery storage"
 on storage.objects
 for delete
 to authenticated
-using (bucket_id = 'gallery');
+using (bucket_id = 'gallery' and public.is_ab_auto_admin());
