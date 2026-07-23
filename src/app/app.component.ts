@@ -15,6 +15,25 @@ interface ServiceItem {
   description: string;
 }
 
+type AdminPanel = 'images' | 'info' | 'workshop';
+
+interface WorkshopJob {
+  id: string;
+  customerName: string;
+  customerContact: string;
+  vehicle: string;
+  registration: string;
+  jobType: string;
+  status: string;
+  priority: string;
+  estimate: number;
+  paid: number;
+  dueDate: string;
+  notes: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
 @Component({
   selector: 'app-root',
   standalone: false,
@@ -36,6 +55,7 @@ export class AppComponent implements OnDestroy, OnInit {
   private readonly callNumberStorageKey = 'abautomobile-call-number';
   private readonly whatsappNumberStorageKey = 'abautomobile-whatsapp-number';
   private readonly emailAddressStorageKey = 'abautomobile-email-address';
+  private readonly workshopJobsStorageKey = 'abautomobile-workshop-jobs';
   private readonly signInTimeoutMs = 22000;
   private readonly adminInactivityMs = 10 * 60 * 1000;
   private readonly slowSignInNoticeMs = 6000;
@@ -73,6 +93,30 @@ export class AppComponent implements OnDestroy, OnInit {
     'A tidy finish so the vehicle leaves cleaner, safer and ready for the road.'
   ];
 
+  readonly adminPanels: Array<{ id: AdminPanel; icon: string; title: string; description: string }> = [
+    {
+      id: 'images',
+      icon: 'fa-picture-o',
+      title: 'Manage images',
+      description: 'Add, describe and remove gallery photos.'
+    },
+    {
+      id: 'info',
+      icon: 'fa-address-card-o',
+      title: 'Manage info',
+      description: 'Update location, phone, WhatsApp and email.'
+    },
+    {
+      id: 'workshop',
+      icon: 'fa-clipboard',
+      title: 'Workshop management',
+      description: 'Track vehicles, jobs, payments and next steps.'
+    }
+  ];
+
+  readonly workshopStatuses = ['Booked', 'Checked in', 'Diagnosing', 'Waiting for parts', 'In repair', 'Ready for collection', 'Collected'];
+  readonly workshopPriorities = ['Normal', 'Urgent', 'Waiting customer', 'Warranty check'];
+
   defaultImages: GalleryImage[] = [
     { srcImg: 'assets/img/ABAuto/dignostics.jpg', title: 'Diagnostic checks' },
     { srcImg: 'assets/img/ABAuto/Engine.jpg', title: 'Engine bay inspection' },
@@ -106,14 +150,19 @@ export class AppComponent implements OnDestroy, OnInit {
   isProcessingImages = false;
   isSavingLocation = false;
   isSavingContactDetails = false;
+  isSavingWorkshopJob = false;
   savingImageTitleIndexes = new Set<number>();
   removingImageIndexes = new Set<number>();
   showPassword = false;
   isGalleryPage = false;
   isSignInPage = false;
   activeSection = '';
+  activeAdminPanel: AdminPanel = 'images';
   adminRefreshKey = 0;
   activeGalleryIndex: number | null = null;
+  workshopJobs: WorkshopJob[] = [];
+  editingWorkshopJobId: string | null = null;
+  workshopDraft: Omit<WorkshopJob, 'id' | 'createdAt' | 'updatedAt'> = this.createEmptyWorkshopDraft();
   login = {
     username: '',
     password: ''
@@ -171,8 +220,38 @@ export class AppComponent implements OnDestroy, OnInit {
     return this.isProcessingImages ||
       this.isSavingLocation ||
       this.isSavingContactDetails ||
+      this.isSavingWorkshopJob ||
       this.savingImageTitleIndexes.size > 0 ||
       this.removingImageIndexes.size > 0;
+  }
+
+  get openWorkshopJobs(): number {
+    return this.workshopJobs.filter(job => job.status !== 'Collected').length;
+  }
+
+  get readyWorkshopJobs(): number {
+    return this.workshopJobs.filter(job => job.status === 'Ready for collection').length;
+  }
+
+  get outstandingWorkshopBalance(): number {
+    return this.workshopJobs.reduce((total, job) => total + Math.max((job.estimate || 0) - (job.paid || 0), 0), 0);
+  }
+
+  get orderedWorkshopJobs(): WorkshopJob[] {
+    return [...this.workshopJobs].sort((left, right) => {
+      const leftDate = left.dueDate || '9999-12-31';
+      const rightDate = right.dueDate || '9999-12-31';
+      return leftDate.localeCompare(rightDate) || right.updatedAt.localeCompare(left.updatedAt);
+    });
+  }
+
+  get activeAdminPanelTitle(): string {
+    return this.adminPanels.find(panel => panel.id === this.activeAdminPanel)?.title || '';
+  }
+
+  setActiveAdminPanel(panel: AdminPanel): void {
+    this.activeAdminPanel = panel;
+    this.markAdminActivity();
   }
 
   openAdmin(event?: Event): void {
@@ -514,6 +593,80 @@ export class AppComponent implements OnDestroy, OnInit {
     }
   }
 
+  async saveWorkshopJob(): Promise<void> {
+    this.markAdminActivity();
+    const customerName = this.workshopDraft.customerName.trim();
+    const vehicle = this.workshopDraft.vehicle.trim();
+
+    if (!customerName || !vehicle) {
+      this.uploadError = 'Add at least the customer name and vehicle before saving the job.';
+      return;
+    }
+
+    this.isSavingWorkshopJob = true;
+    this.uploadError = '';
+    const now = new Date().toISOString();
+    const cleanJob: WorkshopJob = {
+      id: this.editingWorkshopJobId || crypto.randomUUID(),
+      customerName,
+      customerContact: this.workshopDraft.customerContact.trim(),
+      vehicle,
+      registration: this.workshopDraft.registration.trim(),
+      jobType: this.workshopDraft.jobType.trim(),
+      status: this.workshopDraft.status || this.workshopStatuses[0],
+      priority: this.workshopDraft.priority || this.workshopPriorities[0],
+      estimate: Number(this.workshopDraft.estimate) || 0,
+      paid: Number(this.workshopDraft.paid) || 0,
+      dueDate: this.workshopDraft.dueDate,
+      notes: this.workshopDraft.notes.trim(),
+      createdAt: this.workshopJobs.find(job => job.id === this.editingWorkshopJobId)?.createdAt || now,
+      updatedAt: now
+    };
+
+    await Promise.resolve();
+    this.workshopJobs = this.editingWorkshopJobId
+      ? this.workshopJobs.map(job => job.id === this.editingWorkshopJobId ? cleanJob : job)
+      : [cleanJob, ...this.workshopJobs];
+    this.saveWorkshopJobs();
+    this.resetWorkshopDraft();
+    this.adminNotice = 'Workshop job saved.';
+    this.isSavingWorkshopJob = false;
+    this.renderState();
+  }
+
+  editWorkshopJob(job: WorkshopJob): void {
+    this.markAdminActivity();
+    this.editingWorkshopJobId = job.id;
+    this.workshopDraft = {
+      customerName: job.customerName,
+      customerContact: job.customerContact,
+      vehicle: job.vehicle,
+      registration: job.registration,
+      jobType: job.jobType,
+      status: job.status,
+      priority: job.priority,
+      estimate: job.estimate,
+      paid: job.paid,
+      dueDate: job.dueDate,
+      notes: job.notes
+    };
+  }
+
+  removeWorkshopJob(jobId: string): void {
+    this.markAdminActivity();
+    this.workshopJobs = this.workshopJobs.filter(job => job.id !== jobId);
+    if (this.editingWorkshopJobId === jobId) {
+      this.resetWorkshopDraft();
+    }
+    this.saveWorkshopJobs();
+    this.adminNotice = 'Workshop job removed.';
+  }
+
+  resetWorkshopDraft(): void {
+    this.editingWorkshopJobId = null;
+    this.workshopDraft = this.createEmptyWorkshopDraft();
+  }
+
   private loadLocalFallback(): void {
     this.galleryImages = this.loadLocalGallery();
     this.workshopLocation = localStorage.getItem(this.locationStorageKey) || this.defaultLocation;
@@ -524,6 +677,7 @@ export class AppComponent implements OnDestroy, OnInit {
     this.callNumberDraft = this.callNumber;
     this.whatsappNumberDraft = this.whatsappNumber;
     this.emailAddressDraft = this.emailAddress;
+    this.workshopJobs = this.loadWorkshopJobs();
   }
 
   private async loadRemoteContent(): Promise<void> {
@@ -628,6 +782,53 @@ export class AppComponent implements OnDestroy, OnInit {
 
     localStorage.setItem(this.galleryStorageKey, JSON.stringify(this.galleryImages.slice(0, this.maxImages)));
     localStorage.setItem(this.galleryInitializedStorageKey, 'true');
+  }
+
+  private loadWorkshopJobs(): WorkshopJob[] {
+    const storedJobs = localStorage.getItem(this.workshopJobsStorageKey);
+    if (!storedJobs) {
+      return [];
+    }
+
+    try {
+      const parsedJobs = JSON.parse(storedJobs) as WorkshopJob[];
+      if (Array.isArray(parsedJobs)) {
+        return parsedJobs
+          .filter(job => job && job.id && job.customerName && job.vehicle)
+          .map(job => ({
+            ...job,
+            estimate: Number(job.estimate) || 0,
+            paid: Number(job.paid) || 0,
+            status: job.status || this.workshopStatuses[0],
+            priority: job.priority || this.workshopPriorities[0],
+            notes: job.notes || ''
+          }));
+      }
+    } catch (error) {
+      localStorage.removeItem(this.workshopJobsStorageKey);
+    }
+
+    return [];
+  }
+
+  private saveWorkshopJobs(): void {
+    localStorage.setItem(this.workshopJobsStorageKey, JSON.stringify(this.workshopJobs));
+  }
+
+  private createEmptyWorkshopDraft(): Omit<WorkshopJob, 'id' | 'createdAt' | 'updatedAt'> {
+    return {
+      customerName: '',
+      customerContact: '',
+      vehicle: '',
+      registration: '',
+      jobType: '',
+      status: 'Booked',
+      priority: 'Normal',
+      estimate: 0,
+      paid: 0,
+      dueDate: '',
+      notes: ''
+    };
   }
 
   private refreshAdminGallery(message: string): void {

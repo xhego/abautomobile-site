@@ -371,6 +371,51 @@ describe('AppComponent', () => {
     expect(compiled.textContent).not.toContain('Reset gallery');
   });
 
+  it('should show large admin buttons after sign in', () => {
+    history.pushState({}, '', '/signin');
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.componentInstance.isSignedIn = true;
+    fixture.componentInstance.showAdmin = true;
+    fixture.detectChanges();
+    const compiled = fixture.nativeElement as HTMLElement;
+    const actionCards = compiled.querySelectorAll('.admin-action-card');
+
+    expect(actionCards.length).toBe(3);
+    expect(compiled.textContent).toContain('Manage images');
+    expect(compiled.textContent).toContain('Manage info');
+    expect(compiled.textContent).toContain('Workshop management');
+  });
+
+  it('should save workshop jobs and keep them after reload', async () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    app.workshopDraft = {
+      customerName: 'Test Customer',
+      customerContact: '071 000 0000',
+      vehicle: 'Toyota Corolla 2015',
+      registration: 'ABC123GP',
+      jobType: 'Brake service',
+      status: 'Booked',
+      priority: 'Urgent',
+      estimate: 2500,
+      paid: 500,
+      dueDate: '2026-08-01',
+      notes: 'Customer approved front pads.'
+    };
+
+    await app.saveWorkshopJob();
+
+    expect(app.workshopJobs.length).toBe(1);
+    expect(app.openWorkshopJobs).toBe(1);
+    expect(app.outstandingWorkshopBalance).toBe(2000);
+
+    const nextFixture = TestBed.createComponent(AppComponent);
+    const nextApp = nextFixture.componentInstance;
+    nextApp.ngOnInit();
+    expect(nextApp.workshopJobs.length).toBe(1);
+    expect(nextApp.workshopJobs[0].vehicle).toBe('Toyota Corolla 2015');
+  });
+
   it('should save contact details and build links after reload', () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;

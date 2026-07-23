@@ -527,13 +527,20 @@ footer a:hover {
 .location-form input,
 .contact-form input,
 .upload-description input,
-.admin-image input {
+.admin-image input,
+.workshop-form input,
+.workshop-form select,
+.workshop-form textarea {
   border: 1px solid #c8c2b8;
   border-radius: 5px;
   font: inherit;
   min-height: 46px;
   padding: 10px 12px;
   width: 100%;
+}
+
+.workshop-form textarea {
+  resize: vertical;
 }
 
 .password-field {
@@ -596,6 +603,84 @@ footer a:hover {
   display: grid;
   gap: 20px;
   grid-column: 1 / -1;
+}
+
+.admin-action-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.admin-action-card {
+  align-items: center;
+  background: #172029;
+  border: 2px solid transparent;
+  border-radius: 8px;
+  color: #ffffff;
+  cursor: pointer;
+  display: flex;
+  gap: 14px;
+  min-height: 112px;
+  padding: 18px;
+  text-align: left;
+  transition: border-color 0.2s ease, transform 0.2s ease;
+}
+
+.admin-action-card:hover,
+.admin-action-card:focus-visible,
+.admin-action-card.active {
+  border-color: #f2b84b;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.admin-action-card i {
+  align-items: center;
+  background: #f2b84b;
+  border-radius: 6px;
+  color: #111820;
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 24px;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.admin-action-card strong,
+.admin-action-card small {
+  display: block;
+}
+
+.admin-action-card strong {
+  font-size: 17px;
+}
+
+.admin-action-card small {
+  color: #cbd4db;
+  line-height: 1.4;
+  margin-top: 4px;
+}
+
+.admin-section-heading {
+  align-items: center;
+  border-bottom: 1px solid #dedbd3;
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  padding-bottom: 12px;
+}
+
+.admin-section-heading h3 {
+  color: #172029;
+  font-size: 24px;
+  margin: 0;
+}
+
+.admin-section-heading span {
+  color: #68727a;
+  font-size: 14px;
+  font-weight: 800;
 }
 
 .upload-tools {
@@ -788,6 +873,148 @@ footer a:hover {
   width: 28px;
 }
 
+.workshop-stats {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.workshop-stats div {
+  background: #f7f5f1;
+  border: 1px solid #dedbd3;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.workshop-stats strong,
+.workshop-stats span {
+  display: block;
+}
+
+.workshop-stats strong {
+  color: #172029;
+  font-size: 26px;
+}
+
+.workshop-stats span {
+  color: #68727a;
+  font-size: 13px;
+  font-weight: 800;
+  margin-top: 4px;
+}
+
+.workshop-form {
+  background: #f7f5f1;
+  border: 1px solid #dedbd3;
+  border-radius: 8px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  padding: 16px;
+}
+
+.workshop-form label {
+  color: #39434c;
+  display: grid;
+  font-weight: 800;
+  gap: 8px;
+}
+
+.wide-field,
+.workshop-form-actions {
+  grid-column: 1 / -1;
+}
+
+.workshop-form-actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.workshop-form-actions button,
+.job-actions button {
+  align-items: center;
+  background: #f2b84b;
+  border: 0;
+  border-radius: 5px;
+  color: #111820;
+  cursor: pointer;
+  display: inline-flex;
+  gap: 10px;
+  font-weight: 800;
+  justify-content: center;
+  padding: 12px 14px;
+}
+
+.workshop-jobs {
+  display: grid;
+  gap: 14px;
+}
+
+.workshop-job-card {
+  background: #ffffff;
+  border: 1px solid #dedbd3;
+  border-radius: 8px;
+  display: grid;
+  gap: 12px;
+  padding: 16px;
+}
+
+.workshop-job-card strong,
+.workshop-job-card span,
+.workshop-job-card small {
+  display: block;
+}
+
+.workshop-job-card strong {
+  color: #172029;
+  font-size: 18px;
+}
+
+.workshop-job-card span,
+.workshop-job-card small,
+.workshop-job-card p {
+  color: #5d6871;
+}
+
+.job-tags,
+.job-money,
+.job-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.job-tags span,
+.job-money span {
+  background: #f4f2ed;
+  border-radius: 5px;
+  color: #39434c;
+  font-size: 13px;
+  font-weight: 800;
+  padding: 8px 10px;
+}
+
+.job-actions .danger-button {
+  background: #a13b27;
+  color: #ffffff;
+}
+
+.empty-admin-state {
+  background: #f7f5f1;
+  border: 1px dashed #c8c2b8;
+  border-radius: 8px;
+  color: #68727a;
+  display: grid;
+  gap: 4px;
+  padding: 20px;
+}
+
+.empty-admin-state strong {
+  color: #172029;
+}
+
 .floating-call {
   align-items: center;
   background: #1f8f4d;
@@ -912,6 +1139,11 @@ footer a {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .admin-action-grid,
+  .workshop-stats {
+    grid-template-columns: 1fr;
+  }
+
   .gallery-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
   }
@@ -1023,8 +1255,14 @@ footer a {
   .manager-header,
   .upload-row,
   .contact-form,
+  .admin-section-heading,
+  .workshop-form-actions,
   footer {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .workshop-form {
+    grid-template-columns: 1fr;
   }
 }

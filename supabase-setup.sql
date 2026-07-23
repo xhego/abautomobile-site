@@ -19,6 +19,23 @@ create table if not exists public.gallery_images (
   updated_at timestamptz not null default now()
 );
 
+create table if not exists public.workshop_jobs (
+  id uuid primary key default gen_random_uuid(),
+  customer_name text not null,
+  customer_contact text not null default '',
+  vehicle text not null,
+  registration text not null default '',
+  job_type text not null default '',
+  status text not null default 'Booked',
+  priority text not null default 'Normal',
+  estimate numeric(12, 2) not null default 0,
+  paid numeric(12, 2) not null default 0,
+  due_date date,
+  notes text not null default '',
+  created_at timestamptz not null default now(),
+  updated_at timestamptz not null default now()
+);
+
 create or replace function public.prevent_gallery_overflow()
 returns trigger
 language plpgsql
@@ -61,6 +78,7 @@ set public = excluded.public,
 
 alter table public.site_settings enable row level security;
 alter table public.gallery_images enable row level security;
+alter table public.workshop_jobs enable row level security;
 
 drop policy if exists "Public can read site settings" on public.site_settings;
 create policy "Public can read site settings"
@@ -87,6 +105,14 @@ using (true);
 drop policy if exists "Authenticated admin can manage gallery images" on public.gallery_images;
 create policy "Authenticated admin can manage gallery images"
 on public.gallery_images
+for all
+to authenticated
+using (public.is_ab_auto_admin())
+with check (public.is_ab_auto_admin());
+
+drop policy if exists "Authenticated admin can manage workshop jobs" on public.workshop_jobs;
+create policy "Authenticated admin can manage workshop jobs"
+on public.workshop_jobs
 for all
 to authenticated
 using (public.is_ab_auto_admin())
