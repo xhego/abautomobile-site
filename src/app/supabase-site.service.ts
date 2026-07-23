@@ -37,6 +37,7 @@ interface GalleryImageRow {
 export class SupabaseSiteService {
   private readonly settingsId = 'main';
   private readonly requestTimeoutMs = 20000;
+  private accessToken = '';
   private readonly client: SupabaseClient | null = environment.supabaseUrl && environment.supabaseAnonKey
     ? createClient(environment.supabaseUrl, environment.supabaseAnonKey, {
         auth: {
@@ -55,19 +56,30 @@ export class SupabaseSiteService {
   }
 
   async signIn(email: string, password: string): Promise<void> {
-    const client = this.requireClient();
-    const { error } = await client.auth.signInWithPassword({ email, password });
-    if (error) {
-      throw error;
+    if (!this.client) {
+      throw new Error('Supabase is not configured yet.');
     }
+
+    this.accessToken = '';
+    const response = await this.fetchWithTimeout(environment.supabaseUrl + '/auth/v1/token?grant_type=password', {
+      method: 'POST',
+      headers: {
+        apikey: environment.supabaseAnonKey,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify({ email, password })
+    });
+    const data = await response.json().catch(() => null) as { access_token?: string; error_description?: string; msg?: string } | null;
+
+    if (!response.ok || !data?.access_token) {
+      throw new Error(data?.error_description || data?.msg || 'Incorrect sign-in details.');
+    }
+
+    this.accessToken = data.access_token;
   }
 
   async signOut(): Promise<void> {
-    if (!this.client) {
-      return;
-    }
-
-    await this.client.auth.signOut();
+    this.accessToken = '';
   }
 
   async loadSettings(): Promise<SiteSettings | null> {
@@ -235,6 +247,11 @@ export class SupabaseSiteService {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.requestTimeoutMs);
     const upstreamSignal = init?.signal;
+    const headers = new Headers(init?.headers);
+
+    if (this.accessToken) {
+      headers.set('Authorization', 'Bearer ' + this.accessToken);
+    }
 
     if (upstreamSignal) {
       if (upstreamSignal.aborted) {
@@ -247,6 +264,7 @@ export class SupabaseSiteService {
     try {
       return await fetch(input, {
         ...init,
+        headers,
         signal: controller.signal
       });
     } finally {
