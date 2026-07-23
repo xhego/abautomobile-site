@@ -157,6 +157,17 @@ describe('AppComponent', () => {
     expect(compiled.querySelector('.preview-gallery-grid')).toBeNull();
   });
 
+  it('should keep work highlighted on the full gallery page', () => {
+    history.pushState({}, '', '/gallery');
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+
+    const app = fixture.componentInstance;
+    expect(app.isActiveNav('work')).toBeTrue();
+    expect(app.isActiveNav('services')).toBeFalse();
+    expect(app.isActiveNav('signin')).toBeFalse();
+  });
+
   it('should return from gallery to a home section when a section nav link is clicked', fakeAsync(() => {
     history.pushState({}, '', '/gallery');
     const fixture = TestBed.createComponent(AppComponent);

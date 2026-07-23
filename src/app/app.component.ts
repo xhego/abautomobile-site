@@ -200,6 +200,10 @@ export class AppComponent implements OnInit {
       return this.isSignInPage;
     }
 
+    if (section === 'work' && this.isGalleryPage) {
+      return true;
+    }
+
     return !this.isGalleryPage && !this.isSignInPage && this.activeSection === section;
   }
 
