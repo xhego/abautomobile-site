@@ -28,14 +28,28 @@ describe('AppComponent', () => {
     history.pushState({}, '', '/');
     localStorage.clear();
     supabaseMock.signIn.calls.reset();
+    supabaseMock.signIn.and.resolveTo();
     supabaseMock.isConfigured = false;
     supabaseMock.signOut.calls.reset();
+    supabaseMock.signOut.and.resolveTo();
     supabaseMock.loadSettings.calls.reset();
+    supabaseMock.loadSettings.and.resolveTo(null);
     supabaseMock.saveSettings.calls.reset();
+    supabaseMock.saveSettings.and.resolveTo();
     supabaseMock.loadGallery.calls.reset();
+    supabaseMock.loadGallery.and.resolveTo(null);
     supabaseMock.uploadGalleryImage.calls.reset();
+    supabaseMock.uploadGalleryImage.and.resolveTo({
+      id: 'test-image',
+      srcImg: 'assets/test.jpg',
+      title: 'Saved repair photo',
+      storagePath: 'gallery/test.jpg',
+      sortOrder: 1
+    });
     supabaseMock.updateGalleryTitle.calls.reset();
+    supabaseMock.updateGalleryTitle.and.resolveTo();
     supabaseMock.removeGalleryImage.calls.reset();
+    supabaseMock.removeGalleryImage.and.resolveTo();
 
     await TestBed.configureTestingModule({
       imports: [
@@ -129,6 +143,39 @@ describe('AppComponent', () => {
     expect(app.isSigningIn).toBeFalse();
     expect(app.isSignedIn).toBeFalse();
     expect(app.signInError).toContain('taking too long');
+  }));
+
+  it('should auto sign out after 10 minutes of admin inactivity', fakeAsync(() => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    app.isSignedIn = true;
+    app.showAdmin = true;
+
+    app.markAdminActivity();
+    tick(10 * 60 * 1000);
+    flushMicrotasks();
+
+    expect(app.isSignedIn).toBeFalse();
+    expect(app.showAdmin).toBeFalse();
+    expect(app.signInError).toContain('Signed out after 10 minutes');
+  }));
+
+  it('should wait to auto sign out while admin work is busy', fakeAsync(() => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    app.isSignedIn = true;
+    app.showAdmin = true;
+    app.isSavingLocation = true;
+
+    app.markAdminActivity();
+    tick(10 * 60 * 1000);
+    flushMicrotasks();
+
+    expect(app.isSignedIn).toBeTrue();
+    app.isSavingLocation = false;
+    tick(10 * 60 * 1000);
+    flushMicrotasks();
+    expect(app.isSignedIn).toBeFalse();
   }));
 
   it('should cap edited image descriptions at 50 characters', () => {

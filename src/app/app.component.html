@@ -198,13 +198,13 @@
         </form>
       </div>
 
-      <div class="admin-panel manager-panel" *ngIf="isSignedIn">
+      <div class="admin-panel manager-panel" *ngIf="isSignedIn" (click)="markAdminActivity()" (input)="markAdminActivity()" (change)="markAdminActivity()">
         <div class="manager-header">
           <div>
             <strong>{{ galleryImages.length }} / {{ maxImages }} images live</strong>
             <span>{{ usesRemoteBackend ? 'Images and site details are saved for all visitors.' : 'Supabase is not configured yet, so changes are saved in this browser.' }}</span>
           </div>
-          <button type="button" class="ghost-button" (click)="signOut()">Sign out</button>
+          <button type="button" class="ghost-button" (click)="signOut()" [disabled]="isAdminBusy">Sign out</button>
         </div>
 
         <div class="upload-tools" [class.is-processing]="isProcessingImages">
@@ -224,7 +224,7 @@
           </div>
           <div class="processing-state" *ngIf="isProcessingImages" aria-live="polite">
             <span class="loader-dot"></span>
-            <span>Processing image upload...</span>
+            <span>{{ removingImageIndexes.size ? 'Removing image...' : 'Processing image upload...' }}</span>
           </div>
         </div>
         <p class="form-message" *ngIf="uploadError">{{ uploadError }}</p>
@@ -235,34 +235,47 @@
             <img [src]="image.srcImg" [alt]="image.title || 'Gallery image ' + (i + 1)">
             <label>
               Description
-              <input type="text" [(ngModel)]="image.title" name="image-title-{{ i }}" [attr.maxlength]="descriptionLimit" (ngModelChange)="updateImageTitle(i, $event)">
+              <input type="text" [(ngModel)]="image.title" name="image-title-{{ i }}" [attr.maxlength]="descriptionLimit" (ngModelChange)="updateImageTitle(i, $event)" [disabled]="isRemovingImage(i)">
+              <span class="inline-saving" *ngIf="isSavingImageTitle(i)">
+                <span class="loader-dot mini-loader"></span>
+                Saving...
+              </span>
             </label>
-            <button type="button" aria-label="Remove image" (click)="removeImage(i)" [disabled]="isProcessingImages"><i class="fa fa-trash"></i></button>
+            <button type="button" aria-label="Remove image" (click)="removeImage(i)" [disabled]="isProcessingImages || isSavingImageTitle(i)">
+              <span class="loader-dot mini-loader" *ngIf="isRemovingImage(i)"></span>
+              <i class="fa fa-trash" *ngIf="!isRemovingImage(i)"></i>
+            </button>
           </div>
         </div>
 
         <form class="location-form" (ngSubmit)="saveLocation()">
           <label>
             Workshop location
-            <input type="text" name="location" [(ngModel)]="locationDraft" placeholder="Workshop address or service area">
+            <input type="text" name="location" [(ngModel)]="locationDraft" placeholder="Workshop address or service area" [disabled]="isSavingLocation">
           </label>
-          <button type="submit">Save location</button>
+          <button type="submit" [disabled]="isSavingLocation || isSavingContactDetails">
+            <span class="loader-dot button-loader" *ngIf="isSavingLocation"></span>
+            <span>{{ isSavingLocation ? 'Saving location...' : 'Save location' }}</span>
+          </button>
         </form>
 
         <form class="contact-form" (ngSubmit)="saveContactDetails()">
           <label>
             Call number
-            <input type="tel" name="callNumber" [(ngModel)]="callNumberDraft" placeholder="067 825 2864">
+            <input type="tel" name="callNumber" [(ngModel)]="callNumberDraft" placeholder="067 825 2864" [disabled]="isSavingContactDetails">
           </label>
           <label>
             WhatsApp number
-            <input type="tel" name="whatsappNumber" [(ngModel)]="whatsappNumberDraft" placeholder="073 015 1945">
+            <input type="tel" name="whatsappNumber" [(ngModel)]="whatsappNumberDraft" placeholder="073 015 1945" [disabled]="isSavingContactDetails">
           </label>
           <label>
             Email address
-            <input type="email" name="emailAddress" [(ngModel)]="emailAddressDraft" placeholder="ab@abautomobile.co.za">
+            <input type="email" name="emailAddress" [(ngModel)]="emailAddressDraft" placeholder="ab@abautomobile.co.za" [disabled]="isSavingContactDetails">
           </label>
-          <button type="submit">Save contact details</button>
+          <button type="submit" [disabled]="isSavingLocation || isSavingContactDetails">
+            <span class="loader-dot button-loader" *ngIf="isSavingContactDetails"></span>
+            <span>{{ isSavingContactDetails ? 'Saving contact details...' : 'Save contact details' }}</span>
+          </button>
         </form>
       </div>
     </section>

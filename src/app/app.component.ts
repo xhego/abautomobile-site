@@ -1,4 +1,4 @@
-import { Component, HostListener, OnInit } from '@angular/core';
+import { Component, HostListener, OnDestroy, OnInit } from '@angular/core';
 import { SupabaseSiteService } from './supabase-site.service';
 
 interface GalleryImage {
@@ -21,7 +21,7 @@ interface ServiceItem {
   templateUrl: './app.component.html',
   styleUrls: ['./app.component.css']
 })
-export class AppComponent implements OnInit {
+export class AppComponent implements OnDestroy, OnInit {
   readonly maxImages = 50;
   readonly landingImageLimit = 5;
   readonly descriptionLimit = 50;
@@ -39,6 +39,8 @@ export class AppComponent implements OnInit {
   private readonly adminUsername = 'abautomobile@gmail.com';
   private readonly adminPassword = 'workshop2026';
   private readonly signInTimeoutMs = 25000;
+  private readonly adminInactivityMs = 10 * 60 * 1000;
+  private adminInactivityTimer: ReturnType<typeof setTimeout> | undefined;
 
   services: ServiceItem[] = [
     {
@@ -99,6 +101,10 @@ export class AppComponent implements OnInit {
   descriptionDraft = '';
   isSigningIn = false;
   isProcessingImages = false;
+  isSavingLocation = false;
+  isSavingContactDetails = false;
+  savingImageTitleIndexes = new Set<number>();
+  removingImageIndexes = new Set<number>();
   showPassword = false;
   isGalleryPage = false;
   isSignInPage = false;
@@ -120,6 +126,10 @@ export class AppComponent implements OnInit {
       this.scrollToCurrentHash();
       this.updateActiveSection();
     });
+  }
+
+  ngOnDestroy(): void {
+    this.clearAdminInactivityTimer();
   }
 
   get mapUrl(): string {
@@ -148,6 +158,14 @@ export class AppComponent implements OnInit {
 
   get activeGalleryImage(): GalleryImage | null {
     return this.activeGalleryIndex === null ? null : this.galleryImages[this.activeGalleryIndex] || null;
+  }
+
+  get isAdminBusy(): boolean {
+    return this.isProcessingImages ||
+      this.isSavingLocation ||
+      this.isSavingContactDetails ||
+      this.savingImageTitleIndexes.size > 0 ||
+      this.removingImageIndexes.size > 0;
   }
 
   openAdmin(event?: Event): void {
@@ -249,6 +267,7 @@ export class AppComponent implements OnInit {
       this.isSignedIn = true;
       this.showAdmin = true;
       this.login.password = '';
+      this.resetAdminInactivityTimer();
     } catch (error) {
       this.signInError = error instanceof Error && error.message.indexOf('taking too long') > -1
         ? error.message
@@ -259,14 +278,33 @@ export class AppComponent implements OnInit {
   }
 
   async signOut(): Promise<void> {
+    this.clearAdminInactivityTimer();
     await this.siteService.signOut();
     this.isSignedIn = false;
     this.showAdmin = false;
     this.login = { username: '', password: '' };
     this.uploadError = '';
+    this.adminNotice = '';
+  }
+
+  markAdminActivity(): void {
+    if (!this.isSignedIn) {
+      return;
+    }
+
+    this.resetAdminInactivityTimer();
+  }
+
+  isSavingImageTitle(index: number): boolean {
+    return this.savingImageTitleIndexes.has(index);
+  }
+
+  isRemovingImage(index: number): boolean {
+    return this.removingImageIndexes.has(index);
   }
 
   async onFilesSelected(event: Event): Promise<void> {
+    this.markAdminActivity();
     const input = event.target as HTMLInputElement;
     const files = Array.from(input.files || []).filter(file => file.type.indexOf('image/') === 0);
     const availableSlots = this.maxImages - this.galleryImages.length;
@@ -307,6 +345,7 @@ export class AppComponent implements OnInit {
   }
 
   async updateImageTitle(index: number, title: string): Promise<void> {
+    this.markAdminActivity();
     const image = this.galleryImages[index];
     if (!image) {
       return;
@@ -318,21 +357,26 @@ export class AppComponent implements OnInit {
       return;
     }
 
+    this.savingImageTitleIndexes.add(index);
     try {
       await this.siteService.updateGalleryTitle(image.id, image.title);
       this.adminNotice = 'Image description saved.';
     } catch (error) {
       this.uploadError = 'That image description could not be saved.';
+    } finally {
+      this.savingImageTitleIndexes.delete(index);
     }
   }
 
   async removeImage(index: number): Promise<void> {
+    this.markAdminActivity();
     const image = this.galleryImages[index];
     if (!image) {
       return;
     }
 
     this.uploadError = '';
+    this.removingImageIndexes.add(index);
     if (this.siteService.isConfigured && image.id) {
       this.isProcessingImages = true;
       try {
@@ -340,6 +384,7 @@ export class AppComponent implements OnInit {
       } catch (error) {
         this.uploadError = 'That image could not be removed.';
         this.isProcessingImages = false;
+        this.removingImageIndexes.delete(index);
         return;
       }
       this.isProcessingImages = false;
@@ -349,6 +394,7 @@ export class AppComponent implements OnInit {
     if (this.activeGalleryIndex !== null) {
       this.activeGalleryIndex = null;
     }
+    this.removingImageIndexes.delete(index);
     this.refreshAdminGallery('Gallery refreshed after removing an image.');
   }
 
@@ -381,13 +427,20 @@ export class AppComponent implements OnInit {
   }
 
   async saveLocation(): Promise<void> {
+    this.markAdminActivity();
     const nextLocation = this.locationDraft.trim() || this.defaultLocation;
     this.workshopLocation = nextLocation;
     this.locationDraft = nextLocation;
-    await this.persistSettings();
+    this.isSavingLocation = true;
+    try {
+      await this.persistSettings();
+    } finally {
+      this.isSavingLocation = false;
+    }
   }
 
   async saveContactDetails(): Promise<void> {
+    this.markAdminActivity();
     const nextCallNumber = this.callNumberDraft.trim() || this.defaultCallNumber;
     const nextWhatsappNumber = this.whatsappNumberDraft.trim() || this.defaultWhatsappNumber;
     const nextEmailAddress = this.emailAddressDraft.trim() || this.defaultEmailAddress;
@@ -397,7 +450,12 @@ export class AppComponent implements OnInit {
     this.callNumberDraft = nextCallNumber;
     this.whatsappNumberDraft = nextWhatsappNumber;
     this.emailAddressDraft = nextEmailAddress;
-    await this.persistSettings();
+    this.isSavingContactDetails = true;
+    try {
+      await this.persistSettings();
+    } finally {
+      this.isSavingContactDetails = false;
+    }
   }
 
   private loadLocalFallback(): void {
@@ -512,6 +570,32 @@ export class AppComponent implements OnInit {
     this.saveGallery();
     this.adminRefreshKey++;
     this.adminNotice = message;
+  }
+
+  private resetAdminInactivityTimer(): void {
+    this.clearAdminInactivityTimer();
+    this.adminInactivityTimer = setTimeout(() => void this.handleAdminInactivity(), this.adminInactivityMs);
+  }
+
+  private clearAdminInactivityTimer(): void {
+    if (this.adminInactivityTimer) {
+      clearTimeout(this.adminInactivityTimer);
+      this.adminInactivityTimer = undefined;
+    }
+  }
+
+  private async handleAdminInactivity(): Promise<void> {
+    if (!this.isSignedIn) {
+      return;
+    }
+
+    if (this.isAdminBusy) {
+      this.resetAdminInactivityTimer();
+      return;
+    }
+
+    await this.signOut();
+    this.signInError = 'Signed out after 10 minutes of inactivity.';
   }
 
   private readImageFile(file: File, description: string): Promise<GalleryImage> {
