@@ -22,18 +22,10 @@ type WorkshopPage =
   'calendar' |
   'bookings' |
   'board' |
-  'mobile-callouts' |
   'job-cards' |
-  'customers' |
-  'vehicles' |
   'estimates' |
-  'invoices' |
   'payments' |
-  'parts' |
-  'suppliers' |
-  'quality-control' |
   'mechanics' |
-  'reports' |
   'settings';
 
 interface WorkshopJob {
@@ -42,12 +34,18 @@ interface WorkshopJob {
   customerContact: string;
   vehicle: string;
   registration: string;
+  vin: string;
+  bookingType: string;
+  mobileLocation: string;
+  assignedMechanic: string;
   jobType: string;
   status: string;
   priority: string;
   estimate: number;
   paid: number;
   dueDate: string;
+  partsNotes: string;
+  qualityNotes: string;
   notes: string;
   createdAt: string;
   updatedAt: string;
@@ -68,6 +66,22 @@ interface WorkshopMetric {
 interface WorkshopBoardColumn {
   title: string;
   statuses: string[];
+}
+
+interface WorkshopMechanic {
+  id: string;
+  name: string;
+  phone: string;
+  skills: string;
+  active: boolean;
+}
+
+interface CalendarDay {
+  date: string;
+  dayNumber: number;
+  isCurrentMonth: boolean;
+  isToday: boolean;
+  bookings: WorkshopJob[];
 }
 
 @Component({
@@ -92,6 +106,8 @@ export class AppComponent implements OnDestroy, OnInit {
   private readonly whatsappNumberStorageKey = 'abautomobile-whatsapp-number';
   private readonly emailAddressStorageKey = 'abautomobile-email-address';
   private readonly workshopJobsStorageKey = 'abautomobile-workshop-jobs';
+  private readonly workshopMechanicsStorageKey = 'abautomobile-workshop-mechanics';
+  private readonly workshopStorageFeeStorageKey = 'abautomobile-workshop-storage-fee';
   private readonly signInTimeoutMs = 22000;
   private readonly adminInactivityMs = 10 * 60 * 1000;
   private readonly slowSignInNoticeMs = 6000;
@@ -152,23 +168,16 @@ export class AppComponent implements OnDestroy, OnInit {
 
   readonly workshopStatuses = ['Booked', 'Checked in', 'Diagnosing', 'Waiting for parts', 'In repair', 'Ready for collection', 'Collected'];
   readonly workshopPriorities = ['Normal', 'Urgent', 'Waiting customer', 'Warranty check'];
+  readonly bookingTypes = ['Workshop booking', 'Mobile booking'];
   readonly workshopManagementNav: WorkshopNavItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: 'fa-tachometer' },
     { id: 'calendar', label: 'Calendar', icon: 'fa-calendar' },
     { id: 'bookings', label: 'Bookings', icon: 'fa-book' },
     { id: 'board', label: 'Workshop Board', icon: 'fa-columns' },
-    { id: 'mobile-callouts', label: 'Mobile Call-Outs', icon: 'fa-road' },
     { id: 'job-cards', label: 'Job Cards', icon: 'fa-clipboard' },
-    { id: 'customers', label: 'Customers', icon: 'fa-users' },
-    { id: 'vehicles', label: 'Vehicles', icon: 'fa-car' },
     { id: 'estimates', label: 'Estimates', icon: 'fa-calculator' },
-    { id: 'invoices', label: 'Invoices', icon: 'fa-file-text-o' },
     { id: 'payments', label: 'Payments', icon: 'fa-credit-card' },
-    { id: 'parts', label: 'Parts', icon: 'fa-cogs' },
-    { id: 'suppliers', label: 'Suppliers', icon: 'fa-truck' },
-    { id: 'quality-control', label: 'Quality Control', icon: 'fa-check-square-o' },
     { id: 'mechanics', label: 'Mechanics', icon: 'fa-wrench' },
-    { id: 'reports', label: 'Reports', icon: 'fa-bar-chart' },
     { id: 'settings', label: 'Settings', icon: 'fa-sliders' }
   ];
   readonly workshopBoardColumns: WorkshopBoardColumn[] = [
@@ -227,8 +236,16 @@ export class AppComponent implements OnDestroy, OnInit {
   adminRefreshKey = 0;
   activeGalleryIndex: number | null = null;
   workshopJobs: WorkshopJob[] = [];
+  workshopMechanics: WorkshopMechanic[] = [];
   editingWorkshopJobId: string | null = null;
   workshopDraft: Omit<WorkshopJob, 'id' | 'createdAt' | 'updatedAt'> = this.createEmptyWorkshopDraft();
+  mechanicDraft: Omit<WorkshopMechanic, 'id'> = this.createEmptyMechanicDraft();
+  bookingSortNewestFirst = true;
+  bookingFilter = 'All';
+  selectedCalendarDate = new Date().toISOString().slice(0, 10);
+  calendarCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  storageFee = 250;
+  storageFeeDraft = 250;
   login = {
     username: '',
     password: ''
@@ -339,9 +356,9 @@ export class AppComponent implements OnDestroy, OnInit {
       { label: 'Waiting for parts', value: waitingCount, tone: 'orange' },
       { label: 'Overdue jobs', value: overdueCount, tone: overdueCount ? 'danger' : 'neutral' },
       { label: 'Ready for collection', value: this.readyWorkshopJobs, tone: 'green' },
-      { label: 'Outstanding balance', value: 'R' + this.outstandingWorkshopBalance, tone: 'strong' },
-      { label: 'Revenue today', value: 'R' + this.revenueToday, tone: 'green' },
-      { label: 'Revenue this month', value: 'R' + this.revenueThisMonth, tone: 'green' }
+      { label: 'Mobile bookings', value: this.mobileBookings.length, tone: 'blue' },
+      { label: 'Workshop bookings', value: this.workshopBookings.length, tone: 'neutral' },
+      { label: 'Active mechanics', value: this.activeMechanics.length, tone: 'green' }
     ];
   }
 
@@ -352,9 +369,6 @@ export class AppComponent implements OnDestroy, OnInit {
     }
     if (this.readyWorkshopJobs) {
       items.push(this.readyWorkshopJobs + ' vehicle' + (this.readyWorkshopJobs === 1 ? ' is' : 's are') + ' ready for collection.');
-    }
-    if (this.outstandingWorkshopBalance > 0) {
-      items.push('Outstanding customer balance is R' + this.outstandingWorkshopBalance + '.');
     }
     if (this.workshopJobs.some(job => !job.dueDate && job.status !== 'Collected')) {
       items.push('Some open jobs still need an expected completion date.');
@@ -387,6 +401,65 @@ export class AppComponent implements OnDestroy, OnInit {
       .reduce((total, job) => total + (job.paid || 0), 0);
   }
 
+  get activeMechanics(): WorkshopMechanic[] {
+    return this.workshopMechanics.filter(mechanic => mechanic.active);
+  }
+
+  get workshopBookings(): WorkshopJob[] {
+    return this.workshopJobs.filter(job => job.bookingType !== 'Mobile booking');
+  }
+
+  get mobileBookings(): WorkshopJob[] {
+    return this.workshopJobs.filter(job => job.bookingType === 'Mobile booking');
+  }
+
+  get bookingFilters(): string[] {
+    return ['All', 'Workshop booking', 'Mobile booking', 'Booked', 'Checked in', 'Diagnosing', 'Waiting for parts', 'In repair', 'Ready for collection', 'Collected'];
+  }
+
+  get filteredBookings(): WorkshopJob[] {
+    const filtered = this.bookingFilter === 'All'
+      ? [...this.workshopJobs]
+      : this.workshopJobs.filter(job => job.bookingType === this.bookingFilter || job.status === this.bookingFilter);
+    return filtered.sort((left, right) => {
+      const leftDate = left.dueDate || '9999-12-31';
+      const rightDate = right.dueDate || '9999-12-31';
+      return this.bookingSortNewestFirst
+        ? rightDate.localeCompare(leftDate) || right.updatedAt.localeCompare(left.updatedAt)
+        : leftDate.localeCompare(rightDate) || left.updatedAt.localeCompare(right.updatedAt);
+    });
+  }
+
+  get selectedDateBookings(): WorkshopJob[] {
+    return this.orderedWorkshopJobs.filter(job => job.dueDate === this.selectedCalendarDate);
+  }
+
+  get calendarTitle(): string {
+    return this.calendarCursor.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
+  }
+
+  get calendarDays(): CalendarDay[] {
+    const year = this.calendarCursor.getFullYear();
+    const month = this.calendarCursor.getMonth();
+    const firstDay = new Date(year, month, 1);
+    const start = new Date(firstDay);
+    start.setDate(start.getDate() - start.getDay());
+    const today = new Date().toISOString().slice(0, 10);
+
+    return Array.from({ length: 42 }, (_, index) => {
+      const date = new Date(start);
+      date.setDate(start.getDate() + index);
+      const isoDate = this.toDateInputValue(date);
+      return {
+        date: isoDate,
+        dayNumber: date.getDate(),
+        isCurrentMonth: date.getMonth() === month,
+        isToday: isoDate === today,
+        bookings: this.workshopJobs.filter(job => job.dueDate === isoDate)
+      };
+    });
+  }
+
   get uniqueWorkshopCustomers(): Array<{ name: string; contact: string; jobs: number; balance: number }> {
     const customers = new Map<string, { name: string; contact: string; jobs: number; balance: number }>();
     this.workshopJobs.forEach(job => {
@@ -400,13 +473,22 @@ export class AppComponent implements OnDestroy, OnInit {
     return Array.from(customers.values()).sort((left, right) => left.name.localeCompare(right.name));
   }
 
-  get uniqueWorkshopVehicles(): Array<{ vehicle: string; registration: string; customer: string; status: string }> {
+  get uniqueWorkshopVehicles(): Array<{ vehicle: string; registration: string; vin: string; customer: string; status: string }> {
     return this.orderedWorkshopJobs.map(job => ({
       vehicle: job.vehicle,
       registration: job.registration || 'Not captured',
+      vin: job.vin || 'Not captured',
       customer: job.customerName,
       status: job.status
     }));
+  }
+
+  get canIssueInvoiceJobs(): WorkshopJob[] {
+    return this.workshopJobs.filter(job => job.estimate > 0 && job.paid >= job.estimate);
+  }
+
+  get estimateJobs(): WorkshopJob[] {
+    return this.workshopJobs.filter(job => job.estimate > 0 && job.paid < job.estimate);
   }
 
   setActiveAdminPanel(panel: AdminPanel): void {
@@ -433,6 +515,92 @@ export class AppComponent implements OnDestroy, OnInit {
     window.history.pushState({}, '', '/admin/workshop-management/' + page);
     setTimeout(() => window.scrollTo({ top: 0 }));
     this.markAdminActivity();
+  }
+
+  selectCalendarDate(date: string): void {
+    this.selectedCalendarDate = date;
+    this.workshopDraft.dueDate = date;
+    this.markAdminActivity();
+  }
+
+  moveCalendar(monthOffset: number): void {
+    this.calendarCursor = new Date(this.calendarCursor.getFullYear(), this.calendarCursor.getMonth() + monthOffset, 1);
+    this.markAdminActivity();
+  }
+
+  toggleBookingSort(): void {
+    this.bookingSortNewestFirst = !this.bookingSortNewestFirst;
+    this.markAdminActivity();
+  }
+
+  saveMechanic(): void {
+    this.markAdminActivity();
+    const name = this.mechanicDraft.name.trim();
+    if (!name) {
+      this.uploadError = 'Add the mechanic name before saving.';
+      return;
+    }
+
+    const mechanic: WorkshopMechanic = {
+      id: crypto.randomUUID(),
+      name,
+      phone: this.mechanicDraft.phone.trim(),
+      skills: this.mechanicDraft.skills.trim(),
+      active: true
+    };
+    this.workshopMechanics = [...this.workshopMechanics, mechanic];
+    this.saveWorkshopMechanics();
+    this.mechanicDraft = this.createEmptyMechanicDraft();
+    this.adminNotice = 'Mechanic saved.';
+    this.uploadError = '';
+  }
+
+  toggleMechanic(mechanic: WorkshopMechanic): void {
+    this.markAdminActivity();
+    this.workshopMechanics = this.workshopMechanics.map(item => item.id === mechanic.id ? { ...item, active: !item.active } : item);
+    this.saveWorkshopMechanics();
+  }
+
+  removeMechanic(mechanicId: string): void {
+    this.markAdminActivity();
+    this.workshopMechanics = this.workshopMechanics.filter(mechanic => mechanic.id !== mechanicId);
+    this.saveWorkshopMechanics();
+  }
+
+  saveWorkshopSettings(): void {
+    this.markAdminActivity();
+    this.storageFee = Math.max(Number(this.storageFeeDraft) || 0, 0);
+    localStorage.setItem(this.workshopStorageFeeStorageKey, String(this.storageFee));
+    this.adminNotice = 'Workshop settings saved.';
+  }
+
+  openPrintableDocument(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): void {
+    this.markAdminActivity();
+    if (documentType === 'Invoice' && job.paid < job.estimate) {
+      this.uploadError = 'Invoice can only be created after full payment. Send the estimate first.';
+      return;
+    }
+
+    const documentWindow = window.open('', '_blank');
+    if (!documentWindow) {
+      this.uploadError = 'Allow pop-ups to open the printable document.';
+      return;
+    }
+
+    documentWindow.document.write(this.buildPrintableDocument(job, documentType));
+    documentWindow.document.close();
+    documentWindow.focus();
+    documentWindow.print();
+  }
+
+  getDocumentEmailHref(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): string {
+    const subject = encodeURIComponent("AB's Auto Mobile Mechanic (Pty) Ltd " + documentType + ' - ' + job.vehicle);
+    const body = encodeURIComponent(this.buildShareMessage(job, documentType) + '\n\nPlease open the attached PDF after it has been saved from the system.');
+    return 'mailto:?subject=' + subject + '&body=' + body;
+  }
+
+  getDocumentWhatsappHref(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): string {
+    return 'https://wa.me/' + this.toWhatsappHref(job.customerContact || this.whatsappNumber) + '?text=' + encodeURIComponent(this.buildShareMessage(job, documentType));
   }
 
   navigateToAdminDashboard(event?: Event): void {
@@ -804,12 +972,18 @@ export class AppComponent implements OnDestroy, OnInit {
       customerContact: this.workshopDraft.customerContact.trim(),
       vehicle,
       registration: this.workshopDraft.registration.trim(),
+      vin: this.workshopDraft.vin.trim().toUpperCase(),
+      bookingType: this.workshopDraft.bookingType || this.bookingTypes[0],
+      mobileLocation: this.workshopDraft.bookingType === 'Mobile booking' ? this.workshopDraft.mobileLocation.trim() : '',
+      assignedMechanic: this.workshopDraft.assignedMechanic,
       jobType: this.workshopDraft.jobType.trim(),
       status: this.workshopDraft.status || this.workshopStatuses[0],
       priority: this.workshopDraft.priority || this.workshopPriorities[0],
       estimate: Number(this.workshopDraft.estimate) || 0,
       paid: Number(this.workshopDraft.paid) || 0,
       dueDate: this.workshopDraft.dueDate,
+      partsNotes: this.workshopDraft.partsNotes.trim(),
+      qualityNotes: this.workshopDraft.qualityNotes.trim(),
       notes: this.workshopDraft.notes.trim(),
       createdAt: this.workshopJobs.find(job => job.id === this.editingWorkshopJobId)?.createdAt || now,
       updatedAt: now
@@ -834,12 +1008,18 @@ export class AppComponent implements OnDestroy, OnInit {
       customerContact: job.customerContact,
       vehicle: job.vehicle,
       registration: job.registration,
+      vin: job.vin,
+      bookingType: job.bookingType,
+      mobileLocation: job.mobileLocation,
+      assignedMechanic: job.assignedMechanic,
       jobType: job.jobType,
       status: job.status,
       priority: job.priority,
       estimate: job.estimate,
       paid: job.paid,
       dueDate: job.dueDate,
+      partsNotes: job.partsNotes,
+      qualityNotes: job.qualityNotes,
       notes: job.notes
     };
   }
@@ -870,6 +1050,9 @@ export class AppComponent implements OnDestroy, OnInit {
     this.whatsappNumberDraft = this.whatsappNumber;
     this.emailAddressDraft = this.emailAddress;
     this.workshopJobs = this.loadWorkshopJobs();
+    this.workshopMechanics = this.loadWorkshopMechanics();
+    this.storageFee = Number(localStorage.getItem(this.workshopStorageFeeStorageKey)) || 250;
+    this.storageFeeDraft = this.storageFee;
   }
 
   private async loadRemoteContent(): Promise<void> {
@@ -993,6 +1176,12 @@ export class AppComponent implements OnDestroy, OnInit {
             paid: Number(job.paid) || 0,
             status: job.status || this.workshopStatuses[0],
             priority: job.priority || this.workshopPriorities[0],
+            vin: (job.vin || '').toUpperCase(),
+            bookingType: job.bookingType || this.bookingTypes[0],
+            mobileLocation: job.mobileLocation || '',
+            assignedMechanic: job.assignedMechanic || '',
+            partsNotes: job.partsNotes || '',
+            qualityNotes: job.qualityNotes || '',
             notes: job.notes || ''
           }));
       }
@@ -1007,19 +1196,65 @@ export class AppComponent implements OnDestroy, OnInit {
     localStorage.setItem(this.workshopJobsStorageKey, JSON.stringify(this.workshopJobs));
   }
 
+  private loadWorkshopMechanics(): WorkshopMechanic[] {
+    const storedMechanics = localStorage.getItem(this.workshopMechanicsStorageKey);
+    if (!storedMechanics) {
+      return [
+        { id: crypto.randomUUID(), name: 'AB Workshop Mechanic', phone: this.callNumber, skills: 'Diagnostics, servicing and repairs', active: true }
+      ];
+    }
+
+    try {
+      const parsedMechanics = JSON.parse(storedMechanics) as WorkshopMechanic[];
+      if (Array.isArray(parsedMechanics)) {
+        return parsedMechanics
+          .filter(mechanic => mechanic && mechanic.id && mechanic.name)
+          .map(mechanic => ({
+            ...mechanic,
+            phone: mechanic.phone || '',
+            skills: mechanic.skills || '',
+            active: mechanic.active !== false
+          }));
+      }
+    } catch (error) {
+      localStorage.removeItem(this.workshopMechanicsStorageKey);
+    }
+
+    return [];
+  }
+
+  private saveWorkshopMechanics(): void {
+    localStorage.setItem(this.workshopMechanicsStorageKey, JSON.stringify(this.workshopMechanics));
+  }
+
   private createEmptyWorkshopDraft(): Omit<WorkshopJob, 'id' | 'createdAt' | 'updatedAt'> {
     return {
       customerName: '',
       customerContact: '',
       vehicle: '',
       registration: '',
+      vin: '',
+      bookingType: 'Workshop booking',
+      mobileLocation: '',
+      assignedMechanic: '',
       jobType: '',
       status: 'Booked',
       priority: 'Normal',
       estimate: 0,
       paid: 0,
       dueDate: '',
+      partsNotes: '',
+      qualityNotes: '',
       notes: ''
+    };
+  }
+
+  private createEmptyMechanicDraft(): Omit<WorkshopMechanic, 'id'> {
+    return {
+      name: '',
+      phone: '',
+      skills: '',
+      active: true
     };
   }
 
@@ -1098,6 +1333,74 @@ export class AppComponent implements OnDestroy, OnInit {
   private toWhatsappHref(value: string): string {
     const cleanedNumber = value.replace(/\D/g, '');
     return cleanedNumber.startsWith('0') ? '27' + cleanedNumber.slice(1) : cleanedNumber;
+  }
+
+  private toDateInputValue(date: Date): string {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return year + '-' + month + '-' + day;
+  }
+
+  private buildShareMessage(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): string {
+    const amountLine = documentType === 'Invoice'
+      ? 'Invoice paid: R' + job.paid
+      : 'Estimated amount: R' + job.estimate;
+    return [
+      "AB's Auto Mobile Mechanic (Pty) Ltd",
+      documentType + ' for ' + job.vehicle,
+      'Customer: ' + job.customerName,
+      'Registration: ' + (job.registration || 'Not captured'),
+      'VIN: ' + (job.vin || 'Not captured'),
+      'Status: ' + job.status,
+      amountLine,
+      'Please reply on WhatsApp if anything needs to be updated.'
+    ].join('\n');
+  }
+
+  private buildPrintableDocument(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): string {
+    const balance = Math.max((job.estimate || 0) - (job.paid || 0), 0);
+    return `
+      <!doctype html>
+      <html>
+        <head>
+          <title>${documentType} - ${job.vehicle}</title>
+          <style>
+            body { color: #172029; font-family: Arial, sans-serif; margin: 34px; }
+            header { border-bottom: 4px solid #f2b84b; margin-bottom: 24px; padding-bottom: 18px; }
+            h1 { margin: 0 0 8px; }
+            table { border-collapse: collapse; margin-top: 18px; width: 100%; }
+            td, th { border: 1px solid #d9dee3; padding: 10px; text-align: left; }
+            th { background: #172029; color: #fff; }
+            .note { background: #f7f8f9; border: 1px solid #d9dee3; margin-top: 18px; padding: 14px; }
+          </style>
+        </head>
+        <body>
+          <header>
+            <h1>AB's Auto Mobile Mechanic (Pty) Ltd</h1>
+            <strong>${documentType}</strong>
+            <p>${this.workshopLocation} | ${this.callNumber} | ${this.emailAddress}</p>
+          </header>
+          <table>
+            <tr><th>Customer</th><td>${job.customerName}</td></tr>
+            <tr><th>Contact</th><td>${job.customerContact || ''}</td></tr>
+            <tr><th>Vehicle</th><td>${job.vehicle}</td></tr>
+            <tr><th>Registration</th><td>${job.registration || ''}</td></tr>
+            <tr><th>VIN</th><td>${job.vin || ''}</td></tr>
+            <tr><th>Booking type</th><td>${job.bookingType}</td></tr>
+            <tr><th>Location</th><td>${job.mobileLocation || this.workshopLocation}</td></tr>
+            <tr><th>Mechanic</th><td>${job.assignedMechanic || 'Not assigned'}</td></tr>
+            <tr><th>Status</th><td>${job.status}</td></tr>
+            <tr><th>Estimate</th><td>R${job.estimate || 0}</td></tr>
+            <tr><th>Paid</th><td>R${job.paid || 0}</td></tr>
+            <tr><th>Balance</th><td>R${balance}</td></tr>
+          </table>
+          <div class="note"><strong>Work notes</strong><p>${job.notes || 'No notes captured.'}</p></div>
+          <div class="note"><strong>Parts and supplier slip notes</strong><p>${job.partsNotes || 'No parts slip notes captured.'}</p></div>
+          <div class="note"><strong>Quality control</strong><p>${job.qualityNotes || 'No quality notes captured.'}</p></div>
+        </body>
+      </html>
+    `;
   }
 
   private withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {

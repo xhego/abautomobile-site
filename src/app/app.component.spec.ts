@@ -440,12 +440,18 @@ describe('AppComponent', () => {
       customerContact: '071 000 0000',
       vehicle: 'Toyota Corolla 2015',
       registration: 'ABC123GP',
+      vin: 'AHT12345678901234',
+      bookingType: 'Workshop booking',
+      mobileLocation: '',
+      assignedMechanic: 'AB Workshop Mechanic',
       jobType: 'Brake service',
       status: 'Booked',
       priority: 'Urgent',
       estimate: 2500,
       paid: 500,
       dueDate: '2026-08-01',
+      partsNotes: 'Front brake pads from supplier slip.',
+      qualityNotes: 'Brake pedal checked after test drive.',
       notes: 'Customer approved front pads.'
     };
 

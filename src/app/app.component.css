@@ -1524,6 +1524,147 @@ footer a {
   padding: 14px;
 }
 
+.calendar-toolbar,
+.document-actions,
+.mechanic-form,
+.settings-form {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.calendar-toolbar {
+  margin-bottom: 16px;
+}
+
+.calendar-toolbar button,
+.small-action-button,
+.document-actions button,
+.document-actions a,
+.mechanic-form button,
+.settings-form button {
+  align-items: center;
+  background: #172029;
+  border: 0;
+  border-radius: 5px;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: center;
+  padding: 10px 12px;
+  text-decoration: none;
+}
+
+.document-actions button:disabled {
+  background: #c9d1d7;
+  color: #66737c;
+  cursor: not-allowed;
+}
+
+.workshop-calendar {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+}
+
+.workshop-calendar button {
+  background: #ffffff;
+  border: 1px solid #dfe4e8;
+  border-radius: 8px;
+  color: #172029;
+  cursor: pointer;
+  min-height: 86px;
+  padding: 10px;
+  text-align: left;
+}
+
+.workshop-calendar button.outside-month {
+  background: #f2f4f5;
+  color: #9aa5ad;
+}
+
+.workshop-calendar button.today {
+  border-color: #f2b84b;
+  box-shadow: inset 0 0 0 2px #f2b84b;
+}
+
+.workshop-calendar button.selected {
+  background: #172029;
+  color: #ffffff;
+}
+
+.workshop-calendar strong,
+.workshop-calendar span {
+  display: block;
+}
+
+.workshop-calendar span {
+  color: inherit;
+  font-size: 12px;
+  font-weight: 800;
+  margin-top: 10px;
+}
+
+.booking-list,
+.mechanic-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.booking-row,
+.mechanic-list article {
+  background: #f7f8f9;
+  border: 1px solid #e1e5e8;
+  border-radius: 8px;
+  color: #172029;
+  display: grid;
+  gap: 5px;
+  padding: 14px;
+  text-align: left;
+}
+
+.booking-row {
+  cursor: pointer;
+}
+
+.booking-row:hover {
+  border-color: #f2b84b;
+}
+
+.booking-row span,
+.booking-row small,
+.mechanic-list span,
+.mechanic-list small {
+  color: #5d6871;
+}
+
+.filter-field,
+.mechanic-form label,
+.settings-form label {
+  color: #3a4650;
+  display: grid;
+  flex: 1 1 220px;
+  font-weight: 800;
+  gap: 7px;
+}
+
+.filter-field select,
+.mechanic-form input,
+.mechanic-form textarea,
+.settings-form input {
+  border: 1px solid #cfd6dc;
+  border-radius: 5px;
+  font: inherit;
+  padding: 11px;
+}
+
+.document-actions {
+  margin-top: 14px;
+}
+
 @media (max-width: 980px) {
   .topbar,
   .nav-links {
