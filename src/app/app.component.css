@@ -1118,6 +1118,412 @@ footer a {
   color: #ffffff;
 }
 
+.workshop-management-main {
+  background: #eef1f3;
+  min-height: 100vh;
+  padding-top: 122px;
+}
+
+.workshop-login-state {
+  align-items: start;
+  display: grid;
+  gap: 32px;
+  grid-template-columns: minmax(0, 1fr) minmax(320px, 420px);
+  margin: 0 auto;
+  max-width: 1120px;
+  padding: 74px 6vw;
+}
+
+.workshop-login-state h1,
+.workshop-page-header h1 {
+  color: #172029;
+  font-size: 42px;
+  font-weight: 800;
+  letter-spacing: 0;
+  line-height: 1.05;
+  margin: 0;
+}
+
+.compact-signin {
+  margin: 0;
+}
+
+.workshop-app-shell {
+  display: grid;
+  grid-template-columns: 280px minmax(0, 1fr);
+  min-height: calc(100vh - 122px);
+}
+
+.workshop-sidebar {
+  background: #10161c;
+  border-right: 1px solid rgba(255, 255, 255, 0.08);
+  color: #ffffff;
+  padding: 22px;
+}
+
+.workshop-sidebar-brand {
+  align-items: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  display: flex;
+  gap: 12px;
+  margin-bottom: 18px;
+  padding-bottom: 18px;
+}
+
+.workshop-sidebar-brand img {
+  filter: drop-shadow(0 8px 14px rgba(0, 0, 0, 0.42)) saturate(1.04);
+  height: 58px;
+  mix-blend-mode: lighten;
+  object-fit: contain;
+  width: 58px;
+}
+
+.workshop-sidebar-brand strong,
+.workshop-sidebar-brand small {
+  display: block;
+}
+
+.workshop-sidebar-brand small {
+  color: #9faab3;
+  font-size: 12px;
+}
+
+.workshop-sidebar nav {
+  display: grid;
+  gap: 6px;
+}
+
+.workshop-sidebar button {
+  align-items: center;
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  color: #d9e0e5;
+  cursor: pointer;
+  display: flex;
+  gap: 11px;
+  font-weight: 800;
+  padding: 12px;
+  text-align: left;
+}
+
+.workshop-sidebar button.active,
+.workshop-sidebar button:hover {
+  background: #f2b84b;
+  color: #111820;
+}
+
+.workshop-sidebar button i {
+  text-align: center;
+  width: 18px;
+}
+
+.workshop-workspace {
+  min-width: 0;
+  padding: 28px;
+}
+
+.workshop-page-header {
+  align-items: start;
+  background: #ffffff;
+  border: 1px solid #dfe4e8;
+  border-radius: 8px;
+  display: grid;
+  gap: 20px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  margin-bottom: 22px;
+  padding: 24px;
+}
+
+.workshop-page-header span,
+.workshop-login-state p {
+  color: #5d6871;
+}
+
+.back-admin-link {
+  color: #172029;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 8px;
+  margin-bottom: 18px;
+  text-decoration: none;
+}
+
+.back-admin-link:hover {
+  color: #c9871c;
+}
+
+.workshop-quick-actions {
+  display: grid;
+  gap: 9px;
+  grid-template-columns: repeat(2, minmax(150px, 1fr));
+}
+
+.workshop-quick-actions button,
+.job-actions button,
+.workshop-form-actions button {
+  align-items: center;
+  border: 0;
+  border-radius: 5px;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: center;
+  padding: 12px 14px;
+}
+
+.workshop-quick-actions button,
+.job-actions button,
+.workshop-form-actions button:not(.ghost-button) {
+  background: #172029;
+  color: #ffffff;
+}
+
+.workshop-page {
+  display: grid;
+  gap: 22px;
+}
+
+.workshop-metric-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+}
+
+.workshop-metric,
+.operation-panel,
+.board-column {
+  background: #ffffff;
+  border: 1px solid #dfe4e8;
+  border-radius: 8px;
+  box-shadow: 0 12px 28px rgba(16, 22, 28, 0.06);
+}
+
+.workshop-metric {
+  min-height: 112px;
+  padding: 18px;
+}
+
+.workshop-metric span {
+  color: #5d6871;
+  display: block;
+  font-size: 13px;
+  font-weight: 800;
+}
+
+.workshop-metric strong {
+  color: #172029;
+  display: block;
+  font-size: 28px;
+  margin-top: 12px;
+}
+
+.workshop-metric.tone-danger {
+  border-color: #d8664b;
+}
+
+.workshop-metric.tone-green {
+  border-color: #4a9d69;
+}
+
+.workshop-metric.tone-orange,
+.workshop-metric.tone-warm {
+  border-color: #f2b84b;
+}
+
+.workshop-two-column {
+  display: grid;
+  gap: 22px;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+}
+
+.operation-panel {
+  padding: 22px;
+}
+
+.operation-panel h2,
+.board-column h2 {
+  color: #172029;
+  font-size: 20px;
+  margin: 0;
+}
+
+.panel-title-row {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.panel-title-row span {
+  background: #f4f2ed;
+  border-radius: 999px;
+  color: #52606b;
+  font-size: 12px;
+  font-weight: 800;
+  padding: 7px 10px;
+}
+
+.attention-list {
+  display: grid;
+  gap: 10px;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.attention-list li {
+  align-items: start;
+  background: #fff8e8;
+  border: 1px solid #f1d397;
+  border-radius: 6px;
+  color: #4b3a18;
+  display: flex;
+  gap: 10px;
+  line-height: 1.45;
+  padding: 12px;
+}
+
+.compact-table {
+  border: 1px solid #e3e7ea;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.table-row {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  padding: 12px 14px;
+}
+
+.table-row + .table-row {
+  border-top: 1px solid #e3e7ea;
+}
+
+.table-row span {
+  color: #34424e;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.table-head {
+  background: #172029;
+}
+
+.table-head span {
+  color: #ffffff;
+  font-size: 12px;
+  font-weight: 800;
+  text-transform: uppercase;
+}
+
+.soft-empty {
+  background: #f7f8f9;
+  border: 1px dashed #c9d1d7;
+  border-radius: 8px;
+  color: #66737c;
+  font-weight: 800;
+  padding: 18px;
+}
+
+.mechanic-load-grid {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.mechanic-load-grid div,
+.settings-list span {
+  background: #f7f8f9;
+  border: 1px solid #e1e5e8;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.mechanic-load-grid strong,
+.mechanic-load-grid span,
+.mechanic-load-grid small {
+  display: block;
+}
+
+.mechanic-load-grid span {
+  color: #172029;
+  font-size: 22px;
+  font-weight: 800;
+  margin-top: 8px;
+}
+
+.mechanic-load-grid small {
+  color: #66737c;
+  margin-top: 6px;
+}
+
+.workshop-board {
+  align-items: start;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(7, minmax(180px, 1fr));
+  overflow-x: auto;
+  padding-bottom: 8px;
+}
+
+.board-column {
+  min-height: 360px;
+  padding: 14px;
+}
+
+.board-column h2 {
+  font-size: 16px;
+  margin-bottom: 12px;
+}
+
+.board-job {
+  background: #f7f8f9;
+  border-left: 4px solid #f2b84b;
+  border-radius: 6px;
+  display: grid;
+  gap: 5px;
+  margin-bottom: 10px;
+  padding: 12px;
+}
+
+.board-job strong,
+.board-job span,
+.board-job small {
+  overflow-wrap: anywhere;
+}
+
+.board-job span,
+.board-job small {
+  color: #5d6871;
+}
+
+.embedded-workshop-form {
+  margin-top: 18px;
+}
+
+.quality-check-grid,
+.settings-list {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin-top: 18px;
+}
+
+.quality-check-grid label {
+  align-items: center;
+  background: #f7f8f9;
+  border: 1px solid #e1e5e8;
+  border-radius: 8px;
+  color: #34424e;
+  display: flex;
+  font-weight: 800;
+  gap: 10px;
+  padding: 14px;
+}
+
 @media (max-width: 980px) {
   .topbar,
   .nav-links {
@@ -1163,6 +1569,32 @@ footer a {
   }
 
   .terms-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .workshop-app-shell,
+  .workshop-login-state,
+  .workshop-page-header,
+  .workshop-two-column {
+    grid-template-columns: 1fr;
+  }
+
+  .workshop-sidebar {
+    overflow-x: auto;
+  }
+
+  .workshop-sidebar nav {
+    display: flex;
+    min-width: max-content;
+  }
+
+  .workshop-metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .mechanic-load-grid,
+  .quality-check-grid,
+  .settings-list {
     grid-template-columns: 1fr;
   }
 }
@@ -1264,5 +1696,30 @@ footer a {
 
   .workshop-form {
     grid-template-columns: 1fr;
+  }
+
+  .workshop-management-main {
+    padding-top: 0;
+  }
+
+  .workshop-workspace,
+  .workshop-sidebar,
+  .workshop-login-state {
+    padding: 18px;
+  }
+
+  .workshop-page-header h1,
+  .workshop-login-state h1 {
+    font-size: 32px;
+  }
+
+  .workshop-quick-actions,
+  .workshop-metric-grid,
+  .table-row {
+    grid-template-columns: 1fr;
+  }
+
+  .table-head {
+    display: none;
   }
 }

@@ -17,7 +17,7 @@
     </div>
   </nav>
 
-  <header class="hero" *ngIf="!isGalleryPage && !isSignInPage">
+  <header class="hero" *ngIf="!isGalleryPage && !isSignInPage && !isWorkshopManagementPage">
     <div class="hero-content">
       <p class="eyebrow">Professional mobile mechanic in Meyerton and surrounding Gauteng areas</p>
       <h1>Clean, reliable vehicle repairs where you need them.</h1>
@@ -34,7 +34,7 @@
     </div>
   </header>
 
-  <main *ngIf="!isGalleryPage && !isSignInPage">
+  <main *ngIf="!isGalleryPage && !isSignInPage && !isWorkshopManagementPage">
     <section class="section intro-section" id="services">
       <div class="section-heading">
         <p class="eyebrow">Workshop services</p>
@@ -178,6 +178,354 @@
     </section>
 
   </main>
+
+  <main class="workshop-management-main" *ngIf="isWorkshopManagementPage">
+    <section class="workshop-login-state" *ngIf="!isSignedIn">
+      <div>
+        <p class="eyebrow">Workshop management</p>
+        <h1>Sign in to manage workshop operations.</h1>
+        <p>Vehicle jobs, payments, customers and workshop notes are protected for authorised staff only.</p>
+      </div>
+      <form (submit)="$event.preventDefault()" class="signin-form compact-signin">
+        <label>
+          Email
+          <input type="email" name="workshopUsername" [(ngModel)]="login.username" autocomplete="username" [disabled]="isSigningIn" (keydown.enter)="signIn()" required>
+        </label>
+        <label>
+          Password
+          <span class="password-field">
+            <input [type]="showPassword ? 'text' : 'password'" name="workshopPassword" [(ngModel)]="login.password" autocomplete="current-password" [disabled]="isSigningIn" (keydown.enter)="signIn()" required>
+            <button class="password-toggle" type="button" (click)="showPassword = !showPassword" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'" [attr.aria-pressed]="showPassword" [disabled]="isSigningIn">
+              <i class="fa" [ngClass]="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
+            </button>
+          </span>
+        </label>
+        <button type="button" (click)="signIn()" [disabled]="isSigningIn">
+          <span class="loader-dot button-loader" *ngIf="isSigningIn"></span>
+          <span>{{ isSigningIn ? 'Signing in...' : 'Sign in' }}</span>
+        </button>
+        <a class="gallery-link" href="/signin" (click)="navigateToPage('signin', $event)">Back to admin sign in</a>
+        <p class="form-status" *ngIf="signInStatus">{{ signInStatus }}</p>
+        <p class="form-message" *ngIf="signInError">{{ signInError }}</p>
+      </form>
+    </section>
+
+    <section class="workshop-app-shell" *ngIf="isSignedIn" (click)="markAdminActivity()" (input)="markAdminActivity()" (change)="markAdminActivity()">
+      <aside class="workshop-sidebar">
+        <div class="workshop-sidebar-brand">
+          <img src="assets/img/ab-auto-logo.png" alt="AB's Auto Mobile Mechanic (Pty) Ltd logo">
+          <span>
+            <strong>Workshop</strong>
+            <small>Operations system</small>
+          </span>
+        </div>
+        <nav aria-label="Workshop management navigation">
+          <button type="button" *ngFor="let item of workshopManagementNav" (click)="navigateToWorkshopManagement(item.id)" [class.active]="activeWorkshopPage === item.id">
+            <i class="fa" [ngClass]="item.icon"></i>
+            <span>{{ item.label }}</span>
+          </button>
+        </nav>
+      </aside>
+
+      <div class="workshop-workspace">
+        <header class="workshop-page-header">
+          <div>
+            <a href="/signin" (click)="navigateToAdminDashboard($event)" class="back-admin-link"><i class="fa fa-arrow-left"></i> Back to Admin Dashboard</a>
+            <p class="eyebrow">AB's Auto Mobile Mechanic (Pty) Ltd</p>
+            <h1>{{ activeWorkshopPageTitle }}</h1>
+            <span>{{ currentYear }} workshop operations | {{ workshopLocation }}</span>
+          </div>
+          <div class="workshop-quick-actions">
+            <button type="button" (click)="navigateToWorkshopManagement('bookings')"><i class="fa fa-plus"></i> New Booking</button>
+            <button type="button" (click)="navigateToWorkshopManagement('customers')"><i class="fa fa-user-plus"></i> New Customer</button>
+            <button type="button" (click)="navigateToWorkshopManagement('vehicles')"><i class="fa fa-car"></i> New Vehicle</button>
+            <button type="button" (click)="navigateToWorkshopManagement('job-cards')"><i class="fa fa-clipboard"></i> New Job Card</button>
+            <button type="button" (click)="navigateToWorkshopManagement('payments')"><i class="fa fa-credit-card"></i> Record Payment</button>
+          </div>
+        </header>
+
+        <ng-container [ngSwitch]="activeWorkshopPage">
+          <section class="workshop-page" *ngSwitchCase="'dashboard'">
+            <div class="workshop-metric-grid">
+              <article class="workshop-metric" *ngFor="let metric of workshopMetrics" [class]="'tone-' + metric.tone">
+                <span>{{ metric.label }}</span>
+                <strong>{{ metric.value }}</strong>
+              </article>
+            </div>
+
+            <div class="workshop-two-column">
+              <article class="operation-panel">
+                <div class="panel-title-row">
+                  <h2>Attention required</h2>
+                  <span>{{ attentionItems.length }}</span>
+                </div>
+                <ul class="attention-list">
+                  <li *ngFor="let item of attentionItems"><i class="fa fa-exclamation-circle"></i>{{ item }}</li>
+                </ul>
+              </article>
+
+              <article class="operation-panel">
+                <div class="panel-title-row">
+                  <h2>Today's schedule</h2>
+                  <span>{{ todaysWorkshopJobs.length }}</span>
+                </div>
+                <div class="compact-table" *ngIf="todaysWorkshopJobs.length; else noTodayJobs">
+                  <div class="table-row table-head"><span>Customer</span><span>Vehicle</span><span>Status</span><span>Due</span></div>
+                  <div class="table-row" *ngFor="let job of todaysWorkshopJobs">
+                    <span>{{ job.customerName }}</span><span>{{ job.vehicle }}</span><span>{{ job.status }}</span><span>{{ job.dueDate }}</span>
+                  </div>
+                </div>
+                <ng-template #noTodayJobs>
+                  <div class="soft-empty">No jobs due today.</div>
+                </ng-template>
+              </article>
+            </div>
+
+            <article class="operation-panel">
+              <div class="panel-title-row">
+                <h2>Mechanic workload</h2>
+                <span>Live overview</span>
+              </div>
+              <div class="mechanic-load-grid">
+                <div>
+                  <strong>Main workshop</strong>
+                  <span>{{ openWorkshopJobs }} open jobs</span>
+                  <small>{{ readyWorkshopJobs }} ready for collection</small>
+                </div>
+                <div>
+                  <strong>Parts waiting</strong>
+                  <span>{{ waitingPartsJobs }} jobs</span>
+                  <small>Follow up suppliers before close of day.</small>
+                </div>
+                <div>
+                  <strong>Customer approvals</strong>
+                  <span>{{ waitingCustomerJobs }} pending</span>
+                  <small>WhatsApp or phone confirmation required.</small>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="workshop-page" *ngSwitchCase="'board'">
+            <div class="workshop-board">
+              <article class="board-column" *ngFor="let column of workshopBoardColumns">
+                <h2>{{ column.title }}</h2>
+                <div class="board-job" *ngFor="let job of orderedWorkshopJobs" [hidden]="column.statuses.indexOf(job.status) === -1">
+                  <strong>{{ job.vehicle }}</strong>
+                  <span>{{ job.customerName }}</span>
+                  <small>{{ job.priority }} | {{ job.dueDate || 'No due date' }}</small>
+                </div>
+              </article>
+            </div>
+          </section>
+
+          <section class="workshop-page" *ngSwitchCase="'bookings'">
+            <article class="operation-panel">
+              <h2>Bookings and scheduling</h2>
+              <p>Use the job form below to capture bookings while Supabase booking tables are being connected.</p>
+              <ng-container *ngTemplateOutlet="workshopJobForm"></ng-container>
+            </article>
+          </section>
+
+          <section class="workshop-page" *ngSwitchCase="'job-cards'">
+            <article class="operation-panel">
+              <div class="panel-title-row">
+                <h2>Job cards</h2>
+                <span>{{ workshopJobs.length }} total</span>
+              </div>
+              <ng-container *ngTemplateOutlet="workshopJobList"></ng-container>
+            </article>
+          </section>
+
+          <section class="workshop-page" *ngSwitchCase="'customers'">
+            <article class="operation-panel">
+              <div class="panel-title-row">
+                <h2>Customers</h2>
+                <span>{{ uniqueWorkshopCustomers.length }} records</span>
+              </div>
+              <div class="compact-table">
+                <div class="table-row table-head"><span>Name</span><span>Contact</span><span>Jobs</span><span>Balance</span></div>
+                <div class="table-row" *ngFor="let customer of uniqueWorkshopCustomers">
+                  <span>{{ customer.name }}</span><span>{{ customer.contact || 'Not captured' }}</span><span>{{ customer.jobs }}</span><span>R{{ customer.balance }}</span>
+                </div>
+              </div>
+              <div class="soft-empty" *ngIf="!uniqueWorkshopCustomers.length">No customer records yet.</div>
+            </article>
+          </section>
+
+          <section class="workshop-page" *ngSwitchCase="'vehicles'">
+            <article class="operation-panel">
+              <div class="panel-title-row">
+                <h2>Vehicles</h2>
+                <span>{{ uniqueWorkshopVehicles.length }} records</span>
+              </div>
+              <div class="compact-table">
+                <div class="table-row table-head"><span>Vehicle</span><span>Registration</span><span>Customer</span><span>Status</span></div>
+                <div class="table-row" *ngFor="let vehicle of uniqueWorkshopVehicles">
+                  <span>{{ vehicle.vehicle }}</span><span>{{ vehicle.registration }}</span><span>{{ vehicle.customer }}</span><span>{{ vehicle.status }}</span>
+                </div>
+              </div>
+              <div class="soft-empty" *ngIf="!uniqueWorkshopVehicles.length">No vehicles captured yet.</div>
+            </article>
+          </section>
+
+          <section class="workshop-page" *ngSwitchCase="'payments'">
+            <article class="operation-panel">
+              <div class="panel-title-row">
+                <h2>Payments</h2>
+                <span>R{{ outstandingWorkshopBalance }} outstanding</span>
+              </div>
+              <div class="compact-table">
+                <div class="table-row table-head"><span>Customer</span><span>Vehicle</span><span>Paid</span><span>Balance</span></div>
+                <div class="table-row" *ngFor="let job of orderedWorkshopJobs">
+                  <span>{{ job.customerName }}</span><span>{{ job.vehicle }}</span><span>R{{ job.paid }}</span><span>R{{ (job.estimate || 0) - (job.paid || 0) }}</span>
+                </div>
+              </div>
+            </article>
+          </section>
+
+          <section class="workshop-page" *ngSwitchCase="'quality-control'">
+            <article class="operation-panel">
+              <h2>Quality control</h2>
+              <div class="quality-check-grid">
+                <label><input type="checkbox"> Fault confirmed repaired</label>
+                <label><input type="checkbox"> Test drive completed where required</label>
+                <label><input type="checkbox"> Warning lights checked</label>
+                <label><input type="checkbox"> Brakes checked where relevant</label>
+                <label><input type="checkbox"> Leaks checked</label>
+                <label><input type="checkbox"> Customer concerns reviewed</label>
+              </div>
+            </article>
+          </section>
+
+          <section class="workshop-page" *ngSwitchCase="'reports'">
+            <div class="workshop-metric-grid">
+              <article class="workshop-metric"><span>Open jobs</span><strong>{{ openWorkshopJobs }}</strong></article>
+              <article class="workshop-metric"><span>Outstanding</span><strong>R{{ outstandingWorkshopBalance }}</strong></article>
+              <article class="workshop-metric"><span>Ready</span><strong>{{ readyWorkshopJobs }}</strong></article>
+              <article class="workshop-metric"><span>Overdue</span><strong>{{ overdueWorkshopJobs.length }}</strong></article>
+            </div>
+          </section>
+
+          <section class="workshop-page" *ngSwitchCase="'settings'">
+            <article class="operation-panel">
+              <h2>Workshop settings</h2>
+              <p>Supabase RLS, storage buckets and workflow functions are documented in the project SQL files.</p>
+              <div class="settings-list">
+                <span>Storage fee: R250 per day</span>
+                <span>Admin auto sign-out: 10 minutes inactivity</span>
+                <span>Private workshop documents: Supabase Storage</span>
+                <span>Permissions: Supabase Auth + RLS</span>
+              </div>
+            </article>
+          </section>
+
+          <section class="workshop-page" *ngSwitchDefault>
+            <article class="operation-panel">
+              <h2>{{ activeWorkshopPageTitle }}</h2>
+              <p>This workspace is ready for the next Supabase-backed workflow connection.</p>
+              <ng-container *ngTemplateOutlet="workshopJobList"></ng-container>
+            </article>
+          </section>
+        </ng-container>
+      </div>
+    </section>
+  </main>
+
+  <ng-template #workshopJobForm>
+    <form class="workshop-form embedded-workshop-form" (ngSubmit)="saveWorkshopJob()">
+      <label>
+        Customer name
+        <input type="text" name="pageCustomerName" [(ngModel)]="workshopDraft.customerName" placeholder="Customer name">
+      </label>
+      <label>
+        Customer contact
+        <input type="tel" name="pageCustomerContact" [(ngModel)]="workshopDraft.customerContact" placeholder="Phone or WhatsApp">
+      </label>
+      <label>
+        Vehicle
+        <input type="text" name="pageVehicle" [(ngModel)]="workshopDraft.vehicle" placeholder="Make, model and year">
+      </label>
+      <label>
+        Registration
+        <input type="text" name="pageRegistration" [(ngModel)]="workshopDraft.registration" placeholder="Licence plate">
+      </label>
+      <label>
+        Job type
+        <input type="text" name="pageJobType" [(ngModel)]="workshopDraft.jobType" placeholder="Service, diagnosis, brakes, engine">
+      </label>
+      <label>
+        Due date
+        <input type="date" name="pageDueDate" [(ngModel)]="workshopDraft.dueDate">
+      </label>
+      <label>
+        Status
+        <select name="pageStatus" [(ngModel)]="workshopDraft.status">
+          <option *ngFor="let status of workshopStatuses" [value]="status">{{ status }}</option>
+        </select>
+      </label>
+      <label>
+        Priority
+        <select name="pagePriority" [(ngModel)]="workshopDraft.priority">
+          <option *ngFor="let priority of workshopPriorities" [value]="priority">{{ priority }}</option>
+        </select>
+      </label>
+      <label>
+        Estimate
+        <input type="number" min="0" name="pageEstimate" [(ngModel)]="workshopDraft.estimate" placeholder="0">
+      </label>
+      <label>
+        Paid
+        <input type="number" min="0" name="pagePaid" [(ngModel)]="workshopDraft.paid" placeholder="0">
+      </label>
+      <label class="wide-field">
+        Notes and next steps
+        <textarea name="pageNotes" [(ngModel)]="workshopDraft.notes" rows="4" placeholder="Faults, parts, approval, supplier notes, collection instructions"></textarea>
+      </label>
+      <div class="workshop-form-actions">
+        <button type="submit" [disabled]="isSavingWorkshopJob">
+          <span class="loader-dot button-loader" *ngIf="isSavingWorkshopJob"></span>
+          <span>{{ isSavingWorkshopJob ? 'Saving job...' : (editingWorkshopJobId ? 'Update job' : 'Add job') }}</span>
+        </button>
+        <button class="ghost-button" type="button" (click)="resetWorkshopDraft()">Clear form</button>
+      </div>
+    </form>
+    <p class="form-message" *ngIf="uploadError">{{ uploadError }}</p>
+    <p class="form-success" *ngIf="adminNotice">{{ adminNotice }}</p>
+  </ng-template>
+
+  <ng-template #workshopJobList>
+    <div class="workshop-jobs" *ngIf="orderedWorkshopJobs.length; else noWorkshopJobsPage">
+      <article class="workshop-job-card" *ngFor="let job of orderedWorkshopJobs">
+        <div>
+          <strong>{{ job.vehicle }}</strong>
+          <span>{{ job.customerName }} | {{ job.customerContact || 'No contact captured' }}</span>
+          <small>{{ job.registration || 'No registration' }} | {{ job.jobType || 'General repair' }}</small>
+        </div>
+        <div class="job-tags">
+          <span>{{ job.status }}</span>
+          <span>{{ job.priority }}</span>
+          <span *ngIf="job.dueDate">Due {{ job.dueDate }}</span>
+        </div>
+        <p>{{ job.notes || 'No notes added yet.' }}</p>
+        <div class="job-money">
+          <span>Estimate: R{{ job.estimate }}</span>
+          <span>Paid: R{{ job.paid }}</span>
+          <span>Balance: R{{ (job.estimate || 0) - (job.paid || 0) }}</span>
+        </div>
+        <div class="job-actions">
+          <button type="button" (click)="editWorkshopJob(job); navigateToWorkshopManagement('bookings')">Edit</button>
+          <button type="button" class="danger-button" (click)="removeWorkshopJob(job.id)">Remove</button>
+        </div>
+      </article>
+    </div>
+    <ng-template #noWorkshopJobsPage>
+      <div class="empty-admin-state">
+        <strong>No workshop jobs yet.</strong>
+        <span>Add the first vehicle from Bookings or Job Cards.</span>
+      </div>
+    </ng-template>
+  </ng-template>
 
   <main class="signin-page-main" *ngIf="isSignInPage">
     <section class="section admin-section" id="admin">

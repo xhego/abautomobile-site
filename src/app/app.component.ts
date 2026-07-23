@@ -16,6 +16,25 @@ interface ServiceItem {
 }
 
 type AdminPanel = 'images' | 'info' | 'workshop';
+type SitePage = 'home' | 'gallery' | 'signin';
+type WorkshopPage =
+  'dashboard' |
+  'calendar' |
+  'bookings' |
+  'board' |
+  'mobile-callouts' |
+  'job-cards' |
+  'customers' |
+  'vehicles' |
+  'estimates' |
+  'invoices' |
+  'payments' |
+  'parts' |
+  'suppliers' |
+  'quality-control' |
+  'mechanics' |
+  'reports' |
+  'settings';
 
 interface WorkshopJob {
   id: string;
@@ -32,6 +51,23 @@ interface WorkshopJob {
   notes: string;
   createdAt: string;
   updatedAt: string;
+}
+
+interface WorkshopNavItem {
+  id: WorkshopPage;
+  label: string;
+  icon: string;
+}
+
+interface WorkshopMetric {
+  label: string;
+  value: string | number;
+  tone: string;
+}
+
+interface WorkshopBoardColumn {
+  title: string;
+  statuses: string[];
 }
 
 @Component({
@@ -116,6 +152,34 @@ export class AppComponent implements OnDestroy, OnInit {
 
   readonly workshopStatuses = ['Booked', 'Checked in', 'Diagnosing', 'Waiting for parts', 'In repair', 'Ready for collection', 'Collected'];
   readonly workshopPriorities = ['Normal', 'Urgent', 'Waiting customer', 'Warranty check'];
+  readonly workshopManagementNav: WorkshopNavItem[] = [
+    { id: 'dashboard', label: 'Dashboard', icon: 'fa-tachometer' },
+    { id: 'calendar', label: 'Calendar', icon: 'fa-calendar' },
+    { id: 'bookings', label: 'Bookings', icon: 'fa-book' },
+    { id: 'board', label: 'Workshop Board', icon: 'fa-columns' },
+    { id: 'mobile-callouts', label: 'Mobile Call-Outs', icon: 'fa-road' },
+    { id: 'job-cards', label: 'Job Cards', icon: 'fa-clipboard' },
+    { id: 'customers', label: 'Customers', icon: 'fa-users' },
+    { id: 'vehicles', label: 'Vehicles', icon: 'fa-car' },
+    { id: 'estimates', label: 'Estimates', icon: 'fa-calculator' },
+    { id: 'invoices', label: 'Invoices', icon: 'fa-file-text-o' },
+    { id: 'payments', label: 'Payments', icon: 'fa-credit-card' },
+    { id: 'parts', label: 'Parts', icon: 'fa-cogs' },
+    { id: 'suppliers', label: 'Suppliers', icon: 'fa-truck' },
+    { id: 'quality-control', label: 'Quality Control', icon: 'fa-check-square-o' },
+    { id: 'mechanics', label: 'Mechanics', icon: 'fa-wrench' },
+    { id: 'reports', label: 'Reports', icon: 'fa-bar-chart' },
+    { id: 'settings', label: 'Settings', icon: 'fa-sliders' }
+  ];
+  readonly workshopBoardColumns: WorkshopBoardColumn[] = [
+    { title: 'Booked', statuses: ['Booked'] },
+    { title: 'Checked in', statuses: ['Checked in'] },
+    { title: 'Diagnosis', statuses: ['Diagnosing'] },
+    { title: 'Waiting', statuses: ['Waiting for parts'] },
+    { title: 'In repair', statuses: ['In repair'] },
+    { title: 'Ready', statuses: ['Ready for collection'] },
+    { title: 'Collected', statuses: ['Collected'] }
+  ];
 
   defaultImages: GalleryImage[] = [
     { srcImg: 'assets/img/ABAuto/dignostics.jpg', title: 'Diagnostic checks' },
@@ -156,7 +220,9 @@ export class AppComponent implements OnDestroy, OnInit {
   showPassword = false;
   isGalleryPage = false;
   isSignInPage = false;
+  isWorkshopManagementPage = false;
   activeSection = '';
+  activeWorkshopPage: WorkshopPage = 'dashboard';
   activeAdminPanel: AdminPanel = 'images';
   adminRefreshKey = 0;
   activeGalleryIndex: number | null = null;
@@ -233,6 +299,14 @@ export class AppComponent implements OnDestroy, OnInit {
     return this.workshopJobs.filter(job => job.status === 'Ready for collection').length;
   }
 
+  get waitingPartsJobs(): number {
+    return this.workshopJobs.filter(job => job.status === 'Waiting for parts').length;
+  }
+
+  get waitingCustomerJobs(): number {
+    return this.workshopJobs.filter(job => job.priority === 'Waiting customer').length;
+  }
+
   get outstandingWorkshopBalance(): number {
     return this.workshopJobs.reduce((total, job) => total + Math.max((job.estimate || 0) - (job.paid || 0), 0), 0);
   }
@@ -249,9 +323,126 @@ export class AppComponent implements OnDestroy, OnInit {
     return this.adminPanels.find(panel => panel.id === this.activeAdminPanel)?.title || '';
   }
 
+  get activeWorkshopPageTitle(): string {
+    return this.workshopManagementNav.find(item => item.id === this.activeWorkshopPage)?.label || 'Workshop Management';
+  }
+
+  get workshopMetrics(): WorkshopMetric[] {
+    const inProgressCount = this.workshopJobs.filter(job => job.status === 'In repair').length;
+    const waitingCount = this.workshopJobs.filter(job => job.status === 'Waiting for parts').length;
+    const overdueCount = this.overdueWorkshopJobs.length;
+    return [
+      { label: 'Bookings today', value: this.todaysWorkshopJobs.length, tone: 'warm' },
+      { label: 'Vehicles checked in', value: this.workshopJobs.filter(job => job.status === 'Checked in').length, tone: 'neutral' },
+      { label: 'Open jobs', value: this.openWorkshopJobs, tone: 'strong' },
+      { label: 'Jobs in progress', value: inProgressCount, tone: 'blue' },
+      { label: 'Waiting for parts', value: waitingCount, tone: 'orange' },
+      { label: 'Overdue jobs', value: overdueCount, tone: overdueCount ? 'danger' : 'neutral' },
+      { label: 'Ready for collection', value: this.readyWorkshopJobs, tone: 'green' },
+      { label: 'Outstanding balance', value: 'R' + this.outstandingWorkshopBalance, tone: 'strong' },
+      { label: 'Revenue today', value: 'R' + this.revenueToday, tone: 'green' },
+      { label: 'Revenue this month', value: 'R' + this.revenueThisMonth, tone: 'green' }
+    ];
+  }
+
+  get attentionItems(): string[] {
+    const items: string[] = [];
+    if (this.overdueWorkshopJobs.length) {
+      items.push(this.overdueWorkshopJobs.length + ' job' + (this.overdueWorkshopJobs.length === 1 ? ' is' : 's are') + ' overdue.');
+    }
+    if (this.readyWorkshopJobs) {
+      items.push(this.readyWorkshopJobs + ' vehicle' + (this.readyWorkshopJobs === 1 ? ' is' : 's are') + ' ready for collection.');
+    }
+    if (this.outstandingWorkshopBalance > 0) {
+      items.push('Outstanding customer balance is R' + this.outstandingWorkshopBalance + '.');
+    }
+    if (this.workshopJobs.some(job => !job.dueDate && job.status !== 'Collected')) {
+      items.push('Some open jobs still need an expected completion date.');
+    }
+    if (this.workshopJobs.some(job => job.priority === 'Waiting customer')) {
+      items.push('Customer approval or feedback is still pending.');
+    }
+
+    return items.length ? items : ['No urgent workshop issues need attention right now.'];
+  }
+
+  get todaysWorkshopJobs(): WorkshopJob[] {
+    const today = new Date().toISOString().slice(0, 10);
+    return this.orderedWorkshopJobs.filter(job => job.dueDate === today);
+  }
+
+  get overdueWorkshopJobs(): WorkshopJob[] {
+    const today = new Date().toISOString().slice(0, 10);
+    return this.workshopJobs.filter(job => job.dueDate && job.dueDate < today && job.status !== 'Collected');
+  }
+
+  get revenueToday(): number {
+    return this.todaysWorkshopJobs.reduce((total, job) => total + (job.paid || 0), 0);
+  }
+
+  get revenueThisMonth(): number {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    return this.workshopJobs
+      .filter(job => (job.updatedAt || '').slice(0, 7) === currentMonth)
+      .reduce((total, job) => total + (job.paid || 0), 0);
+  }
+
+  get uniqueWorkshopCustomers(): Array<{ name: string; contact: string; jobs: number; balance: number }> {
+    const customers = new Map<string, { name: string; contact: string; jobs: number; balance: number }>();
+    this.workshopJobs.forEach(job => {
+      const key = (job.customerName || 'Unknown customer').toLowerCase();
+      const current = customers.get(key) || { name: job.customerName || 'Unknown customer', contact: job.customerContact, jobs: 0, balance: 0 };
+      current.jobs++;
+      current.contact = current.contact || job.customerContact;
+      current.balance += Math.max((job.estimate || 0) - (job.paid || 0), 0);
+      customers.set(key, current);
+    });
+    return Array.from(customers.values()).sort((left, right) => left.name.localeCompare(right.name));
+  }
+
+  get uniqueWorkshopVehicles(): Array<{ vehicle: string; registration: string; customer: string; status: string }> {
+    return this.orderedWorkshopJobs.map(job => ({
+      vehicle: job.vehicle,
+      registration: job.registration || 'Not captured',
+      customer: job.customerName,
+      status: job.status
+    }));
+  }
+
   setActiveAdminPanel(panel: AdminPanel): void {
+    if (panel === 'workshop') {
+      this.navigateToWorkshopManagement();
+      return;
+    }
+
     this.activeAdminPanel = panel;
     this.markAdminActivity();
+  }
+
+  navigateToWorkshopManagement(page: WorkshopPage = 'dashboard', event?: Event): void {
+    if (event) {
+      event.preventDefault();
+    }
+
+    this.activeWorkshopPage = page;
+    this.isGalleryPage = false;
+    this.isSignInPage = false;
+    this.isWorkshopManagementPage = true;
+    this.showAdmin = false;
+    this.activeSection = '';
+    window.history.pushState({}, '', '/admin/workshop-management/' + page);
+    setTimeout(() => window.scrollTo({ top: 0 }));
+    this.markAdminActivity();
+  }
+
+  navigateToAdminDashboard(event?: Event): void {
+    if (event) {
+      event.preventDefault();
+    }
+
+    this.navigateToPage('signin');
+    this.showAdmin = true;
+    this.activeAdminPanel = 'images';
   }
 
   openAdmin(event?: Event): void {
@@ -281,13 +472,14 @@ export class AppComponent implements OnDestroy, OnInit {
     });
   }
 
-  navigateToPage(page: 'home' | 'gallery' | 'signin', event?: Event): void {
+  navigateToPage(page: SitePage, event?: Event): void {
     if (event) {
       event.preventDefault();
     }
 
     this.isGalleryPage = page === 'gallery';
     this.isSignInPage = page === 'signin';
+    this.isWorkshopManagementPage = false;
     this.showAdmin = this.isSignInPage;
     this.activeSection = '';
 
@@ -303,14 +495,14 @@ export class AppComponent implements OnDestroy, OnInit {
 
   isActiveNav(section: string): boolean {
     if (section === 'signin') {
-      return this.isSignInPage;
+      return this.isSignInPage || this.isWorkshopManagementPage;
     }
 
     if (section === 'work' && this.isGalleryPage) {
       return true;
     }
 
-    return !this.isGalleryPage && !this.isSignInPage && this.activeSection === section;
+    return !this.isGalleryPage && !this.isSignInPage && !this.isWorkshopManagementPage && this.activeSection === section;
   }
 
   @HostListener('window:scroll')
@@ -937,7 +1129,7 @@ export class AppComponent implements OnDestroy, OnInit {
   }
 
   private scrollToCurrentHash(): void {
-    if (this.isGalleryPage || this.isSignInPage || !window.location.hash) {
+    if (this.isGalleryPage || this.isSignInPage || this.isWorkshopManagementPage || !window.location.hash) {
       return;
     }
 
@@ -946,13 +1138,22 @@ export class AppComponent implements OnDestroy, OnInit {
 
   private setCurrentPage(): void {
     const currentPath = window.location.pathname.replace(/\/$/, '') || '/';
+    const workshopPrefix = '/admin/workshop-management';
+    this.isWorkshopManagementPage = currentPath === workshopPrefix || currentPath.startsWith(workshopPrefix + '/');
     this.isGalleryPage = currentPath === '/gallery';
     this.isSignInPage = currentPath === '/signin';
     this.showAdmin = this.isSignInPage;
+    if (this.isWorkshopManagementPage) {
+      const page = currentPath.replace(workshopPrefix, '').replace(/^\//, '') as WorkshopPage;
+      this.activeWorkshopPage = this.workshopManagementNav.some(item => item.id === page) ? page : 'dashboard';
+      this.isGalleryPage = false;
+      this.isSignInPage = false;
+      this.showAdmin = false;
+    }
   }
 
   private updateActiveSection(): void {
-    if (this.isGalleryPage || this.isSignInPage) {
+    if (this.isGalleryPage || this.isSignInPage || this.isWorkshopManagementPage) {
       this.activeSection = '';
       return;
     }

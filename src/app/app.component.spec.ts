@@ -386,6 +386,52 @@ describe('AppComponent', () => {
     expect(compiled.textContent).toContain('Workshop management');
   });
 
+  it('should open workshop management as a standalone admin page', () => {
+    history.pushState({}, '', '/admin/workshop-management/dashboard');
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.componentInstance.isSignedIn = true;
+    fixture.detectChanges();
+    const app = fixture.componentInstance;
+    const compiled = fixture.nativeElement as HTMLElement;
+
+    expect(app.isWorkshopManagementPage).toBeTrue();
+    expect(app.activeWorkshopPage).toBe('dashboard');
+    expect(compiled.querySelector('.workshop-app-shell')).not.toBeNull();
+    expect(compiled.querySelector('.workshop-sidebar')).not.toBeNull();
+    expect(compiled.textContent).toContain('Back to Admin Dashboard');
+    expect(compiled.textContent).toContain('Bookings today');
+  });
+
+  it('should navigate between workshop management pages', () => {
+    history.pushState({}, '', '/admin/workshop-management/dashboard');
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.componentInstance.isSignedIn = true;
+    fixture.detectChanges();
+    const app = fixture.componentInstance;
+
+    app.navigateToWorkshopManagement('payments');
+    fixture.detectChanges();
+
+    expect(window.location.pathname).toBe('/admin/workshop-management/payments');
+    expect(app.activeWorkshopPage).toBe('payments');
+    expect((fixture.nativeElement as HTMLElement).textContent).toContain('Payments');
+  });
+
+  it('should send the admin workshop card to the management page', () => {
+    history.pushState({}, '', '/signin');
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    app.isSignedIn = true;
+    app.showAdmin = true;
+    fixture.detectChanges();
+
+    app.setActiveAdminPanel('workshop');
+    fixture.detectChanges();
+
+    expect(app.isWorkshopManagementPage).toBeTrue();
+    expect(window.location.pathname).toBe('/admin/workshop-management/dashboard');
+  });
+
   it('should save workshop jobs and keep them after reload', async () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
