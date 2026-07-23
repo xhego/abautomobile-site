@@ -259,6 +259,12 @@ export class AppComponent implements OnDestroy, OnInit {
     const username = this.login.username.trim();
     this.signInError = '';
     this.signInStatus = '';
+
+    if (!username || !this.login.password) {
+      this.signInError = 'Enter the admin email and password.';
+      return;
+    }
+
     this.isSigningIn = true;
     this.startSignInSlowTimer();
 

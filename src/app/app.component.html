@@ -189,21 +189,21 @@
       </div>
 
       <div class="admin-panel" *ngIf="!isSignedIn">
-        <form (ngSubmit)="signIn()" class="signin-form">
+        <form (submit)="$event.preventDefault()" class="signin-form">
           <label>
             Email
-            <input type="email" name="username" [(ngModel)]="login.username" autocomplete="username" [disabled]="isSigningIn" required>
+            <input type="email" name="username" [(ngModel)]="login.username" autocomplete="username" [disabled]="isSigningIn" (keydown.enter)="signIn()" required>
           </label>
           <label>
             Password
             <span class="password-field">
-              <input [type]="showPassword ? 'text' : 'password'" name="password" [(ngModel)]="login.password" autocomplete="current-password" [disabled]="isSigningIn" required>
+              <input [type]="showPassword ? 'text' : 'password'" name="password" [(ngModel)]="login.password" autocomplete="current-password" [disabled]="isSigningIn" (keydown.enter)="signIn()" required>
               <button class="password-toggle" type="button" (click)="showPassword = !showPassword" [attr.aria-label]="showPassword ? 'Hide password' : 'Show password'" [attr.aria-pressed]="showPassword" [disabled]="isSigningIn">
                 <i class="fa" [ngClass]="showPassword ? 'fa-eye-slash' : 'fa-eye'"></i>
               </button>
             </span>
           </label>
-          <button type="submit" [disabled]="isSigningIn">
+          <button type="button" (click)="signIn()" [disabled]="isSigningIn">
             <span class="loader-dot button-loader" *ngIf="isSigningIn"></span>
             <span>{{ isSigningIn ? 'Signing in...' : 'Sign in' }}</span>
           </button>
