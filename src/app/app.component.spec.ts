@@ -1,7 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { fakeAsync, flushMicrotasks, TestBed, tick } from '@angular/core/testing';
-import { RouterModule } from '@angular/router';
 import { AppComponent } from './app.component';
 import { SupabaseSiteService } from './supabase-site.service';
 
@@ -54,8 +53,7 @@ describe('AppComponent', () => {
     await TestBed.configureTestingModule({
       imports: [
         CommonModule,
-        FormsModule,
-        RouterModule.forRoot([])
+        FormsModule
       ],
       declarations: [
         AppComponent

@@ -40,9 +40,9 @@ export class SupabaseSiteService {
   private readonly client: SupabaseClient | null = environment.supabaseUrl && environment.supabaseAnonKey
     ? createClient(environment.supabaseUrl, environment.supabaseAnonKey, {
         auth: {
-          autoRefreshToken: true,
+          autoRefreshToken: false,
           detectSessionInUrl: false,
-          persistSession: true
+          persistSession: false
         },
         global: {
           fetch: (input, init) => this.fetchWithTimeout(input, init)
