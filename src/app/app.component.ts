@@ -107,6 +107,16 @@ interface CalendarDay {
   bookings: WorkshopJob[];
 }
 
+type RevenuePeriod = 'Daily' | 'Weekly' | 'Monthly';
+type RevenueChartType = 'Bar' | 'Line' | 'Area';
+
+interface RevenueChartPoint {
+  label: string;
+  value: number;
+  x: number;
+  y: number;
+}
+
 @Component({
   selector: 'app-root',
   standalone: false,
@@ -274,6 +284,8 @@ export class AppComponent implements OnDestroy, OnInit {
   calendarCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   storageFee = 250;
   storageFeeDraft = 250;
+  revenuePeriod: RevenuePeriod = 'Daily';
+  revenueChartType: RevenueChartType = 'Bar';
   login = {
     username: '',
     password: ''
@@ -428,6 +440,63 @@ export class AppComponent implements OnDestroy, OnInit {
     return this.workshopJobs
       .filter(job => (job.updatedAt || '').slice(0, 7) === currentMonth)
       .reduce((total, job) => total + (job.paid || 0), 0);
+  }
+
+  get revenueChartPoints(): RevenueChartPoint[] {
+    const today = new Date();
+    const count = this.revenuePeriod === 'Daily' ? 7 : this.revenuePeriod === 'Weekly' ? 8 : 6;
+    const buckets = Array.from({ length: count }, (_, index) => ({ label: '', start: new Date(), end: new Date(), value: 0 }));
+    buckets.forEach((bucket, index) => {
+      if (this.revenuePeriod === 'Daily') {
+        const date = new Date(today.getFullYear(), today.getMonth(), today.getDate() - (count - 1 - index));
+        bucket.start = date;
+        bucket.end = new Date(date.getFullYear(), date.getMonth(), date.getDate() + 1);
+        bucket.label = date.toLocaleDateString('en-ZA', { weekday: 'short' });
+      } else if (this.revenuePeriod === 'Weekly') {
+        const day = today.getDay() || 7;
+        const start = new Date(today.getFullYear(), today.getMonth(), today.getDate() - day + 1 - ((count - 1 - index) * 7));
+        bucket.start = start;
+        bucket.end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 7);
+        bucket.label = start.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' });
+      } else {
+        const start = new Date(today.getFullYear(), today.getMonth() - (count - 1 - index), 1);
+        bucket.start = start;
+        bucket.end = new Date(start.getFullYear(), start.getMonth() + 1, 1);
+        bucket.label = start.toLocaleDateString('en-ZA', { month: 'short' });
+      }
+    });
+    this.workshopJobs.forEach(job => {
+      const date = new Date((job.bookingDate || job.updatedAt) + 'T00:00:00');
+      const bucket = buckets.find(item => date >= item.start && date < item.end);
+      if (bucket) {
+        bucket.value += Number(job.paid) || 0;
+      }
+    });
+    const max = Math.max(...buckets.map(item => item.value), 1);
+    return buckets.map((item, index) => ({
+      label: item.label,
+      value: item.value,
+      x: 5 + (index * 90 / (count - 1)),
+      y: 37 - ((item.value / max) * 30)
+    }));
+  }
+
+  get revenueChartTotal(): number {
+    return this.revenueChartPoints.reduce((total, point) => total + point.value, 0);
+  }
+
+  get revenueChartPolyline(): string {
+    return this.revenueChartPoints.map(point => point.x + ',' + point.y).join(' ');
+  }
+
+  get revenueChartArea(): string {
+    const points = this.revenueChartPoints;
+    return '5,37 ' + points.map(point => point.x + ',' + point.y).join(' ') + ' 95,37';
+  }
+
+  getRevenueBarHeight(value: number): number {
+    const max = Math.max(...this.revenueChartPoints.map(point => point.value), 1);
+    return Math.max((value / max) * 100, value ? 8 : 2);
   }
 
   get activeMechanics(): WorkshopMechanic[] {
@@ -598,6 +667,16 @@ export class AppComponent implements OnDestroy, OnInit {
 
   setBookingPage(page: number): void {
     this.bookingPage = Math.min(Math.max(page, 1), this.bookingPageCount);
+    this.markAdminActivity();
+  }
+
+  setRevenuePeriod(period: string): void {
+    this.revenuePeriod = period as RevenuePeriod;
+    this.markAdminActivity();
+  }
+
+  setRevenueChartType(type: string): void {
+    this.revenueChartType = type as RevenueChartType;
     this.markAdminActivity();
   }
 

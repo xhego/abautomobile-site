@@ -1349,6 +1349,28 @@ footer a {
   margin: 0;
 }
 
+.revenue-panel { overflow: hidden; }
+
+.revenue-panel-header { align-items: flex-start; display: flex; gap: 18px; justify-content: space-between; }
+.revenue-panel-header .eyebrow { margin-bottom: 4px; }
+.revenue-panel-header h2 { margin: 0; }
+.revenue-panel-header > div > strong { color: #172029; display: block; font-size: 28px; margin-top: 8px; }
+.chart-controls { display: grid; gap: 8px; justify-items: end; }
+.chart-segmented { background: #eef1f3; border-radius: 6px; display: inline-flex; padding: 3px; }
+.chart-segmented button { background: transparent; border: 0; border-radius: 4px; color: #5d6871; cursor: pointer; font: inherit; font-size: 12px; font-weight: 800; padding: 7px 10px; }
+.chart-segmented button.active { background: #172029; color: #fff; }
+.revenue-chart { height: 260px; margin-top: 22px; position: relative; }
+.chart-grid-line { border-top: 1px dashed #dfe4e8; left: 0; position: absolute; right: 0; }
+.chart-grid-line:nth-child(1) { top: 20%; }.chart-grid-line:nth-child(2) { top: 50%; }.chart-grid-line:nth-child(3) { top: 80%; }
+.chart-bars { align-items: end; bottom: 30px; display: flex; gap: 14px; left: 0; position: absolute; right: 0; top: 14px; }
+.chart-bars .chart-bar-group { flex: 1 1 0; }
+.chart-bar-group { align-items: center; display: flex; flex-direction: column; height: 100%; justify-content: end; position: relative; }
+.chart-bar { background: #f2b84b; border: 1px solid #d89c2d; border-radius: 5px 5px 0 0; max-width: 42px; min-height: 4px; width: 100%; }
+.chart-bar-group small { color: #66737c; font-size: 11px; margin-top: 7px; }.chart-bar-group strong { color: #34424e; font-size: 10px; font-weight: 800; margin-top: 3px; white-space: nowrap; }
+.revenue-chart svg { bottom: 34px; height: calc(100% - 48px); left: 0; overflow: visible; position: absolute; width: 100%; }
+.chart-line { fill: none; stroke: #172029; stroke-linecap: round; stroke-linejoin: round; stroke-width: 1.2; vector-effect: non-scaling-stroke; }.chart-area { fill: rgba(242, 184, 75, .32); }.chart-point { fill: #f2b84b; stroke: #172029; stroke-width: .45; vector-effect: non-scaling-stroke; }
+.chart-labels { bottom: 0; display: flex; left: 0; position: absolute; right: 0; text-align: center; }.chart-labels span { color: #66737c; flex: 1 1 0; font-size: 11px; font-weight: 800; }.chart-labels small { display: block; font-size: 10px; font-weight: 600; margin-top: 3px; }
+
 .panel-title-row {
   align-items: center;
   display: flex;
@@ -2061,6 +2083,10 @@ footer a {
   .workshop-form {
     grid-template-columns: 1fr;
   }
+
+  .revenue-panel-header { align-items: stretch; flex-direction: column; }
+  .chart-controls { justify-items: start; }
+  .revenue-chart { height: 230px; }
 
   .booking-modal-backdrop { padding: 0; }
 

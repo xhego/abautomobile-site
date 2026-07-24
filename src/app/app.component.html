@@ -251,6 +251,28 @@
               </article>
             </div>
 
+            <article class="operation-panel revenue-panel">
+              <div class="revenue-panel-header">
+                <div><p class="eyebrow">Revenue trend</p><h2>Payments received</h2><strong>R{{ revenueChartTotal | number:'1.0-0' }}</strong></div>
+                <div class="chart-controls" aria-label="Revenue chart controls">
+                  <div class="chart-segmented"><button type="button" *ngFor="let period of ['Daily', 'Weekly', 'Monthly']" [class.active]="revenuePeriod === period" (click)="setRevenuePeriod(period)">{{ period }}</button></div>
+                  <div class="chart-segmented"><button type="button" *ngFor="let type of ['Bar', 'Line', 'Area']" [class.active]="revenueChartType === type" (click)="setRevenueChartType(type)">{{ type }}</button></div>
+                </div>
+              </div>
+              <div class="revenue-chart" [class.bar-chart]="revenueChartType === 'Bar'">
+                <div class="chart-grid-line" *ngFor="let line of [1, 2, 3]"></div>
+                <div class="chart-bars" *ngIf="revenueChartType === 'Bar'">
+                  <div class="chart-bar-group" *ngFor="let point of revenueChartPoints"><span class="chart-bar" [style.height.%]="getRevenueBarHeight(point.value)"></span><small>{{ point.label }}</small><strong>R{{ point.value | number:'1.0-0' }}</strong></div>
+                </div>
+                <svg *ngIf="revenueChartType !== 'Bar'" viewBox="0 0 100 40" preserveAspectRatio="none" role="img" [attr.aria-label]="revenueChartType + ' revenue chart'">
+                  <polygon *ngIf="revenueChartType === 'Area'" [attr.points]="revenueChartArea" class="chart-area"></polygon>
+                  <polyline [attr.points]="revenueChartPolyline" class="chart-line"></polyline>
+                  <circle *ngFor="let point of revenueChartPoints" [attr.cx]="point.x" [attr.cy]="point.y" r="1.25" class="chart-point"></circle>
+                </svg>
+                <div class="chart-labels" *ngIf="revenueChartType !== 'Bar'"><span *ngFor="let point of revenueChartPoints">{{ point.label }}<small>R{{ point.value | number:'1.0-0' }}</small></span></div>
+              </div>
+            </article>
+
             <div class="workshop-two-column">
               <article class="operation-panel">
                 <div class="panel-title-row">
