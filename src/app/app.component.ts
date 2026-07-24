@@ -284,6 +284,7 @@ export class AppComponent implements OnDestroy, OnInit {
   mechanicDraft: Omit<WorkshopMechanic, 'id'> = this.createEmptyMechanicDraft();
   bookingSortNewestFirst = true;
   bookingFilter = 'All';
+  boardFilter: 'All' | 'Workshop booking' | 'Mobile booking' = 'All';
   bookingPage = 1;
   readonly bookingsPerPage = 10;
   showBookingModal = false;
@@ -646,6 +647,20 @@ export class AppComponent implements OnDestroy, OnInit {
     return this.workshopJobs.filter(job => job.estimate > 0 && job.paid < job.estimate);
   }
 
+  get boardJobs(): WorkshopJob[] {
+    return this.boardFilter === 'All'
+      ? this.orderedWorkshopJobs
+      : this.orderedWorkshopJobs.filter(job => job.bookingType === this.boardFilter);
+  }
+
+  getBoardStatusCount(column: WorkshopBoardColumn): number {
+    return this.boardJobs.filter(job => column.statuses.includes(job.status)).length;
+  }
+
+  getWorkshopStatusClass(status: string): string {
+    return 'status-' + status.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
+  }
+
   setActiveAdminPanel(panel: AdminPanel): void {
     if (panel === 'workshop') {
       this.navigateToWorkshopManagement();
@@ -738,6 +753,11 @@ export class AppComponent implements OnDestroy, OnInit {
 
   toggleBookingSort(): void {
     this.bookingSortNewestFirst = !this.bookingSortNewestFirst;
+    this.markAdminActivity();
+  }
+
+  setBoardFilter(filter: string): void {
+    this.boardFilter = filter as 'All' | 'Workshop booking' | 'Mobile booking';
     this.markAdminActivity();
   }
 

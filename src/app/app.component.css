@@ -1522,6 +1522,19 @@ footer a {
   color: #5d6871;
 }
 
+.board-control-panel { background: #172029; border-radius: 8px; color: #fff; padding: 22px; }
+.board-control-header { align-items: flex-start; display: flex; gap: 18px; justify-content: space-between; }.board-control-header .eyebrow { color: #f2b84b; margin-bottom: 5px; }.board-control-header h2 { color: #fff; margin: 0; }.board-control-header p:not(.eyebrow) { color: #cbd3d9; margin: 8px 0 0; max-width: 650px; }
+.board-control-header .small-action-button { background: #f2b84b; color: #172029; }
+.board-filter-row { align-items: center; border-top: 1px solid #34424e; display: flex; justify-content: space-between; margin-top: 18px; padding-top: 18px; }.board-filter-row > span { color: #cbd3d9; font-size: 12px; font-weight: 800; }
+.board-filter-row .chart-segmented { background: #26333d; }.board-filter-row .chart-segmented button { color: #cbd3d9; }.board-filter-row .chart-segmented button.active { background: #fff; color: #172029; }
+.board-status-summary { display: grid; gap: 8px; grid-template-columns: repeat(7, minmax(0, 1fr)); margin-top: 18px; }.board-status-summary span { background: #26333d; border-top: 3px solid #a8b4bc; border-radius: 5px; color: #cbd3d9; font-size: 10px; font-weight: 800; padding: 8px; text-transform: uppercase; }.board-status-summary strong { color: #fff; display: block; font-size: 19px; margin-bottom: 3px; }
+
+.board-timeline { background: #edf1f3; border: 1px solid #d7dee2; border-radius: 8px; gap: 1px; padding: 1px; }.board-timeline .board-column { background: #fff; border: 0; border-radius: 0; box-shadow: none; min-height: 410px; padding: 12px; }.board-timeline .board-column > header { align-items: center; border-bottom: 1px solid #e5eaed; display: flex; justify-content: space-between; padding-bottom: 11px; }.board-timeline .board-column > header > div { align-items: center; display: flex; gap: 7px; }.board-timeline .board-column h2 { font-size: 13px; margin: 0; }.board-timeline .board-column > header > strong { background: #eef2f4; border-radius: 999px; color: #52606b; font-size: 11px; padding: 4px 7px; }
+.board-stage-dot { background: #9aa5ad; border-radius: 50%; height: 8px; width: 8px; }.board-timeline .status-booked .board-stage-dot, .board-status-summary .status-booked { border-color: #6d8ca6; }.board-timeline .status-checked-in .board-stage-dot, .board-status-summary .status-checked-in { border-color: #3b9dc2; }.board-timeline .status-diagnosing .board-stage-dot, .board-status-summary .status-diagnosing { border-color: #6f78b9; }.board-timeline .status-waiting-for-parts .board-stage-dot, .board-status-summary .status-waiting-for-parts { border-color: #e29b34; }.board-timeline .status-in-repair .board-stage-dot, .board-status-summary .status-in-repair { border-color: #d8664b; }.board-timeline .status-ready-for-collection .board-stage-dot, .board-status-summary .status-ready-for-collection { border-color: #4a9d69; }.board-timeline .status-collected .board-stage-dot, .board-status-summary .status-collected { border-color: #8d9b5e; }
+.board-timeline .status-booked .board-stage-dot { background: #6d8ca6; }.board-timeline .status-checked-in .board-stage-dot { background: #3b9dc2; }.board-timeline .status-diagnosing .board-stage-dot { background: #6f78b9; }.board-timeline .status-waiting-for-parts .board-stage-dot { background: #e29b34; }.board-timeline .status-in-repair .board-stage-dot { background: #d8664b; }.board-timeline .status-ready-for-collection .board-stage-dot { background: #4a9d69; }.board-timeline .status-collected .board-stage-dot { background: #8d9b5e; }
+.board-lane { display: grid; gap: 8px; padding-top: 10px; }.board-timeline .board-job { background: #f7f9fa; border: 1px solid #e1e7ea; border-left: 3px solid #9aa5ad; border-radius: 5px; color: #172029; cursor: pointer; display: grid; gap: 6px; margin: 0; padding: 10px; text-align: left; transition: border-color .15s ease, box-shadow .15s ease; }.board-timeline .board-job:hover { border-color: #f2b84b; box-shadow: 0 6px 14px rgba(23,32,41,.1); }.board-job-top, .board-job footer { align-items: center; display: flex; justify-content: space-between; }.board-job-top > span { color: #52606b; font-size: 10px; font-weight: 800; }.board-job-top small { background: #e9eef1; border-radius: 999px; color: #52606b; font-size: 9px; font-weight: 800; padding: 3px 5px; }.board-timeline .board-job > strong { font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.board-timeline .board-job > span { color: #52606b; font-size: 11px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.board-timeline .board-job > small { color: #75828b; font-size: 10px; line-height: 1.4; }.board-job footer { border-top: 1px solid #e4e9ec; color: #52606b; font-size: 10px; font-weight: 800; padding-top: 7px; }.board-job footer i { color: #f2b84b; }.board-empty { color: #98a4ac; font-size: 11px; padding: 14px 2px; text-align: center; }
+.board-timeline .status-booked .board-job { border-left-color: #6d8ca6; }.board-timeline .status-checked-in .board-job { border-left-color: #3b9dc2; }.board-timeline .status-diagnosing .board-job { border-left-color: #6f78b9; }.board-timeline .status-waiting-for-parts .board-job { border-left-color: #e29b34; }.board-timeline .status-in-repair .board-job { border-left-color: #d8664b; }.board-timeline .status-ready-for-collection .board-job { border-left-color: #4a9d69; }.board-timeline .status-collected .board-job { border-left-color: #8d9b5e; }
+
 .embedded-workshop-form {
   margin-top: 18px;
 }
@@ -2130,11 +2143,14 @@ footer a {
   .revenue-chart { height: 230px; }
   .calendar-header,
   .calendar-controls,
-  .day-schedule-header { align-items: stretch; flex-direction: column; }
+  .day-schedule-header,
+  .board-control-header,
+  .board-filter-row { align-items: stretch; flex-direction: column; }
   .calendar-controls { gap: 10px; }
   .calendar-view-switch,
   .calendar-navigation { width: max-content; }
   .year-calendar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .board-status-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 
   .booking-modal-backdrop { padding: 0; }
 
