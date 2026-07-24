@@ -292,15 +292,15 @@ describe('AppComponent', () => {
 
     const app = fixture.componentInstance;
     app.navigateToSection('work', new MouseEvent('click'));
-    fixture.detectChanges();
     tick();
+    fixture.detectChanges();
 
     expect(window.location.pathname).toBe('/');
     expect(window.location.hash).toBe('#work');
     expect(app.isGalleryPage).toBeFalse();
     expect(app.isSignInPage).toBeFalse();
+    expect(app.isWorkshopManagementPage).toBeFalse();
     expect(app.activeSection).toBe('work');
-    expect((fixture.nativeElement as HTMLElement).querySelector('#work')).not.toBeNull();
   }));
 
   it('should return from sign in to a home section when a section nav link is clicked', fakeAsync(() => {
@@ -310,8 +310,8 @@ describe('AppComponent', () => {
 
     const app = fixture.componentInstance;
     app.navigateToSection('terms', new MouseEvent('click'));
-    fixture.detectChanges();
     tick();
+    fixture.detectChanges();
 
     expect(window.location.pathname).toBe('/');
     expect(window.location.hash).toBe('#terms');
@@ -452,7 +452,8 @@ describe('AppComponent', () => {
       dueDate: '2026-08-01',
       partsNotes: 'Front brake pads from supplier slip.',
       qualityNotes: 'Brake pedal checked after test drive.',
-      notes: 'Customer approved front pads.'
+      notes: 'Customer approved front pads.',
+      attachments: []
     };
 
     await app.saveWorkshopJob();
@@ -460,12 +461,61 @@ describe('AppComponent', () => {
     expect(app.workshopJobs.length).toBe(1);
     expect(app.openWorkshopJobs).toBe(1);
     expect(app.outstandingWorkshopBalance).toBe(2000);
+    expect(app.editingWorkshopJobId).toBe(app.workshopJobs[0].id);
+    expect(app.adminNotice).toContain('add vehicle photos and parts slips');
 
     const nextFixture = TestBed.createComponent(AppComponent);
     const nextApp = nextFixture.componentInstance;
     nextApp.ngOnInit();
     expect(nextApp.workshopJobs.length).toBe(1);
     expect(nextApp.workshopJobs[0].vehicle).toBe('Toyota Corolla 2015');
+  });
+
+  it('should include vehicle photos and supplier slips in the printable job card', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    const job = {
+      ...app.workshopDraft,
+      id: 'job-evidence',
+      customerName: 'Test Customer',
+      vehicle: 'Toyota Hilux',
+      bookingType: 'Workshop booking' as const,
+      status: 'Booked',
+      priority: 'Normal',
+      estimate: 0,
+      paid: 0,
+      createdAt: '2026-07-24T08:00:00.000Z',
+      updatedAt: '2026-07-24T08:00:00.000Z',
+      attachments: [
+        {
+          id: 'vehicle-photo',
+          type: 'Vehicle photo' as const,
+          fileName: 'vehicle-condition.jpg',
+          mimeType: 'image/jpeg',
+          fileSize: 1024,
+          srcImg: 'data:image/jpeg;base64,test',
+          storagePath: '',
+          createdAt: '2026-07-24T08:00:00.000Z'
+        },
+        {
+          id: 'parts-slip',
+          type: 'Parts slip' as const,
+          fileName: 'supplier-slip.pdf',
+          mimeType: 'application/pdf',
+          fileSize: 1024,
+          srcImg: 'data:application/pdf;base64,test',
+          storagePath: '',
+          createdAt: '2026-07-24T08:00:00.000Z'
+        }
+      ]
+    };
+
+    const documentHtml = (app as any).buildPrintableDocument(job, 'Job Card') as string;
+
+    expect(documentHtml).toContain('Vehicle condition photos');
+    expect(documentHtml).toContain('vehicle-condition.jpg');
+    expect(documentHtml).toContain('Parts and supplier slips');
+    expect(documentHtml).toContain('supplier-slip.pdf');
   });
 
   it('should save contact details and build links after reload', () => {

@@ -236,8 +236,8 @@
             <span>{{ currentYear }} workshop operations | {{ workshopLocation }}</span>
           </div>
           <div class="workshop-quick-actions">
-            <button type="button" (click)="navigateToWorkshopManagement('bookings')"><i class="fa fa-plus"></i> New Booking</button>
-            <button type="button" (click)="navigateToWorkshopManagement('job-cards')"><i class="fa fa-clipboard"></i> New Job Card</button>
+            <button type="button" (click)="startNewWorkshopJob()"><i class="fa fa-plus"></i> New Booking</button>
+            <button type="button" (click)="startNewWorkshopJob()"><i class="fa fa-clipboard"></i> New Job Card</button>
             <button type="button" (click)="navigateToWorkshopManagement('estimates')"><i class="fa fa-calculator"></i> Send Estimate</button>
             <button type="button" (click)="navigateToWorkshopManagement('payments')"><i class="fa fa-credit-card"></i> Record Payment</button>
           </div>
@@ -386,8 +386,9 @@
             <article class="operation-panel">
               <div class="panel-title-row">
                 <h2>Job cards</h2>
-                <span>{{ workshopJobs.length }} total</span>
+                <button type="button" class="small-action-button" (click)="startNewWorkshopJob()"><i class="fa fa-plus"></i> Start a job card</button>
               </div>
+              <p class="workflow-intro">Start a job card from Bookings, save the vehicle details, then add photos and any parts slip as work progresses.</p>
               <ng-container *ngTemplateOutlet="workshopJobList"></ng-container>
             </article>
           </section>
@@ -481,9 +482,13 @@
 
   <ng-template #workshopJobForm>
     <form class="workshop-form embedded-workshop-form" (ngSubmit)="saveWorkshopJob()">
+      <div class="job-card-flow wide-field">
+        <span class="flow-step" [class.done]="editingWorkshopJobId">1</span>
+        <p><strong>{{ editingWorkshopJobId ? 'Job card saved' : 'Start the job card' }}</strong><br><small>Capture the vehicle and customer details first. Once saved, add inspection photos and any parts supplier slip below.</small></p>
+      </div>
       <label>
         Customer name
-        <input type="text" name="pageCustomerName" [(ngModel)]="workshopDraft.customerName" placeholder="Customer name">
+        <input type="text" name="pageCustomerName" [(ngModel)]="workshopDraft.customerName" placeholder="Customer name" required>
       </label>
       <label>
         Customer contact
@@ -491,7 +496,7 @@
       </label>
       <label>
         Vehicle
-        <input type="text" name="pageVehicle" [(ngModel)]="workshopDraft.vehicle" placeholder="Make, model and year">
+        <input type="text" name="pageVehicle" [(ngModel)]="workshopDraft.vehicle" placeholder="Make, model and year" required>
       </label>
       <label>
         Registration
@@ -552,12 +557,33 @@
       </label>
       <label class="wide-field">
         Parts, suppliers and slip notes
-        <textarea name="pagePartsNotes" [(ngModel)]="workshopDraft.partsNotes" rows="4" placeholder="Parts needed, supplier notes, or attach/take a picture of supplier slip in Supabase phase"></textarea>
+        <textarea name="pagePartsNotes" [(ngModel)]="workshopDraft.partsNotes" rows="4" placeholder="Parts needed, supplier details, reference number, or approval notes"></textarea>
       </label>
       <label class="wide-field">
         Quality control notes
         <textarea name="pageQualityNotes" [(ngModel)]="workshopDraft.qualityNotes" rows="4" placeholder="Test drive, warning lights, leaks, brakes, final checks"></textarea>
       </label>
+      <section class="job-evidence-editor wide-field" *ngIf="editingWorkshopJobId">
+        <div>
+          <p class="eyebrow">Job card evidence</p>
+          <h3>Photos and parts slips</h3>
+          <p>Add vehicle condition photos for transparency, and attach a photo or PDF of the supplier parts slip. These appear on the job card and printable PDF.</p>
+        </div>
+        <div class="evidence-upload-actions">
+          <label class="file-button">
+            <i class="fa fa-camera"></i>
+            <span>{{ isUploadingWorkshopAttachment ? 'Adding file...' : 'Add vehicle photos' }}</span>
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif" multiple [disabled]="isUploadingWorkshopAttachment" (change)="addWorkshopAttachments($event, 'Vehicle photo')">
+          </label>
+          <label class="file-button">
+            <i class="fa fa-file-text-o"></i>
+            <span>{{ isUploadingWorkshopAttachment ? 'Adding file...' : 'Add parts slip' }}</span>
+            <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" multiple [disabled]="isUploadingWorkshopAttachment" (change)="addWorkshopAttachments($event, 'Parts slip')">
+          </label>
+        </div>
+        <span class="attachment-loader" *ngIf="isUploadingWorkshopAttachment"><span class="loader-dot button-loader"></span> Processing and attaching file...</span>
+        <p class="evidence-help">Accepted: JPG, PNG, WEBP, GIF or PDF. Maximum 5 MB per file.</p>
+      </section>
       <div class="workshop-form-actions">
         <button type="submit" [disabled]="isSavingWorkshopJob">
           <span class="loader-dot button-loader" *ngIf="isSavingWorkshopJob"></span>
@@ -587,6 +613,23 @@
         <p>{{ job.notes || 'No notes added yet.' }}</p>
         <p><strong>Parts/slip:</strong> {{ job.partsNotes || 'No parts or supplier slip notes captured.' }}</p>
         <p><strong>Quality:</strong> {{ job.qualityNotes || 'No quality-control notes captured.' }}</p>
+        <section class="job-evidence" *ngIf="job.attachments.length">
+          <div class="panel-title-row"><h3>Job card evidence</h3><span>{{ job.attachments.length }} file{{ job.attachments.length === 1 ? '' : 's' }}</span></div>
+          <div class="job-photo-grid" *ngIf="job.attachments.length">
+            <article class="job-attachment" *ngFor="let attachment of job.attachments">
+              <a *ngIf="attachment.mimeType.indexOf('image/') === 0" [href]="attachment.srcImg" target="_blank" rel="noopener" class="attachment-preview">
+                <img [src]="attachment.srcImg" [alt]="attachment.type + ': ' + attachment.fileName">
+              </a>
+              <a *ngIf="attachment.mimeType.indexOf('image/') !== 0" [href]="attachment.srcImg" target="_blank" rel="noopener" class="attachment-file-icon"><i class="fa fa-file-pdf-o"></i></a>
+              <div>
+                <strong>{{ attachment.type }}</strong>
+                <span>{{ attachment.fileName }}</span>
+                <small>{{ attachment.fileSize / 1024 | number:'1.0-0' }} KB</small>
+              </div>
+              <button type="button" class="attachment-remove" (click)="removeWorkshopAttachment(job, attachment.id)" [disabled]="removingWorkshopAttachmentIds.has(attachment.id)" [attr.aria-label]="'Remove ' + attachment.fileName"><i class="fa fa-trash"></i></button>
+            </article>
+          </div>
+        </section>
         <div class="job-money">
           <span>Estimate: R{{ job.estimate }}</span>
           <span>Paid: R{{ job.paid }}</span>

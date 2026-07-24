@@ -47,8 +47,22 @@ interface WorkshopJob {
   partsNotes: string;
   qualityNotes: string;
   notes: string;
+  attachments: WorkshopAttachment[];
   createdAt: string;
   updatedAt: string;
+}
+
+type WorkshopAttachmentType = 'Vehicle photo' | 'Parts slip';
+
+interface WorkshopAttachment {
+  id: string;
+  type: WorkshopAttachmentType;
+  fileName: string;
+  mimeType: string;
+  fileSize: number;
+  srcImg: string;
+  storagePath: string;
+  createdAt: string;
 }
 
 interface WorkshopNavItem {
@@ -224,6 +238,8 @@ export class AppComponent implements OnDestroy, OnInit {
   isSavingLocation = false;
   isSavingContactDetails = false;
   isSavingWorkshopJob = false;
+  isUploadingWorkshopAttachment = false;
+  removingWorkshopAttachmentIds = new Set<string>();
   savingImageTitleIndexes = new Set<number>();
   removingImageIndexes = new Set<number>();
   showPassword = false;
@@ -304,6 +320,7 @@ export class AppComponent implements OnDestroy, OnInit {
       this.isSavingLocation ||
       this.isSavingContactDetails ||
       this.isSavingWorkshopJob ||
+      this.isUploadingWorkshopAttachment ||
       this.savingImageTitleIndexes.size > 0 ||
       this.removingImageIndexes.size > 0;
   }
@@ -517,6 +534,13 @@ export class AppComponent implements OnDestroy, OnInit {
     this.markAdminActivity();
   }
 
+  startNewWorkshopJob(): void {
+    this.resetWorkshopDraft();
+    this.uploadError = '';
+    this.adminNotice = '';
+    this.navigateToWorkshopManagement('bookings');
+  }
+
   selectCalendarDate(date: string): void {
     this.selectedCalendarDate = date;
     this.workshopDraft.dueDate = date;
@@ -630,6 +654,7 @@ export class AppComponent implements OnDestroy, OnInit {
 
     this.isGalleryPage = false;
     this.isSignInPage = false;
+    this.isWorkshopManagementPage = false;
     this.showAdmin = false;
     this.activeSection = section;
     window.history.pushState({}, '', '/#' + section);
@@ -727,6 +752,7 @@ export class AppComponent implements OnDestroy, OnInit {
       this.showAdmin = true;
       this.login.password = '';
       this.signInStatus = '';
+      await this.refreshWorkshopAttachmentUrls();
       this.resetAdminInactivityTimer();
       this.renderState();
     } catch (error) {
@@ -965,6 +991,7 @@ export class AppComponent implements OnDestroy, OnInit {
 
     this.isSavingWorkshopJob = true;
     this.uploadError = '';
+    const isNewJob = !this.editingWorkshopJobId;
     const now = new Date().toISOString();
     const cleanJob: WorkshopJob = {
       id: this.editingWorkshopJobId || crypto.randomUUID(),
@@ -985,6 +1012,7 @@ export class AppComponent implements OnDestroy, OnInit {
       partsNotes: this.workshopDraft.partsNotes.trim(),
       qualityNotes: this.workshopDraft.qualityNotes.trim(),
       notes: this.workshopDraft.notes.trim(),
+      attachments: this.workshopJobs.find(job => job.id === this.editingWorkshopJobId)?.attachments || [],
       createdAt: this.workshopJobs.find(job => job.id === this.editingWorkshopJobId)?.createdAt || now,
       updatedAt: now
     };
@@ -994,8 +1022,10 @@ export class AppComponent implements OnDestroy, OnInit {
       ? this.workshopJobs.map(job => job.id === this.editingWorkshopJobId ? cleanJob : job)
       : [cleanJob, ...this.workshopJobs];
     this.saveWorkshopJobs();
-    this.resetWorkshopDraft();
-    this.adminNotice = 'Workshop job saved.';
+    this.editWorkshopJob(cleanJob);
+    this.adminNotice = isNewJob
+      ? 'Job card saved. You can now add vehicle photos and parts slips.'
+      : 'Workshop job updated.';
     this.isSavingWorkshopJob = false;
     this.renderState();
   }
@@ -1020,8 +1050,85 @@ export class AppComponent implements OnDestroy, OnInit {
       dueDate: job.dueDate,
       partsNotes: job.partsNotes,
       qualityNotes: job.qualityNotes,
-      notes: job.notes
+      notes: job.notes,
+      attachments: job.attachments
     };
+  }
+
+  async addWorkshopAttachments(event: Event, type: WorkshopAttachmentType): Promise<void> {
+    this.markAdminActivity();
+    const input = event.target as HTMLInputElement;
+    const files = Array.from(input.files || []);
+    input.value = '';
+
+    if (!this.editingWorkshopJobId) {
+      this.uploadError = 'Save the job card first, then add vehicle photos or a parts slip.';
+      return;
+    }
+
+    if (!files.length) {
+      return;
+    }
+
+    const allowedTypes = type === 'Vehicle photo'
+      ? this.allowedImageTypes
+      : new Set([...this.allowedImageTypes, 'application/pdf']);
+    const invalidFile = files.find(file => !allowedTypes.has(file.type) || file.size > this.maxUploadBytes);
+    if (invalidFile) {
+      this.uploadError = type === 'Vehicle photo'
+        ? 'Vehicle photos must be JPG, PNG, WEBP or GIF and no larger than 5 MB.'
+        : 'Parts slips must be JPG, PNG, WEBP, GIF or PDF and no larger than 5 MB.';
+      return;
+    }
+
+    const jobIndex = this.workshopJobs.findIndex(job => job.id === this.editingWorkshopJobId);
+    if (jobIndex < 0) {
+      this.uploadError = 'This job card is no longer available. Reopen it and try again.';
+      return;
+    }
+
+    this.isUploadingWorkshopAttachment = true;
+    this.uploadError = '';
+    try {
+      const attachments = await Promise.all(files.map(file => this.createWorkshopAttachment(file, type)));
+      const job = this.workshopJobs[jobIndex];
+      this.workshopJobs = this.workshopJobs.map(item => item.id === job.id
+        ? { ...item, attachments: [...item.attachments, ...attachments], updatedAt: new Date().toISOString() }
+        : item);
+      this.saveWorkshopJobs();
+      this.adminNotice = attachments.length + ' ' + (attachments.length === 1 ? 'file' : 'files') + ' added to this job card.';
+    } catch (error) {
+      this.uploadError = error instanceof Error ? error.message : 'The file could not be added.';
+    } finally {
+      this.isUploadingWorkshopAttachment = false;
+      this.renderState();
+    }
+  }
+
+  async removeWorkshopAttachment(job: WorkshopJob, attachmentId: string): Promise<void> {
+    this.markAdminActivity();
+    this.removingWorkshopAttachmentIds.add(attachmentId);
+    const attachment = job.attachments.find(item => item.id === attachmentId);
+    if (!attachment) {
+      this.removingWorkshopAttachmentIds.delete(attachmentId);
+      return;
+    }
+
+    try {
+      if (attachment.storagePath) {
+        await this.siteService.removeWorkshopAttachment(attachment.storagePath, attachment.type);
+      }
+      this.workshopJobs = this.workshopJobs.map(item => item.id === job.id
+        ? { ...item, attachments: item.attachments.filter(itemAttachment => itemAttachment.id !== attachmentId), updatedAt: new Date().toISOString() }
+        : item);
+      this.saveWorkshopJobs();
+      this.adminNotice = 'Attachment removed from this job card.';
+    } catch (error) {
+      this.uploadError = error instanceof Error ? error.message : 'The attachment could not be removed.';
+    } finally {
+      this.removingWorkshopAttachmentIds.delete(attachmentId);
+      this.renderState();
+    }
   }
 
   removeWorkshopJob(jobId: string): void {
@@ -1182,7 +1289,10 @@ export class AppComponent implements OnDestroy, OnInit {
             assignedMechanic: job.assignedMechanic || '',
             partsNotes: job.partsNotes || '',
             qualityNotes: job.qualityNotes || '',
-            notes: job.notes || ''
+            notes: job.notes || '',
+            attachments: Array.isArray(job.attachments)
+              ? job.attachments.filter(attachment => attachment && attachment.id && attachment.fileName)
+              : []
           }));
       }
     } catch (error) {
@@ -1245,7 +1355,8 @@ export class AppComponent implements OnDestroy, OnInit {
       dueDate: '',
       partsNotes: '',
       qualityNotes: '',
-      notes: ''
+      notes: '',
+      attachments: []
     };
   }
 
@@ -1353,6 +1464,7 @@ export class AppComponent implements OnDestroy, OnInit {
       'Registration: ' + (job.registration || 'Not captured'),
       'VIN: ' + (job.vin || 'Not captured'),
       'Status: ' + job.status,
+      'Job card evidence: ' + job.attachments.length + ' file' + (job.attachments.length === 1 ? '' : 's'),
       amountLine,
       'Please reply on WhatsApp if anything needs to be updated.'
     ].join('\n');
@@ -1360,11 +1472,29 @@ export class AppComponent implements OnDestroy, OnInit {
 
   private buildPrintableDocument(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): string {
     const balance = Math.max((job.estimate || 0) - (job.paid || 0), 0);
+    const photos = job.attachments.filter(attachment => attachment.type === 'Vehicle photo' && attachment.srcImg);
+    const slips = job.attachments.filter(attachment => attachment.type === 'Parts slip');
+    const slipImages = slips.filter(slip => slip.mimeType.startsWith('image/') && slip.srcImg);
+    const slipFiles = slips.filter(slip => !slip.mimeType.startsWith('image/'));
+    const photoHtml = photos.length
+      ? '<section class="evidence"><h2>Vehicle condition photos</h2><div class="photo-grid">' + photos.map(photo =>
+        '<figure><img src="' + this.escapeHtml(photo.srcImg) + '" alt="Vehicle condition photo"><figcaption>' + this.escapeHtml(photo.fileName) + '</figcaption></figure>'
+      ).join('') + '</div></section>'
+      : '<section class="evidence"><h2>Vehicle condition photos</h2><p>No vehicle photos were attached to this job card.</p></section>';
+    const slipHtml = '<section class="evidence"><h2>Parts and supplier slips</h2>' + (slips.length
+      ? (slipImages.length
+          ? '<div class="photo-grid">' + slipImages.map(slip =>
+            '<figure><img src="' + this.escapeHtml(slip.srcImg) + '" alt="Parts supplier slip"><figcaption>' + this.escapeHtml(slip.fileName) + '</figcaption></figure>'
+          ).join('') + '</div>'
+          : '') + (slipFiles.length
+          ? '<ul>' + slipFiles.map(slip => '<li>' + this.escapeHtml(slip.fileName) + ' - added ' + this.escapeHtml(new Date(slip.createdAt).toLocaleDateString('en-ZA')) + '</li>').join('') + '</ul>'
+          : '')
+      : '<p>No parts or supplier slip files were attached to this job card.</p>') + '</section>';
     return `
       <!doctype html>
       <html>
         <head>
-          <title>${documentType} - ${job.vehicle}</title>
+          <title>${this.escapeHtml(documentType)} - ${this.escapeHtml(job.vehicle)}</title>
           <style>
             body { color: #172029; font-family: Arial, sans-serif; margin: 34px; }
             header { border-bottom: 4px solid #f2b84b; margin-bottom: 24px; padding-bottom: 18px; }
@@ -1373,34 +1503,119 @@ export class AppComponent implements OnDestroy, OnInit {
             td, th { border: 1px solid #d9dee3; padding: 10px; text-align: left; }
             th { background: #172029; color: #fff; }
             .note { background: #f7f8f9; border: 1px solid #d9dee3; margin-top: 18px; padding: 14px; }
+            .evidence { border-top: 2px solid #f2b84b; margin-top: 22px; padding-top: 12px; }
+            .evidence h2 { font-size: 18px; margin: 0 0 10px; }
+            .photo-grid { display: grid; gap: 12px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+            figure { break-inside: avoid; margin: 0; }
+            figure img { border: 1px solid #d9dee3; max-height: 280px; object-fit: contain; width: 100%; }
+            figcaption { color: #52606b; font-size: 12px; margin-top: 5px; overflow-wrap: anywhere; }
+            @media print { body { margin: 18px; } .photo-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
           </style>
         </head>
         <body>
           <header>
             <h1>AB's Auto Mobile Mechanic (Pty) Ltd</h1>
-            <strong>${documentType}</strong>
-            <p>${this.workshopLocation} | ${this.callNumber} | ${this.emailAddress}</p>
+            <strong>${this.escapeHtml(documentType)}</strong>
+            <p>${this.escapeHtml(this.workshopLocation)} | ${this.escapeHtml(this.callNumber)} | ${this.escapeHtml(this.emailAddress)}</p>
           </header>
           <table>
-            <tr><th>Customer</th><td>${job.customerName}</td></tr>
-            <tr><th>Contact</th><td>${job.customerContact || ''}</td></tr>
-            <tr><th>Vehicle</th><td>${job.vehicle}</td></tr>
-            <tr><th>Registration</th><td>${job.registration || ''}</td></tr>
-            <tr><th>VIN</th><td>${job.vin || ''}</td></tr>
-            <tr><th>Booking type</th><td>${job.bookingType}</td></tr>
-            <tr><th>Location</th><td>${job.mobileLocation || this.workshopLocation}</td></tr>
-            <tr><th>Mechanic</th><td>${job.assignedMechanic || 'Not assigned'}</td></tr>
-            <tr><th>Status</th><td>${job.status}</td></tr>
+            <tr><th>Customer</th><td>${this.escapeHtml(job.customerName)}</td></tr>
+            <tr><th>Contact</th><td>${this.escapeHtml(job.customerContact || '')}</td></tr>
+            <tr><th>Vehicle</th><td>${this.escapeHtml(job.vehicle)}</td></tr>
+            <tr><th>Registration</th><td>${this.escapeHtml(job.registration || '')}</td></tr>
+            <tr><th>VIN</th><td>${this.escapeHtml(job.vin || '')}</td></tr>
+            <tr><th>Booking type</th><td>${this.escapeHtml(job.bookingType)}</td></tr>
+            <tr><th>Location</th><td>${this.escapeHtml(job.mobileLocation || this.workshopLocation)}</td></tr>
+            <tr><th>Mechanic</th><td>${this.escapeHtml(job.assignedMechanic || 'Not assigned')}</td></tr>
+            <tr><th>Status</th><td>${this.escapeHtml(job.status)}</td></tr>
             <tr><th>Estimate</th><td>R${job.estimate || 0}</td></tr>
             <tr><th>Paid</th><td>R${job.paid || 0}</td></tr>
             <tr><th>Balance</th><td>R${balance}</td></tr>
           </table>
-          <div class="note"><strong>Work notes</strong><p>${job.notes || 'No notes captured.'}</p></div>
-          <div class="note"><strong>Parts and supplier slip notes</strong><p>${job.partsNotes || 'No parts slip notes captured.'}</p></div>
-          <div class="note"><strong>Quality control</strong><p>${job.qualityNotes || 'No quality notes captured.'}</p></div>
+          <div class="note"><strong>Work notes</strong><p>${this.escapeHtml(job.notes || 'No notes captured.')}</p></div>
+          <div class="note"><strong>Parts and supplier slip notes</strong><p>${this.escapeHtml(job.partsNotes || 'No parts slip notes captured.')}</p></div>
+          <div class="note"><strong>Quality control</strong><p>${this.escapeHtml(job.qualityNotes || 'No quality notes captured.')}</p></div>
+          ${photoHtml}
+          ${slipHtml}
         </body>
       </html>
     `;
+  }
+
+  private async createWorkshopAttachment(file: File, type: WorkshopAttachmentType): Promise<WorkshopAttachment> {
+    let srcImg = '';
+    let storagePath = '';
+    if (this.siteService.isConfigured && this.isSignedIn) {
+      try {
+        const stored = await this.siteService.uploadWorkshopAttachment(file, this.editingWorkshopJobId || crypto.randomUUID(), type);
+        srcImg = stored.srcImg;
+        storagePath = stored.storagePath;
+      } catch (error) {
+        if (file.size > 750 * 1024) {
+          throw new Error('The secure file upload failed. Check that the workshop Supabase storage setup has been run, then try again.');
+        }
+      }
+    }
+
+    return {
+      id: crypto.randomUUID(),
+      type,
+      fileName: file.name,
+      mimeType: file.type || 'application/octet-stream',
+      fileSize: file.size,
+      srcImg: srcImg || await this.readFileAsDataUrl(file),
+      storagePath,
+      createdAt: new Date().toISOString()
+    };
+  }
+
+  private async refreshWorkshopAttachmentUrls(): Promise<void> {
+    const refreshable = this.workshopJobs.flatMap(job => job.attachments
+      .filter(attachment => attachment.storagePath)
+      .map(attachment => ({ jobId: job.id, attachment })));
+    if (!refreshable.length || !this.siteService.isConfigured) {
+      return;
+    }
+
+    const refreshed = await Promise.all(refreshable.map(async ({ jobId, attachment }) => {
+      try {
+        const srcImg = await this.siteService.getWorkshopAttachmentUrl(attachment.storagePath, attachment.type);
+        return { jobId, attachmentId: attachment.id, srcImg };
+      } catch {
+        return null;
+      }
+    }));
+    if (!refreshed.some(Boolean)) {
+      return;
+    }
+
+    this.workshopJobs = this.workshopJobs.map(job => ({
+      ...job,
+      attachments: job.attachments.map(attachment => {
+        const update = refreshed.find(item => item?.jobId === job.id && item.attachmentId === attachment.id);
+        return update ? { ...attachment, srcImg: update.srcImg } : attachment;
+      })
+    }));
+    this.saveWorkshopJobs();
+  }
+
+  private readFileAsDataUrl(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onerror = () => reject(new Error('The selected file could not be read.'));
+      reader.onload = () => resolve(typeof reader.result === 'string' ? reader.result : '');
+      reader.readAsDataURL(file);
+    });
+  }
+
+  private escapeHtml(value: string): string {
+    return value.replace(/[&<>'"]/g, character => ({
+      '&': '&amp;',
+      '<': '&lt;',
+      '>': '&gt;',
+      "'": '&#39;',
+      '"': '&quot;'
+    }[character] || character));
   }
 
   private withTimeout<T>(promise: Promise<T>, timeoutMs: number, errorMessage: string): Promise<T> {

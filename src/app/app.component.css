@@ -1504,6 +1504,180 @@ footer a {
   margin-top: 18px;
 }
 
+.job-card-flow,
+.job-evidence-editor,
+.job-evidence {
+  border: 1px solid #d9e0e4;
+  border-radius: 8px;
+  padding: 16px;
+}
+
+.job-card-flow {
+  align-items: center;
+  background: #eef5f7;
+  display: flex;
+  gap: 12px;
+}
+
+.job-card-flow p,
+.job-evidence-editor p {
+  margin: 0;
+}
+
+.job-card-flow small,
+.evidence-help,
+.attachment-loader {
+  color: #5d6871;
+}
+
+.flow-step {
+  align-items: center;
+  background: #172029;
+  border-radius: 50%;
+  color: #ffffff;
+  display: inline-flex;
+  font-size: 14px;
+  font-weight: 800;
+  height: 30px;
+  justify-content: center;
+  min-width: 30px;
+}
+
+.flow-step.done {
+  background: #1f8f4d;
+}
+
+.job-evidence-editor {
+  background: #ffffff;
+  display: grid;
+  gap: 14px;
+}
+
+.job-evidence-editor h3,
+.job-evidence h3 {
+  color: #172029;
+  font-size: 18px;
+  margin: 3px 0 6px;
+}
+
+.evidence-upload-actions,
+.job-photo-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.job-evidence-editor .file-button {
+  align-items: center;
+  background: #172029;
+  border-radius: 5px;
+  color: #ffffff;
+  cursor: pointer;
+  display: inline-flex;
+  font-weight: 800;
+  gap: 8px;
+  justify-content: center;
+  min-height: 44px;
+  padding: 10px 14px;
+}
+
+.job-evidence-editor .file-button:has(input:disabled) {
+  cursor: wait;
+  opacity: 0.65;
+}
+
+.attachment-loader {
+  align-items: center;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 800;
+  gap: 8px;
+}
+
+.evidence-help {
+  font-size: 12px;
+}
+
+.job-evidence {
+  background: #f7f8f9;
+}
+
+.job-evidence .panel-title-row {
+  margin-bottom: 12px;
+}
+
+.workflow-intro {
+  color: #5d6871;
+  margin: -4px 0 16px;
+}
+
+.job-attachment {
+  background: #ffffff;
+  border: 1px solid #dfe4e8;
+  border-radius: 7px;
+  display: grid;
+  gap: 8px;
+  grid-template-columns: 76px minmax(0, 1fr) auto;
+  min-width: 0;
+  overflow: hidden;
+  padding: 8px;
+}
+
+.attachment-preview,
+.attachment-file-icon {
+  align-items: center;
+  background: #e8edf0;
+  border-radius: 4px;
+  display: flex;
+  height: 76px;
+  justify-content: center;
+  overflow: hidden;
+  width: 76px;
+}
+
+.attachment-preview img {
+  height: 100%;
+  object-fit: cover;
+  width: 100%;
+}
+
+.attachment-file-icon {
+  color: #b34732;
+  font-size: 28px;
+  text-decoration: none;
+}
+
+.job-attachment strong,
+.job-attachment span,
+.job-attachment small {
+  display: block;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.job-attachment span,
+.job-attachment small {
+  color: #5d6871;
+  font-size: 12px;
+  margin-top: 3px;
+}
+
+.attachment-remove {
+  align-self: start;
+  background: #a13b27;
+  border: 0;
+  border-radius: 4px;
+  color: #ffffff;
+  cursor: pointer;
+  height: 30px;
+  width: 30px;
+}
+
+.attachment-remove:disabled {
+  cursor: wait;
+  opacity: 0.55;
+}
+
 .quality-check-grid,
 .settings-list {
   display: grid;
@@ -1735,7 +1909,9 @@ footer a {
 
   .mechanic-load-grid,
   .quality-check-grid,
-  .settings-list {
+  .settings-list,
+  .evidence-upload-actions,
+  .job-photo-grid {
     grid-template-columns: 1fr;
   }
 }

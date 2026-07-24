@@ -17,6 +17,11 @@ export interface StoredGalleryImage {
   sortOrder: number;
 }
 
+export interface StoredWorkshopAttachment {
+  srcImg: string;
+  storagePath: string;
+}
+
 interface SiteSettingsRow {
   id: string;
   location: string;
@@ -229,6 +234,58 @@ export class SupabaseSiteService {
     }
   }
 
+  async uploadWorkshopAttachment(file: File, jobId: string, type: 'Vehicle photo' | 'Parts slip'): Promise<StoredWorkshopAttachment> {
+    const client = this.requireClient();
+    const bucket = type === 'Vehicle photo' ? 'workshop-vehicle-photos' : 'workshop-payment-documents';
+    const storagePath = this.buildWorkshopStoragePath(jobId, file.name);
+    const { error: uploadError } = await client.storage
+      .from(bucket)
+      .upload(storagePath, file, {
+        cacheControl: '31536000',
+        contentType: file.type || 'application/octet-stream',
+        upsert: false
+      });
+
+    if (uploadError) {
+      throw uploadError;
+    }
+
+    const { data, error: signedUrlError } = await client.storage
+      .from(bucket)
+      .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+    if (signedUrlError || !data?.signedUrl) {
+      await client.storage.from(bucket).remove([storagePath]);
+      throw signedUrlError || new Error('The uploaded file could not be prepared for viewing.');
+    }
+
+    return { srcImg: data.signedUrl, storagePath };
+  }
+
+  async getWorkshopAttachmentUrl(storagePath: string, type: 'Vehicle photo' | 'Parts slip'): Promise<string> {
+    const client = this.requireClient();
+    const bucket = type === 'Vehicle photo' ? 'workshop-vehicle-photos' : 'workshop-payment-documents';
+    const { data, error } = await client.storage
+      .from(bucket)
+      .createSignedUrl(storagePath, 60 * 60 * 24 * 7);
+    if (error || !data?.signedUrl) {
+      throw error || new Error('The saved file could not be opened.');
+    }
+
+    return data.signedUrl;
+  }
+
+  async removeWorkshopAttachment(storagePath: string, type: 'Vehicle photo' | 'Parts slip'): Promise<void> {
+    if (!storagePath || !this.client) {
+      return;
+    }
+
+    const bucket = type === 'Vehicle photo' ? 'workshop-vehicle-photos' : 'workshop-payment-documents';
+    const { error } = await this.client.storage.from(bucket).remove([storagePath]);
+    if (error) {
+      throw error;
+    }
+  }
+
   private requireClient(): SupabaseClient {
     if (!this.client) {
       throw new Error('Supabase is not configured yet.');
@@ -241,6 +298,12 @@ export class SupabaseSiteService {
     const extension = fileName.includes('.') ? fileName.split('.').pop() : 'jpg';
     const safeExtension = (extension || 'jpg').replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'jpg';
     return 'gallery/' + Date.now() + '-' + crypto.randomUUID() + '.' + safeExtension;
+  }
+
+  private buildWorkshopStoragePath(jobId: string, fileName: string): string {
+    const extension = fileName.includes('.') ? fileName.split('.').pop() : 'bin';
+    const safeExtension = (extension || 'bin').replace(/[^a-zA-Z0-9]/g, '').toLowerCase() || 'bin';
+    return 'job-card-evidence/' + jobId + '/' + Date.now() + '-' + crypto.randomUUID() + '.' + safeExtension;
   }
 
   private async fetchWithTimeout(input: RequestInfo | URL, init?: RequestInit): Promise<Response> {
