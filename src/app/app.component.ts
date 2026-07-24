@@ -896,10 +896,34 @@ export class AppComponent implements OnDestroy, OnInit {
       return;
     }
 
+    let printStarted = false;
+    const printWhenReady = () => {
+      if (printStarted) {
+        return;
+      }
+
+      printStarted = true;
+      const images = Array.from(documentWindow.document.images);
+      const imageLoads = images.map(image => image.complete
+        ? Promise.resolve()
+        : new Promise<void>(resolve => {
+            image.addEventListener('load', () => resolve(), { once: true });
+            image.addEventListener('error', () => resolve(), { once: true });
+          }));
+
+      Promise.race([
+        Promise.all(imageLoads),
+        new Promise<void>(resolve => documentWindow.setTimeout(resolve, 4000))
+      ]).finally(() => {
+        documentWindow.focus();
+        documentWindow.setTimeout(() => documentWindow.print(), 100);
+      });
+    };
+
+    documentWindow.addEventListener('load', printWhenReady, { once: true });
     documentWindow.document.write(this.buildPrintableDocument(job, documentType));
     documentWindow.document.close();
-    documentWindow.focus();
-    documentWindow.print();
+    documentWindow.setTimeout(printWhenReady, 500);
   }
 
   getDocumentEmailHref(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): string {
