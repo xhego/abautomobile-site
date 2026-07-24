@@ -68,6 +68,12 @@ interface WorkshopAttachment {
   createdAt: string;
 }
 
+interface QueuedWorkshopAttachment {
+  file: File;
+  type: WorkshopAttachmentType;
+  preview: WorkshopAttachment;
+}
+
 interface WorkshopNavItem {
   id: WorkshopPage;
   label: string;
@@ -241,6 +247,7 @@ export class AppComponent implements OnDestroy, OnInit {
   isSavingContactDetails = false;
   isSavingWorkshopJob = false;
   isUploadingWorkshopAttachment = false;
+  queuedWorkshopAttachments: QueuedWorkshopAttachment[] = [];
   removingWorkshopAttachmentIds = new Set<string>();
   savingImageTitleIndexes = new Set<number>();
   removingImageIndexes = new Set<number>();
@@ -1040,6 +1047,7 @@ export class AppComponent implements OnDestroy, OnInit {
     this.isSavingWorkshopJob = true;
     this.uploadError = '';
     const isNewJob = !this.editingWorkshopJobId;
+    const queuedAttachments = isNewJob ? [...this.queuedWorkshopAttachments] : [];
     const now = new Date().toISOString();
     const cleanJob: WorkshopJob = {
       id: this.editingWorkshopJobId || crypto.randomUUID(),
@@ -1075,6 +1083,9 @@ export class AppComponent implements OnDestroy, OnInit {
       : [cleanJob, ...this.workshopJobs];
     this.saveWorkshopJobs();
     this.editWorkshopJob(cleanJob);
+    if (queuedAttachments.length) {
+      await this.saveQueuedWorkshopAttachments(cleanJob, queuedAttachments);
+    }
     this.adminNotice = isNewJob
       ? 'Job card saved. You can now add vehicle photos and parts slips.'
       : 'Workshop job updated.';
@@ -1085,6 +1096,7 @@ export class AppComponent implements OnDestroy, OnInit {
   editWorkshopJob(job: WorkshopJob): void {
     this.markAdminActivity();
     this.editingWorkshopJobId = job.id;
+    this.queuedWorkshopAttachments = [];
     this.workshopDraft = {
       customerName: job.customerName,
       customerContact: job.customerContact,
@@ -1117,11 +1129,6 @@ export class AppComponent implements OnDestroy, OnInit {
     const files = Array.from(input.files || []);
     input.value = '';
 
-    if (!this.editingWorkshopJobId) {
-      this.uploadError = 'Save the job card first, then add vehicle photos or a parts slip.';
-      return;
-    }
-
     if (!files.length) {
       return;
     }
@@ -1134,6 +1141,36 @@ export class AppComponent implements OnDestroy, OnInit {
       this.uploadError = type === 'Vehicle photo'
         ? 'Vehicle photos must be JPG, PNG, WEBP or GIF and no larger than 5 MB.'
         : 'Parts slips must be JPG, PNG, WEBP, GIF or PDF and no larger than 5 MB.';
+      return;
+    }
+
+    if (!this.editingWorkshopJobId) {
+      this.isUploadingWorkshopAttachment = true;
+      this.uploadError = '';
+      try {
+        const queued = await Promise.all(files.map(async file => ({
+          file,
+          type,
+          preview: {
+            id: crypto.randomUUID(),
+            type,
+            fileName: file.name,
+            mimeType: file.type || 'application/octet-stream',
+            fileSize: file.size,
+            srcImg: await this.readFileAsDataUrl(file),
+            storagePath: '',
+            createdAt: new Date().toISOString()
+          } as WorkshopAttachment
+        })));
+        this.queuedWorkshopAttachments = [...this.queuedWorkshopAttachments, ...queued];
+        this.workshopDraft.attachments = this.queuedWorkshopAttachments.map(item => item.preview);
+        this.adminNotice = queued.length + ' file' + (queued.length === 1 ? '' : 's') + ' ready to attach when this booking is saved.';
+      } catch (error) {
+        this.uploadError = error instanceof Error ? error.message : 'The file could not be prepared.';
+      } finally {
+        this.isUploadingWorkshopAttachment = false;
+        this.renderState();
+      }
       return;
     }
 
@@ -1158,6 +1195,26 @@ export class AppComponent implements OnDestroy, OnInit {
     } finally {
       this.isUploadingWorkshopAttachment = false;
       this.renderState();
+    }
+  }
+
+  private async saveQueuedWorkshopAttachments(job: WorkshopJob, queued: QueuedWorkshopAttachment[]): Promise<void> {
+    this.isUploadingWorkshopAttachment = true;
+    try {
+      const attachments = await Promise.all(queued.map(item => this.createWorkshopAttachment(item.file, item.type)));
+      const updatedJob = { ...job, attachments, updatedAt: new Date().toISOString() };
+      this.workshopJobs = this.workshopJobs.map(item => item.id === job.id ? updatedJob : item);
+      this.saveWorkshopJobs();
+      this.editWorkshopJob(updatedJob);
+      this.queuedWorkshopAttachments = [];
+      this.adminNotice = 'Job card saved with ' + attachments.length + ' evidence file' + (attachments.length === 1 ? '.' : 's.');
+    } catch (error) {
+      this.uploadError = error instanceof Error ? error.message : 'The queued evidence files could not be attached.';
+      this.editWorkshopJob(job);
+      this.queuedWorkshopAttachments = queued;
+      this.workshopDraft.attachments = queued.map(item => item.preview);
+    } finally {
+      this.isUploadingWorkshopAttachment = false;
     }
   }
 
@@ -1199,6 +1256,7 @@ export class AppComponent implements OnDestroy, OnInit {
 
   resetWorkshopDraft(): void {
     this.editingWorkshopJobId = null;
+    this.queuedWorkshopAttachments = [];
     this.workshopDraft = this.createEmptyWorkshopDraft();
   }
 

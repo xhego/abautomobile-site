@@ -567,11 +567,11 @@
         Quality control notes
         <textarea name="pageQualityNotes" [(ngModel)]="workshopDraft.qualityNotes" rows="4" placeholder="Test drive, warning lights, leaks, brakes, final checks"></textarea>
       </label>
-      <section class="job-evidence-editor wide-field" *ngIf="editingWorkshopJobId">
+      <section class="job-evidence-editor wide-field">
         <div>
           <p class="eyebrow">Job card evidence</p>
           <h3>Photos and parts slips</h3>
-          <p>Add vehicle condition photos for transparency, and attach a photo or PDF of the supplier parts slip. These appear on the job card and printable PDF.</p>
+          <p>Add vehicle condition photos for transparency, and attach a photo or PDF of the supplier parts slip. {{ editingWorkshopJobId ? 'These appear on the job card and printable PDF.' : 'Files selected here are attached when the booking is saved.' }}</p>
         </div>
         <div class="evidence-upload-actions">
           <label class="file-button">
@@ -586,6 +586,9 @@
           </label>
         </div>
         <span class="attachment-loader" *ngIf="isUploadingWorkshopAttachment"><span class="loader-dot button-loader"></span> Processing and attaching file...</span>
+        <div class="queued-evidence" *ngIf="!editingWorkshopJobId && workshopDraft.attachments.length">
+          <span *ngFor="let attachment of workshopDraft.attachments"><i class="fa" [ngClass]="attachment.mimeType.indexOf('image/') === 0 ? 'fa-image' : 'fa-file-pdf-o'"></i>{{ attachment.fileName }}</span>
+        </div>
         <p class="evidence-help">Accepted: JPG, PNG, WEBP, GIF or PDF. Maximum 5 MB per file.</p>
       </section>
       <div class="workshop-form-actions">

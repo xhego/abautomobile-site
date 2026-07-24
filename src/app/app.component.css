@@ -1797,6 +1797,10 @@ footer a {
 .modal-close { background: #f0f3f5; border: 0; border-radius: 5px; color: #172029; cursor: pointer; height: 36px; width: 36px; }
 .workshop-form label small { color: #66737c; font-size: 12px; font-weight: 600; }
 
+.queued-evidence { display: flex; flex-wrap: wrap; gap: 8px; }
+.queued-evidence span { background: #edf2f4; border-radius: 5px; color: #34424e; font-size: 12px; font-weight: 800; padding: 7px 9px; }
+.queued-evidence i { margin-right: 6px; }
+
 .workshop-calendar button.outside-month {
   background: #f2f4f5;
   color: #9aa5ad;
