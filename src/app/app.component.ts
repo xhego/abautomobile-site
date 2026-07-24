@@ -116,6 +116,7 @@ interface CalendarMonth {
 type RevenuePeriod = 'Daily' | 'Weekly' | 'Monthly';
 type RevenueChartType = 'Bar' | 'Line' | 'Area';
 type CalendarView = 'Day' | 'Week' | 'Month' | 'Year';
+type BoardFlowView = 'Daily' | 'Weekly' | 'Monthly';
 
 interface RevenueChartPoint {
   label: string;
@@ -285,6 +286,8 @@ export class AppComponent implements OnDestroy, OnInit {
   bookingSortNewestFirst = true;
   bookingFilter = 'All';
   boardFilter: 'All' | 'Workshop booking' | 'Mobile booking' = 'All';
+  boardFlowView: BoardFlowView = 'Weekly';
+  activeBoardJobId: string | null = null;
   bookingPage = 1;
   readonly bookingsPerPage = 10;
   showBookingModal = false;
@@ -653,6 +656,35 @@ export class AppComponent implements OnDestroy, OnInit {
       : this.orderedWorkshopJobs.filter(job => job.bookingType === this.boardFilter);
   }
 
+  get boardFlowDates(): string[] {
+    const selected = this.calendarDateFromIso(this.selectedCalendarDate);
+    if (this.boardFlowView === 'Daily') {
+      return [this.toDateInputValue(selected)];
+    }
+    if (this.boardFlowView === 'Weekly') {
+      const start = this.startOfWeek(selected);
+      return Array.from({ length: 7 }, (_, index) => this.toDateInputValue(new Date(start.getFullYear(), start.getMonth(), start.getDate() + index)));
+    }
+    const start = new Date(selected.getFullYear(), selected.getMonth(), 1);
+    const daysInMonth = new Date(selected.getFullYear(), selected.getMonth() + 1, 0).getDate();
+    return Array.from({ length: daysInMonth }, (_, index) => this.toDateInputValue(new Date(start.getFullYear(), start.getMonth(), index + 1)));
+  }
+
+  getBoardJobsForDate(date: string): WorkshopJob[] {
+    return this.boardJobs.filter(job => job.bookingDate === date).sort((left, right) => left.bookingTime.localeCompare(right.bookingTime));
+  }
+
+  getBoardTimePosition(time: string): number {
+    const [hours, minutes] = (time || '09:00').split(':').map(Number);
+    const totalMinutes = ((hours || 9) * 60) + (minutes || 0);
+    return Math.min(Math.max(((totalMinutes - (8 * 60)) / (10 * 60)) * 100, 0), 86);
+  }
+
+  getElevatableStatuses(status: string): string[] {
+    const currentIndex = this.workshopStatuses.indexOf(status);
+    return currentIndex === -1 ? this.workshopStatuses : this.workshopStatuses.slice(currentIndex);
+  }
+
   getBoardStatusCount(column: WorkshopBoardColumn): number {
     return this.boardJobs.filter(job => column.statuses.includes(job.status)).length;
   }
@@ -758,6 +790,29 @@ export class AppComponent implements OnDestroy, OnInit {
 
   setBoardFilter(filter: string): void {
     this.boardFilter = filter as 'All' | 'Workshop booking' | 'Mobile booking';
+    this.markAdminActivity();
+  }
+
+  setBoardFlowView(view: string): void {
+    this.boardFlowView = view as BoardFlowView;
+    this.activeBoardJobId = null;
+    this.markAdminActivity();
+  }
+
+  toggleBoardJobStatus(job: WorkshopJob): void {
+    this.activeBoardJobId = this.activeBoardJobId === job.id ? null : job.id;
+    this.markAdminActivity();
+  }
+
+  updateBoardJobStatus(job: WorkshopJob, status: string): void {
+    const updatedJob = { ...job, status, updatedAt: new Date().toISOString() };
+    this.workshopJobs = this.workshopJobs.map(item => item.id === job.id ? updatedJob : item);
+    this.saveWorkshopJobs();
+    if (this.editingWorkshopJobId === job.id) {
+      this.editWorkshopJob(updatedJob);
+    }
+    this.activeBoardJobId = null;
+    this.adminNotice = job.vehicle + ' moved to ' + status + '.';
     this.markAdminActivity();
   }
 

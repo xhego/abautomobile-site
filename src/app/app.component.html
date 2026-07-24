@@ -327,25 +327,14 @@
           </section>
 
           <section class="workshop-page" *ngSwitchCase="'board'">
-            <article class="board-control-panel">
-              <div class="board-control-header"><div><p class="eyebrow">Workshop flow control</p><h2>Live vehicle workflow</h2><p>Track every booking from arrival to collection. Select a job to open its complete job card.</p></div><button type="button" class="small-action-button" (click)="openNewBooking()"><i class="fa fa-plus"></i> Add booking</button></div>
-              <div class="board-filter-row"><div class="chart-segmented"><button type="button" *ngFor="let filter of ['All', 'Workshop booking', 'Mobile booking']" [class.active]="boardFilter === filter" (click)="setBoardFilter(filter)">{{ filter === 'All' ? 'All work' : filter === 'Workshop booking' ? 'Workshop' : 'Mobile' }}</button></div><span>{{ boardJobs.length }} visible job{{ boardJobs.length === 1 ? '' : 's' }}</span></div>
-              <div class="board-status-summary"><span *ngFor="let column of workshopBoardColumns" [class]="getWorkshopStatusClass(column.statuses[0])"><strong>{{ getBoardStatusCount(column) }}</strong>{{ column.title }}</span></div>
+            <article class="board-control-panel board-flow-header">
+              <div class="board-control-header"><div><p class="eyebrow">Workshop flow control</p><h2>Vehicle status timeline</h2><p>Each tile is a booking. Click it to update the current stage; the job card updates immediately.</p></div><button type="button" class="small-action-button" (click)="openNewBooking(selectedCalendarDate)"><i class="fa fa-plus"></i> Add booking</button></div>
+              <div class="board-filter-row"><div class="chart-segmented"><button type="button" *ngFor="let view of ['Daily', 'Weekly', 'Monthly']" [class.active]="boardFlowView === view" (click)="setBoardFlowView(view)">{{ view }}</button></div><div class="chart-segmented"><button type="button" *ngFor="let filter of ['All', 'Workshop booking', 'Mobile booking']" [class.active]="boardFilter === filter" (click)="setBoardFilter(filter)">{{ filter === 'All' ? 'All work' : filter === 'Workshop booking' ? 'Workshop' : 'Mobile' }}</button></div></div>
             </article>
-            <div class="workshop-board board-timeline">
-              <article class="board-column" *ngFor="let column of workshopBoardColumns" [class]="getWorkshopStatusClass(column.statuses[0])">
-                <header><div><span class="board-stage-dot"></span><h2>{{ column.title }}</h2></div><strong>{{ getBoardStatusCount(column) }}</strong></header>
-                <div class="board-lane">
-                  <button type="button" class="board-job" *ngFor="let job of boardJobs" [hidden]="column.statuses.indexOf(job.status) === -1" (click)="openBookingJobCard(job)">
-                    <div class="board-job-top"><span>{{ job.bookingTime || '09:00' }}</span><small>{{ job.bookingType === 'Mobile booking' ? 'Mobile' : 'Workshop' }}</small></div>
-                    <strong>{{ job.vehicle }}</strong><span>{{ job.customerName }}</span>
-                    <small>VIN {{ job.vin || 'not captured' }} | {{ job.mileage ? (job.mileage | number) + ' km' : 'Mileage not captured' }}</small>
-                    <footer><span>{{ job.assignedMechanic || 'Assign mechanic' }}</span><i class="fa fa-arrow-right"></i></footer>
-                  </button>
-                  <div class="board-empty" *ngIf="!getBoardStatusCount(column)">No jobs in this stage.</div>
-                </div>
-              </article>
-            </div>
+            <article class="board-flow-panel">
+              <div class="board-time-axis"><span>Date</span><span>08:00</span><span>10:00</span><span>12:00</span><span>14:00</span><span>16:00</span><span>18:00</span></div>
+              <div class="board-flow-row" *ngFor="let date of boardFlowDates"><button type="button" class="board-date-label" (click)="selectCalendarDate(date); openNewBooking(date)" [attr.aria-label]="'Add a booking for ' + (date | date:'longDate')"><strong>{{ date | date:'EEE' }}</strong><span>{{ date | date:'d MMM' }}</span><i class="fa fa-plus"></i></button><div class="board-time-track"><span class="track-line" *ngFor="let tick of [0, 1, 2, 3, 4, 5]"></span><article class="flow-job-tile" *ngFor="let job of getBoardJobsForDate(date)" [class]="'flow-job-tile ' + getWorkshopStatusClass(job.status)" [style.left.%]="getBoardTimePosition(job.bookingTime)" role="button" tabindex="0" (click)="toggleBoardJobStatus(job)" (keydown.enter)="toggleBoardJobStatus(job)" (keydown.space)="toggleBoardJobStatus(job); $event.preventDefault()"><small>{{ job.bookingTime || '09:00' }}</small><strong>{{ job.vehicle }}</strong><span>{{ job.customerName }}</span><em>{{ job.status }}</em><div class="board-status-popover" *ngIf="activeBoardJobId === job.id" (click)="$event.stopPropagation()"><strong>Move {{ job.vehicle }}</strong><button type="button" *ngFor="let status of getElevatableStatuses(job.status)" [class.active]="status === job.status" (click)="updateBoardJobStatus(job, status)">{{ status }}</button><button type="button" class="open-card-link" (click)="openBookingJobCard(job)">Open full job card</button></div></article></div></div>
+            </article>
           </section>
 
           <section class="workshop-page" *ngSwitchCase="'calendar'">
