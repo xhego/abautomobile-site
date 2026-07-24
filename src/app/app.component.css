@@ -1598,6 +1598,26 @@ footer a {
   gap: 14px;
 }
 
+.editing-evidence {
+  border-top: 1px solid #e1e7ea;
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+}
+
+.editing-evidence .panel-title-row {
+  align-items: center;
+  display: flex;
+  gap: 8px;
+  justify-content: space-between;
+}
+
+.editing-evidence .panel-title-row > span {
+  color: #66737c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
 .job-evidence-editor h3,
 .job-evidence h3 {
   color: #172029;

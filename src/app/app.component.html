@@ -606,6 +606,17 @@
           </label>
         </div>
         <span class="attachment-loader" *ngIf="isUploadingWorkshopAttachment"><span class="loader-dot button-loader"></span> Processing and attaching file...</span>
+        <section class="editing-evidence" *ngIf="editingWorkshopJobId && workshopDraft.attachments.length">
+          <div class="panel-title-row"><strong>Attached to this job card</strong><span>{{ workshopDraft.attachments.length }} file{{ workshopDraft.attachments.length === 1 ? '' : 's' }}</span></div>
+          <div class="job-photo-grid">
+            <article class="job-attachment" *ngFor="let attachment of workshopDraft.attachments">
+              <a *ngIf="attachment.mimeType.indexOf('image/') === 0" [href]="attachment.srcImg" target="_blank" rel="noopener" class="attachment-preview"><img [src]="attachment.srcImg" [alt]="attachment.type + ': ' + attachment.fileName"></a>
+              <a *ngIf="attachment.mimeType.indexOf('image/') !== 0" [href]="attachment.srcImg" target="_blank" rel="noopener" class="attachment-file-icon"><i class="fa fa-file-pdf-o"></i></a>
+              <div><strong>{{ attachment.type }}</strong><span>{{ attachment.fileName }}</span><small>{{ attachment.fileSize / 1024 | number:'1.0-0' }} KB</small></div>
+              <button type="button" class="attachment-remove" (click)="removeEditingWorkshopAttachment(attachment.id)" [disabled]="removingWorkshopAttachmentIds.has(attachment.id)" [attr.aria-label]="'Remove ' + attachment.fileName"><span class="loader-dot mini-loader" *ngIf="removingWorkshopAttachmentIds.has(attachment.id)"></span><i class="fa fa-trash" *ngIf="!removingWorkshopAttachmentIds.has(attachment.id)"></i></button>
+            </article>
+          </div>
+        </section>
         <div class="queued-evidence" *ngIf="!editingWorkshopJobId && workshopDraft.attachments.length">
           <span *ngFor="let attachment of workshopDraft.attachments"><i class="fa" [ngClass]="attachment.mimeType.indexOf('image/') === 0 ? 'fa-image' : 'fa-file-pdf-o'"></i>{{ attachment.fileName }}</span>
         </div>
@@ -654,7 +665,7 @@
                 <span>{{ attachment.fileName }}</span>
                 <small>{{ attachment.fileSize / 1024 | number:'1.0-0' }} KB</small>
               </div>
-              <button type="button" class="attachment-remove" (click)="removeWorkshopAttachment(job, attachment.id)" [disabled]="removingWorkshopAttachmentIds.has(attachment.id)" [attr.aria-label]="'Remove ' + attachment.fileName"><i class="fa fa-trash"></i></button>
+              <button type="button" class="attachment-remove" (click)="removeWorkshopAttachment(job, attachment.id)" [disabled]="removingWorkshopAttachmentIds.has(attachment.id)" [attr.aria-label]="'Remove ' + attachment.fileName"><span class="loader-dot mini-loader" *ngIf="removingWorkshopAttachmentIds.has(attachment.id)"></span><i class="fa fa-trash" *ngIf="!removingWorkshopAttachmentIds.has(attachment.id)"></i></button>
             </article>
           </div>
         </section>

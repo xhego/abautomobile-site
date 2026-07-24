@@ -1439,9 +1439,11 @@ export class AppComponent implements OnDestroy, OnInit {
     try {
       const attachments = await Promise.all(files.map(file => this.createWorkshopAttachment(file, type)));
       const job = this.workshopJobs[jobIndex];
+      const updatedJob = { ...job, attachments: [...job.attachments, ...attachments], updatedAt: new Date().toISOString() };
       this.workshopJobs = this.workshopJobs.map(item => item.id === job.id
-        ? { ...item, attachments: [...item.attachments, ...attachments], updatedAt: new Date().toISOString() }
+        ? updatedJob
         : item);
+      this.workshopDraft.attachments = updatedJob.attachments;
       this.saveWorkshopJobs();
       this.adminNotice = attachments.length + ' ' + (attachments.length === 1 ? 'file' : 'files') + ' added to this job card.';
     } catch (error) {
@@ -1485,9 +1487,13 @@ export class AppComponent implements OnDestroy, OnInit {
       if (attachment.storagePath) {
         await this.siteService.removeWorkshopAttachment(attachment.storagePath, attachment.type);
       }
+      const updatedJob = { ...job, attachments: job.attachments.filter(itemAttachment => itemAttachment.id !== attachmentId), updatedAt: new Date().toISOString() };
       this.workshopJobs = this.workshopJobs.map(item => item.id === job.id
-        ? { ...item, attachments: item.attachments.filter(itemAttachment => itemAttachment.id !== attachmentId), updatedAt: new Date().toISOString() }
+        ? updatedJob
         : item);
+      if (this.editingWorkshopJobId === job.id) {
+        this.workshopDraft.attachments = updatedJob.attachments;
+      }
       this.saveWorkshopJobs();
       this.adminNotice = 'Attachment removed from this job card.';
     } catch (error) {
@@ -1496,6 +1502,16 @@ export class AppComponent implements OnDestroy, OnInit {
       this.removingWorkshopAttachmentIds.delete(attachmentId);
       this.renderState();
     }
+  }
+
+  removeEditingWorkshopAttachment(attachmentId: string): void {
+    const job = this.workshopJobs.find(item => item.id === this.editingWorkshopJobId);
+    if (!job) {
+      this.uploadError = 'This job card is no longer available. Reopen it and try again.';
+      return;
+    }
+
+    void this.removeWorkshopAttachment(job, attachmentId);
   }
 
   removeWorkshopJob(jobId: string): void {
