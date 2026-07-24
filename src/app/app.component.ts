@@ -22,7 +22,6 @@ type WorkshopPage =
   'calendar' |
   'bookings' |
   'board' |
-  'job-cards' |
   'estimates' |
   'payments' |
   'mechanics' |
@@ -43,7 +42,11 @@ interface WorkshopJob {
   priority: string;
   estimate: number;
   paid: number;
+  bookingDate: string;
+  bookingTime: string;
   dueDate: string;
+  mileage: number;
+  nextServiceMileage: number;
   partsNotes: string;
   qualityNotes: string;
   notes: string;
@@ -188,7 +191,6 @@ export class AppComponent implements OnDestroy, OnInit {
     { id: 'calendar', label: 'Calendar', icon: 'fa-calendar' },
     { id: 'bookings', label: 'Bookings', icon: 'fa-book' },
     { id: 'board', label: 'Workshop Board', icon: 'fa-columns' },
-    { id: 'job-cards', label: 'Job Cards', icon: 'fa-clipboard' },
     { id: 'estimates', label: 'Estimates', icon: 'fa-calculator' },
     { id: 'payments', label: 'Payments', icon: 'fa-credit-card' },
     { id: 'mechanics', label: 'Mechanics', icon: 'fa-wrench' },
@@ -258,6 +260,9 @@ export class AppComponent implements OnDestroy, OnInit {
   mechanicDraft: Omit<WorkshopMechanic, 'id'> = this.createEmptyMechanicDraft();
   bookingSortNewestFirst = true;
   bookingFilter = 'All';
+  bookingPage = 1;
+  readonly bookingsPerPage = 10;
+  showBookingModal = false;
   selectedCalendarDate = new Date().toISOString().slice(0, 10);
   calendarCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   storageFee = 250;
@@ -399,7 +404,7 @@ export class AppComponent implements OnDestroy, OnInit {
 
   get todaysWorkshopJobs(): WorkshopJob[] {
     const today = new Date().toISOString().slice(0, 10);
-    return this.orderedWorkshopJobs.filter(job => job.dueDate === today);
+    return this.orderedWorkshopJobs.filter(job => job.bookingDate === today);
   }
 
   get overdueWorkshopJobs(): WorkshopJob[] {
@@ -439,16 +444,25 @@ export class AppComponent implements OnDestroy, OnInit {
       ? [...this.workshopJobs]
       : this.workshopJobs.filter(job => job.bookingType === this.bookingFilter || job.status === this.bookingFilter);
     return filtered.sort((left, right) => {
-      const leftDate = left.dueDate || '9999-12-31';
-      const rightDate = right.dueDate || '9999-12-31';
+      const leftDate = left.bookingDate || left.createdAt;
+      const rightDate = right.bookingDate || right.createdAt;
       return this.bookingSortNewestFirst
         ? rightDate.localeCompare(leftDate) || right.updatedAt.localeCompare(left.updatedAt)
         : leftDate.localeCompare(rightDate) || left.updatedAt.localeCompare(right.updatedAt);
     });
   }
 
+  get paginatedBookings(): WorkshopJob[] {
+    const start = (this.bookingPage - 1) * this.bookingsPerPage;
+    return this.filteredBookings.slice(start, start + this.bookingsPerPage);
+  }
+
+  get bookingPageCount(): number {
+    return Math.max(1, Math.ceil(this.filteredBookings.length / this.bookingsPerPage));
+  }
+
   get selectedDateBookings(): WorkshopJob[] {
-    return this.orderedWorkshopJobs.filter(job => job.dueDate === this.selectedCalendarDate);
+    return this.orderedWorkshopJobs.filter(job => job.bookingDate === this.selectedCalendarDate);
   }
 
   get calendarTitle(): string {
@@ -472,7 +486,7 @@ export class AppComponent implements OnDestroy, OnInit {
         dayNumber: date.getDate(),
         isCurrentMonth: date.getMonth() === month,
         isToday: isoDate === today,
-        bookings: this.workshopJobs.filter(job => job.dueDate === isoDate)
+        bookings: this.workshopJobs.filter(job => job.bookingDate === isoDate)
       };
     });
   }
@@ -535,15 +549,33 @@ export class AppComponent implements OnDestroy, OnInit {
   }
 
   startNewWorkshopJob(): void {
+    this.openNewBooking();
+  }
+
+  openNewBooking(date = new Date().toISOString().slice(0, 10)): void {
     this.resetWorkshopDraft();
+    this.workshopDraft.bookingDate = date;
     this.uploadError = '';
     this.adminNotice = '';
+    this.showBookingModal = true;
+    this.navigateToWorkshopManagement('bookings');
+  }
+
+  closeBookingModal(): void {
+    this.showBookingModal = false;
+    this.resetWorkshopDraft();
+  }
+
+  openBookingJobCard(job: WorkshopJob): void {
+    this.editWorkshopJob(job);
+    this.uploadError = '';
+    this.adminNotice = '';
+    this.showBookingModal = true;
     this.navigateToWorkshopManagement('bookings');
   }
 
   selectCalendarDate(date: string): void {
     this.selectedCalendarDate = date;
-    this.workshopDraft.dueDate = date;
     this.markAdminActivity();
   }
 
@@ -555,6 +587,22 @@ export class AppComponent implements OnDestroy, OnInit {
   toggleBookingSort(): void {
     this.bookingSortNewestFirst = !this.bookingSortNewestFirst;
     this.markAdminActivity();
+  }
+
+  setBookingPage(page: number): void {
+    this.bookingPage = Math.min(Math.max(page, 1), this.bookingPageCount);
+    this.markAdminActivity();
+  }
+
+  onBookingFilterChange(): void {
+    this.bookingPage = 1;
+  }
+
+  applyMileageServiceSuggestion(): void {
+    const mileage = Math.max(Number(this.workshopDraft.mileage) || 0, 0);
+    if (!this.workshopDraft.nextServiceMileage || this.workshopDraft.nextServiceMileage <= mileage) {
+      this.workshopDraft.nextServiceMileage = mileage + 10000;
+    }
   }
 
   saveMechanic(): void {
@@ -1008,7 +1056,11 @@ export class AppComponent implements OnDestroy, OnInit {
       priority: this.workshopDraft.priority || this.workshopPriorities[0],
       estimate: Number(this.workshopDraft.estimate) || 0,
       paid: Number(this.workshopDraft.paid) || 0,
+      bookingDate: this.workshopDraft.bookingDate || this.toDateInputValue(new Date()),
+      bookingTime: this.workshopDraft.bookingTime || this.toTimeInputValue(new Date()),
       dueDate: this.workshopDraft.dueDate,
+      mileage: Math.max(Number(this.workshopDraft.mileage) || 0, 0),
+      nextServiceMileage: Math.max(Number(this.workshopDraft.nextServiceMileage) || 0, 0),
       partsNotes: this.workshopDraft.partsNotes.trim(),
       qualityNotes: this.workshopDraft.qualityNotes.trim(),
       notes: this.workshopDraft.notes.trim(),
@@ -1047,7 +1099,11 @@ export class AppComponent implements OnDestroy, OnInit {
       priority: job.priority,
       estimate: job.estimate,
       paid: job.paid,
+      bookingDate: job.bookingDate,
+      bookingTime: job.bookingTime,
       dueDate: job.dueDate,
+      mileage: job.mileage,
+      nextServiceMileage: job.nextServiceMileage,
       partsNotes: job.partsNotes,
       qualityNotes: job.qualityNotes,
       notes: job.notes,
@@ -1281,6 +1337,8 @@ export class AppComponent implements OnDestroy, OnInit {
             ...job,
             estimate: Number(job.estimate) || 0,
             paid: Number(job.paid) || 0,
+            bookingDate: job.bookingDate || job.dueDate || (job.createdAt || this.toDateInputValue(new Date())).slice(0, 10),
+            bookingTime: job.bookingTime || '',
             status: job.status || this.workshopStatuses[0],
             priority: job.priority || this.workshopPriorities[0],
             vin: (job.vin || '').toUpperCase(),
@@ -1290,6 +1348,8 @@ export class AppComponent implements OnDestroy, OnInit {
             partsNotes: job.partsNotes || '',
             qualityNotes: job.qualityNotes || '',
             notes: job.notes || '',
+            mileage: Math.max(Number(job.mileage) || 0, 0),
+            nextServiceMileage: Math.max(Number(job.nextServiceMileage) || 0, 0),
             attachments: Array.isArray(job.attachments)
               ? job.attachments.filter(attachment => attachment && attachment.id && attachment.fileName)
               : []
@@ -1352,7 +1412,11 @@ export class AppComponent implements OnDestroy, OnInit {
       priority: 'Normal',
       estimate: 0,
       paid: 0,
+      bookingDate: this.toDateInputValue(new Date()),
+      bookingTime: this.toTimeInputValue(new Date()),
       dueDate: '',
+      mileage: 0,
+      nextServiceMileage: 0,
       partsNotes: '',
       qualityNotes: '',
       notes: '',
@@ -1451,6 +1515,10 @@ export class AppComponent implements OnDestroy, OnInit {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return year + '-' + month + '-' + day;
+  }
+
+  private toTimeInputValue(date: Date): string {
+    return String(date.getHours()).padStart(2, '0') + ':' + String(date.getMinutes()).padStart(2, '0');
   }
 
   private buildShareMessage(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): string {

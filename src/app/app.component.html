@@ -237,7 +237,6 @@
           </div>
           <div class="workshop-quick-actions">
             <button type="button" (click)="startNewWorkshopJob()"><i class="fa fa-plus"></i> New Booking</button>
-            <button type="button" (click)="startNewWorkshopJob()"><i class="fa fa-clipboard"></i> New Job Card</button>
             <button type="button" (click)="navigateToWorkshopManagement('estimates')"><i class="fa fa-calculator"></i> Send Estimate</button>
             <button type="button" (click)="navigateToWorkshopManagement('payments')"><i class="fa fa-credit-card"></i> Record Payment</button>
           </div>
@@ -269,9 +268,9 @@
                   <span>{{ todaysWorkshopJobs.length }}</span>
                 </div>
                 <div class="compact-table" *ngIf="todaysWorkshopJobs.length; else noTodayJobs">
-                  <div class="table-row table-head"><span>Customer</span><span>Vehicle</span><span>Status</span><span>Due</span></div>
+                  <div class="table-row table-head"><span>Customer</span><span>Vehicle</span><span>Status</span><span>Booking</span></div>
                   <div class="table-row" *ngFor="let job of todaysWorkshopJobs">
-                    <span>{{ job.customerName }}</span><span>{{ job.vehicle }}</span><span>{{ job.status }}</span><span>{{ job.dueDate }}</span>
+                    <span>{{ job.customerName }}</span><span>{{ job.vehicle }}</span><span>{{ job.status }}</span><span>{{ job.bookingDate }}</span>
                   </div>
                 </div>
                 <ng-template #noTodayJobs>
@@ -314,7 +313,7 @@
                   <span>{{ job.customerName }}</span>
                   <small>{{ job.bookingType }} | VIN {{ job.vin || 'not captured' }}</small>
                   <small>{{ job.assignedMechanic || 'No mechanic assigned' }} | {{ job.dueDate || 'No due date' }}</small>
-                  <button type="button" (click)="editWorkshopJob(job); navigateToWorkshopManagement('job-cards')">Open job card</button>
+                  <button type="button" (click)="openBookingJobCard(job)">Open job card</button>
                 </div>
               </article>
             </div>
@@ -331,16 +330,17 @@
                 <button type="button" (click)="moveCalendar(1)">Next <i class="fa fa-chevron-right"></i></button>
               </div>
               <div class="workshop-calendar">
-                <button type="button" *ngFor="let day of calendarDays" (click)="selectCalendarDate(day.date); navigateToWorkshopManagement('bookings')" [class.outside-month]="!day.isCurrentMonth" [class.today]="day.isToday" [class.selected]="day.date === selectedCalendarDate">
+                <button type="button" *ngFor="let day of calendarDays" (click)="selectCalendarDate(day.date)" [class.outside-month]="!day.isCurrentMonth" [class.today]="day.isToday" [class.selected]="day.date === selectedCalendarDate">
                   <strong>{{ day.dayNumber }}</strong>
                   <span *ngIf="day.bookings.length">{{ day.bookings.length }} booking{{ day.bookings.length === 1 ? '' : 's' }}</span>
+                  <i class="fa fa-plus calendar-add" (click)="$event.stopPropagation(); openNewBooking(day.date)" [attr.aria-label]="'Add booking on ' + day.date"></i>
                 </button>
               </div>
             </article>
             <article class="operation-panel">
               <h2>Bookings for {{ selectedCalendarDate }}</h2>
               <div class="booking-list" *ngIf="selectedDateBookings.length; else noSelectedDateBookings">
-                <button type="button" class="booking-row" *ngFor="let job of selectedDateBookings" (click)="editWorkshopJob(job); navigateToWorkshopManagement('job-cards')">
+                <button type="button" class="booking-row" *ngFor="let job of selectedDateBookings" (click)="openBookingJobCard(job)">
                   <strong>{{ job.vehicle }}</strong>
                   <span>{{ job.bookingType }} | {{ job.customerName }}</span>
                   <small>{{ job.bookingType === 'Mobile booking' ? job.mobileLocation : workshopLocation }}</small>
@@ -354,42 +354,26 @@
 
           <section class="workshop-page" *ngSwitchCase="'bookings'">
             <article class="operation-panel">
-              <h2>Bookings and scheduling</h2>
-              <p>Capture workshop and mobile bookings. Mobile bookings must include a customer location.</p>
-              <ng-container *ngTemplateOutlet="workshopJobForm"></ng-container>
-            </article>
-            <article class="operation-panel">
               <div class="panel-title-row">
                 <h2>Booking list</h2>
+                <button type="button" class="small-action-button" (click)="openNewBooking()"><i class="fa fa-plus"></i> Add booking</button>
+              </div>
+              <p>Every booking creates a job card. Open any booking to update vehicle details, work, evidence and documents.</p>
+              <div class="booking-table-controls">
+                <label class="filter-field">Filter<select name="bookingFilter" [(ngModel)]="bookingFilter" (ngModelChange)="onBookingFilterChange()">
+                  <option *ngFor="let filter of bookingFilters" [value]="filter">{{ filter }}</option>
+                </select></label>
                 <button type="button" class="small-action-button" (click)="toggleBookingSort()">{{ bookingSortNewestFirst ? 'Newest first' : 'Oldest first' }}</button>
               </div>
-              <label class="filter-field">
-                Filter
-                <select name="bookingFilter" [(ngModel)]="bookingFilter">
-                  <option *ngFor="let filter of bookingFilters" [value]="filter">{{ filter }}</option>
-                </select>
-              </label>
-              <div class="booking-list" *ngIf="filteredBookings.length; else noFilteredBookings">
-                <button type="button" class="booking-row" *ngFor="let job of filteredBookings" (click)="editWorkshopJob(job); navigateToWorkshopManagement('job-cards')">
-                  <strong>{{ job.dueDate || 'No date' }} | {{ job.vehicle }}</strong>
-                  <span>{{ job.bookingType }} | {{ job.customerName }} | VIN {{ job.vin || 'not captured' }}</span>
-                  <small>{{ job.status }} | {{ job.bookingType === 'Mobile booking' ? job.mobileLocation : workshopLocation }}</small>
-                </button>
+              <div class="booking-table-wrap" *ngIf="paginatedBookings.length; else noFilteredBookings">
+                <table class="booking-table"><thead><tr><th>Booking</th><th>Customer</th><th>Vehicle</th><th>Type</th><th>Status</th><th>Next service</th><th></th></tr></thead>
+                  <tbody><tr *ngFor="let job of paginatedBookings"><td>{{ job.bookingDate }}</td><td>{{ job.customerName }}</td><td>{{ job.vehicle }}<small>VIN {{ job.vin || 'not captured' }}</small></td><td>{{ job.bookingType }}</td><td><span class="status-pill">{{ job.status }}</span></td><td>{{ job.nextServiceMileage ? (job.nextServiceMileage | number) + ' km' : 'Not set' }}</td><td><button type="button" class="table-open-button" (click)="openBookingJobCard(job)">Open</button></td></tr></tbody>
+                </table>
+                <div class="pagination"><button type="button" (click)="setBookingPage(bookingPage - 1)" [disabled]="bookingPage === 1"><i class="fa fa-chevron-left"></i></button><span>Page {{ bookingPage }} of {{ bookingPageCount }}</span><button type="button" (click)="setBookingPage(bookingPage + 1)" [disabled]="bookingPage === bookingPageCount"><i class="fa fa-chevron-right"></i></button></div>
               </div>
               <ng-template #noFilteredBookings>
                 <div class="soft-empty">No bookings match this filter.</div>
               </ng-template>
-            </article>
-          </section>
-
-          <section class="workshop-page" *ngSwitchCase="'job-cards'">
-            <article class="operation-panel">
-              <div class="panel-title-row">
-                <h2>Job cards</h2>
-                <button type="button" class="small-action-button" (click)="startNewWorkshopJob()"><i class="fa fa-plus"></i> Start a job card</button>
-              </div>
-              <p class="workflow-intro">Start a job card from Bookings, save the vehicle details, then add photos and any parts slip as work progresses.</p>
-              <ng-container *ngTemplateOutlet="workshopJobList"></ng-container>
             </article>
           </section>
 
@@ -480,12 +464,23 @@
     </section>
   </main>
 
-  <ng-template #workshopJobForm>
+  <section class="booking-modal-backdrop" *ngIf="showBookingModal" role="dialog" aria-modal="true" aria-labelledby="booking-modal-title">
+    <div class="booking-modal">
+      <header class="booking-modal-header"><div><p class="eyebrow">{{ editingWorkshopJobId ? 'Booking job card' : 'New booking' }}</p><h2 id="booking-modal-title">{{ editingWorkshopJobId ? workshopDraft.vehicle || 'Update job card' : 'Create booking' }}</h2></div><button type="button" class="modal-close" (click)="closeBookingModal()" aria-label="Close booking"><i class="fa fa-times"></i></button></header>
     <form class="workshop-form embedded-workshop-form" (ngSubmit)="saveWorkshopJob()">
       <div class="job-card-flow wide-field">
         <span class="flow-step" [class.done]="editingWorkshopJobId">1</span>
-        <p><strong>{{ editingWorkshopJobId ? 'Job card saved' : 'Start the job card' }}</strong><br><small>Capture the vehicle and customer details first. Once saved, add inspection photos and any parts supplier slip below.</small></p>
+        <p><strong>{{ editingWorkshopJobId ? 'Booking job card' : 'Create the booking' }}</strong><br><small>Save the booking first, then add vehicle photos and supplier slips to the job card.</small></p>
       </div>
+      <label>
+        Booking date
+        <input type="date" name="pageBookingDate" [(ngModel)]="workshopDraft.bookingDate" [disabled]="!!editingWorkshopJobId" required>
+        <small *ngIf="editingWorkshopJobId">Booking dates are locked after creation.</small>
+      </label>
+      <label>
+        Booking time
+        <input type="time" name="pageBookingTime" [(ngModel)]="workshopDraft.bookingTime" [disabled]="!!editingWorkshopJobId" required>
+      </label>
       <label>
         Customer name
         <input type="text" name="pageCustomerName" [(ngModel)]="workshopDraft.customerName" placeholder="Customer name" required>
@@ -528,8 +523,17 @@
         <input type="text" name="pageJobType" [(ngModel)]="workshopDraft.jobType" placeholder="Service, diagnosis, brakes, engine">
       </label>
       <label>
-        Due date
+        Expected completion date
         <input type="date" name="pageDueDate" [(ngModel)]="workshopDraft.dueDate">
+      </label>
+      <label>
+        Current mileage (km)
+        <input type="number" min="0" name="pageMileage" [(ngModel)]="workshopDraft.mileage" (ngModelChange)="applyMileageServiceSuggestion()" placeholder="e.g. 125000">
+      </label>
+      <label>
+        Next service mileage (km)
+        <input type="number" min="0" name="pageNextServiceMileage" [(ngModel)]="workshopDraft.nextServiceMileage" placeholder="e.g. 135000">
+        <small *ngIf="workshopDraft.mileage">Suggested at {{ workshopDraft.mileage + 10000 | number }} km (10 000 km interval).</small>
       </label>
       <label>
         Status
@@ -589,12 +593,13 @@
           <span class="loader-dot button-loader" *ngIf="isSavingWorkshopJob"></span>
           <span>{{ isSavingWorkshopJob ? 'Saving job...' : (editingWorkshopJobId ? 'Update job' : 'Add job') }}</span>
         </button>
-        <button class="ghost-button" type="button" (click)="resetWorkshopDraft()">Clear form</button>
+        <button class="ghost-button" type="button" (click)="closeBookingModal()">Close</button>
       </div>
     </form>
     <p class="form-message" *ngIf="uploadError">{{ uploadError }}</p>
     <p class="form-success" *ngIf="adminNotice">{{ adminNotice }}</p>
-  </ng-template>
+    </div>
+  </section>
 
   <ng-template #workshopJobList>
     <div class="workshop-jobs" *ngIf="orderedWorkshopJobs.length; else noWorkshopJobsPage">
@@ -651,7 +656,7 @@
     <ng-template #noWorkshopJobsPage>
       <div class="empty-admin-state">
         <strong>No workshop jobs yet.</strong>
-        <span>Add the first vehicle from Bookings or Job Cards.</span>
+        <span>Add the first vehicle from Bookings.</span>
       </div>
     </ng-template>
   </ng-template>
