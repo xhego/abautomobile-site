@@ -343,34 +343,36 @@
 
           <section class="workshop-page" *ngSwitchCase="'calendar'">
             <article class="operation-panel">
-              <div class="panel-title-row">
-                <h2>{{ calendarTitle }}</h2>
-                <span>{{ selectedCalendarDate }}</span>
+              <div class="calendar-header">
+                <div><p class="eyebrow">Workshop schedule</p><h2>{{ calendarTitle }}</h2></div>
+                <button type="button" class="small-action-button" (click)="openNewBooking(selectedCalendarDate)"><i class="fa fa-plus"></i> New booking</button>
               </div>
-              <div class="calendar-toolbar">
-                <button type="button" (click)="moveCalendar(-1)"><i class="fa fa-chevron-left"></i> Previous</button>
-                <button type="button" (click)="moveCalendar(1)">Next <i class="fa fa-chevron-right"></i></button>
+              <div class="calendar-toolbar calendar-controls">
+                <div class="calendar-view-switch"><button type="button" *ngFor="let view of ['Day', 'Week', 'Month', 'Year']" [class.active]="calendarView === view" (click)="setCalendarView(view)">{{ view }}</button></div>
+                <div class="calendar-navigation"><button type="button" (click)="moveCalendar(-1)" aria-label="Previous period"><i class="fa fa-chevron-left"></i></button><button type="button" (click)="goToCalendarToday()" class="today-button">Today</button><button type="button" (click)="moveCalendar(1)" aria-label="Next period"><i class="fa fa-chevron-right"></i></button></div>
               </div>
-              <div class="workshop-calendar">
-                <button type="button" *ngFor="let day of calendarDays" (click)="selectCalendarDate(day.date)" [class.outside-month]="!day.isCurrentMonth" [class.today]="day.isToday" [class.selected]="day.date === selectedCalendarDate">
-                  <strong>{{ day.dayNumber }}</strong>
-                  <span *ngIf="day.bookings.length">{{ day.bookings.length }} booking{{ day.bookings.length === 1 ? '' : 's' }}</span>
-                  <i class="fa fa-plus calendar-add" (click)="$event.stopPropagation(); openNewBooking(day.date)" [attr.aria-label]="'Add booking on ' + day.date"></i>
-                </button>
+
+              <div *ngIf="calendarView === 'Month'">
+                <div class="calendar-weekdays"><span *ngFor="let day of ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun']">{{ day }}</span></div>
+                <div class="workshop-calendar month-calendar">
+                  <button type="button" *ngFor="let day of calendarDays" (click)="selectCalendarDate(day.date)" [class.outside-month]="!day.isCurrentMonth" [class.today]="day.isToday" [class.selected]="day.date === selectedCalendarDate">
+                    <strong>{{ day.dayNumber }}</strong><i class="fa fa-plus calendar-add" (click)="$event.stopPropagation(); openNewBooking(day.date)" [attr.aria-label]="'Add booking on ' + day.date"></i>
+                    <span class="month-booking" *ngFor="let job of day.bookings | slice:0:2" (click)="$event.stopPropagation(); openBookingJobCard(job)">{{ job.bookingTime || '09:00' }} {{ job.vehicle }}</span>
+                    <small *ngIf="day.bookings.length > 2">+{{ day.bookings.length - 2 }} more</small>
+                  </button>
+                </div>
               </div>
-            </article>
-            <article class="operation-panel">
-              <h2>Bookings for {{ selectedCalendarDate }}</h2>
-              <div class="booking-list" *ngIf="selectedDateBookings.length; else noSelectedDateBookings">
-                <button type="button" class="booking-row" *ngFor="let job of selectedDateBookings" (click)="openBookingJobCard(job)">
-                  <strong>{{ job.vehicle }}</strong>
-                  <span>{{ job.bookingType }} | {{ job.customerName }}</span>
-                  <small>{{ job.bookingType === 'Mobile booking' ? job.mobileLocation : workshopLocation }}</small>
-                </button>
+
+              <div class="week-schedule" *ngIf="calendarView === 'Week'">
+                <article *ngFor="let day of weekCalendarDays" [class.today]="day.isToday" [class.selected]="day.date === selectedCalendarDate"><header><button type="button" (click)="selectCalendarDate(day.date)"><span>{{ day.date | date:'EEE' }}</span><strong>{{ day.dayNumber }}</strong></button><button type="button" class="week-add" (click)="openNewBooking(day.date)" [attr.aria-label]="'Add booking on ' + day.date"><i class="fa fa-plus"></i></button></header><div class="week-job-list"><button type="button" *ngFor="let job of day.bookings" (click)="openBookingJobCard(job)"><small>{{ job.bookingTime || '09:00' }}</small><strong>{{ job.vehicle }}</strong><span>{{ job.customerName }}</span></button><span class="week-empty" *ngIf="!day.bookings.length">No bookings</span></div></article>
               </div>
-              <ng-template #noSelectedDateBookings>
-                <div class="soft-empty">Click this date to add a booking.</div>
-              </ng-template>
+
+              <div class="day-schedule" *ngIf="calendarView === 'Day'">
+                <div class="day-schedule-header"><strong>{{ selectedCalendarDate | date:'EEEE, d MMMM' }}</strong><button type="button" class="small-action-button" (click)="openNewBooking(selectedCalendarDate)"><i class="fa fa-plus"></i> Add booking</button></div>
+                <div class="day-time-row" *ngFor="let hour of ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00', '15:00', '16:00', '17:00']"><span>{{ hour }}</span><div><button type="button" *ngFor="let job of selectedDateBookings" [hidden]="(job.bookingTime || '09:00').slice(0, 2) !== hour.slice(0, 2)" (click)="openBookingJobCard(job)"><strong>{{ job.vehicle }}</strong><small>{{ job.customerName }} | {{ job.bookingTime }}</small></button></div></div>
+              </div>
+
+              <div class="year-calendar" *ngIf="calendarView === 'Year'"><button type="button" *ngFor="let month of yearCalendarMonths" (click)="openCalendarMonth(month.date)"><strong>{{ month.label }}</strong><span>{{ month.bookingCount }} booking{{ month.bookingCount === 1 ? '' : 's' }}</span><i class="fa fa-chevron-right"></i></button></div>
             </article>
           </section>
 

@@ -1733,6 +1733,28 @@ footer a {
   margin-bottom: 16px;
 }
 
+.calendar-header,
+.calendar-controls,
+.day-schedule-header {
+  align-items: center;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+}
+
+.calendar-header h2 { margin: 0; }
+.calendar-controls { margin: 22px 0 16px; }
+.calendar-view-switch,
+.calendar-navigation { align-items: center; display: flex; gap: 4px; }
+.calendar-view-switch { background: #eef1f3; border-radius: 6px; padding: 3px; }
+.calendar-view-switch button,
+.calendar-navigation button { background: transparent; border: 0; border-radius: 4px; color: #5d6871; cursor: pointer; font: inherit; font-size: 12px; font-weight: 800; padding: 8px 11px; }
+.calendar-view-switch button.active { background: #172029; color: #fff; }
+.calendar-navigation { border: 1px solid #dfe4e8; border-radius: 6px; padding: 2px; }
+.calendar-navigation button:hover { background: #f2f4f5; color: #172029; }
+.calendar-navigation .today-button { border-left: 1px solid #dfe4e8; border-radius: 0; border-right: 1px solid #dfe4e8; }
+.calendar-weekdays { color: #66737c; display: grid; font-size: 11px; font-weight: 800; grid-template-columns: repeat(7, minmax(0, 1fr)); padding: 0 8px 8px; text-align: center; text-transform: uppercase; }
+
 .calendar-toolbar button,
 .small-action-button,
 .document-actions button,
@@ -1777,6 +1799,11 @@ footer a {
   text-align: left;
 }
 
+.month-calendar { gap: 6px; }
+.month-calendar button { min-height: 114px; overflow: hidden; padding: 9px; }
+.month-booking { background: #edf2f4; border-left: 3px solid #f2b84b; border-radius: 3px; color: #172029; display: block; font-size: 11px; font-weight: 800; margin-top: 5px; overflow: hidden; padding: 4px 5px; text-overflow: ellipsis; white-space: nowrap; }
+.month-calendar button small { color: #66737c; display: block; font-size: 10px; font-weight: 800; margin-top: 5px; }
+
 .calendar-add {
   align-items: center;
   background: #f2b84b;
@@ -1791,6 +1818,20 @@ footer a {
   top: 8px;
   width: 22px;
 }
+
+.week-schedule { display: grid; gap: 8px; grid-template-columns: repeat(7, minmax(130px, 1fr)); overflow-x: auto; }
+.week-schedule article { background: #f7f8f9; border: 1px solid #dfe4e8; border-radius: 7px; min-height: 360px; padding: 8px; }
+.week-schedule article.today { border-color: #f2b84b; box-shadow: inset 0 0 0 1px #f2b84b; }
+.week-schedule article.selected { background: #fffdf8; }
+.week-schedule article header { align-items: center; display: flex; justify-content: space-between; margin-bottom: 10px; }
+.week-schedule article header > button:first-child { background: transparent; border: 0; color: #172029; cursor: pointer; display: grid; gap: 2px; padding: 3px; text-align: left; }
+.week-schedule article header span { color: #66737c; font-size: 11px; font-weight: 800; text-transform: uppercase; }.week-schedule article header strong { font-size: 20px; }
+.week-add { background: #fff; border: 1px solid #dfe4e8; border-radius: 5px; color: #172029; cursor: pointer; height: 28px; width: 28px; }
+.week-job-list { display: grid; gap: 7px; }.week-job-list button { background: #172029; border: 0; border-left: 3px solid #f2b84b; border-radius: 4px; color: #fff; cursor: pointer; display: grid; gap: 3px; padding: 8px; text-align: left; }.week-job-list small { color: #f2b84b; font-size: 10px; font-weight: 800; }.week-job-list strong { font-size: 12px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.week-job-list span { color: #cbd3d9; font-size: 10px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }.week-empty { color: #93a0a9; font-size: 11px; padding: 10px 3px; }
+
+.day-schedule { border: 1px solid #dfe4e8; border-radius: 7px; overflow: hidden; }.day-schedule-header { background: #f7f8f9; border-bottom: 1px solid #dfe4e8; padding: 12px 14px; }.day-time-row { display: grid; grid-template-columns: 72px 1fr; min-height: 54px; }.day-time-row > span { border-right: 1px solid #e1e5e8; color: #66737c; font-size: 12px; font-weight: 800; padding: 10px; }.day-time-row > div { border-bottom: 1px solid #eef1f3; display: grid; gap: 6px; padding: 5px 8px; }.day-time-row button { background: #172029; border: 0; border-left: 3px solid #f2b84b; border-radius: 4px; color: #fff; cursor: pointer; display: grid; gap: 2px; padding: 7px 9px; text-align: left; }.day-time-row button small { color: #dfe4e8; }
+
+.year-calendar { display: grid; gap: 12px; grid-template-columns: repeat(4, minmax(0, 1fr)); }.year-calendar button { background: #f7f8f9; border: 1px solid #dfe4e8; border-radius: 7px; color: #172029; cursor: pointer; display: grid; gap: 7px; padding: 16px; position: relative; text-align: left; }.year-calendar button:hover { border-color: #f2b84b; }.year-calendar span { color: #66737c; font-size: 12px; }.year-calendar i { color: #f2b84b; position: absolute; right: 14px; top: 17px; }
 
 .booking-table-controls {
   align-items: end;
@@ -2087,6 +2128,13 @@ footer a {
   .revenue-panel-header { align-items: stretch; flex-direction: column; }
   .chart-controls { justify-items: start; }
   .revenue-chart { height: 230px; }
+  .calendar-header,
+  .calendar-controls,
+  .day-schedule-header { align-items: stretch; flex-direction: column; }
+  .calendar-controls { gap: 10px; }
+  .calendar-view-switch,
+  .calendar-navigation { width: max-content; }
+  .year-calendar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
 
   .booking-modal-backdrop { padding: 0; }
 

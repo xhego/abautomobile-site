@@ -107,8 +107,15 @@ interface CalendarDay {
   bookings: WorkshopJob[];
 }
 
+interface CalendarMonth {
+  date: string;
+  label: string;
+  bookingCount: number;
+}
+
 type RevenuePeriod = 'Daily' | 'Weekly' | 'Monthly';
 type RevenueChartType = 'Bar' | 'Line' | 'Area';
+type CalendarView = 'Day' | 'Week' | 'Month' | 'Year';
 
 interface RevenueChartPoint {
   label: string;
@@ -282,6 +289,7 @@ export class AppComponent implements OnDestroy, OnInit {
   showBookingModal = false;
   selectedCalendarDate = new Date().toISOString().slice(0, 10);
   calendarCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
+  calendarView: CalendarView = 'Month';
   storageFee = 250;
   storageFeeDraft = 250;
   revenuePeriod: RevenuePeriod = 'Daily';
@@ -542,7 +550,18 @@ export class AppComponent implements OnDestroy, OnInit {
   }
 
   get calendarTitle(): string {
-    return this.calendarCursor.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
+    const selected = this.calendarDateFromIso(this.selectedCalendarDate);
+    if (this.calendarView === 'Day') {
+      return selected.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    if (this.calendarView === 'Week') {
+      const start = this.startOfWeek(selected);
+      const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+      return start.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' }) + ' - ' + end.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    return this.calendarView === 'Year'
+      ? String(this.calendarCursor.getFullYear())
+      : this.calendarCursor.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
   }
 
   get calendarDays(): CalendarDay[] {
@@ -563,6 +582,35 @@ export class AppComponent implements OnDestroy, OnInit {
         isCurrentMonth: date.getMonth() === month,
         isToday: isoDate === today,
         bookings: this.workshopJobs.filter(job => job.bookingDate === isoDate)
+      };
+    });
+  }
+
+  get weekCalendarDays(): CalendarDay[] {
+    const start = this.startOfWeek(this.calendarDateFromIso(this.selectedCalendarDate));
+    const today = new Date().toISOString().slice(0, 10);
+    return Array.from({ length: 7 }, (_, index) => {
+      const date = new Date(start.getFullYear(), start.getMonth(), start.getDate() + index);
+      const isoDate = this.toDateInputValue(date);
+      return {
+        date: isoDate,
+        dayNumber: date.getDate(),
+        isCurrentMonth: true,
+        isToday: isoDate === today,
+        bookings: this.workshopJobs.filter(job => job.bookingDate === isoDate).sort((left, right) => left.bookingTime.localeCompare(right.bookingTime))
+      };
+    });
+  }
+
+  get yearCalendarMonths(): CalendarMonth[] {
+    const year = this.calendarCursor.getFullYear();
+    return Array.from({ length: 12 }, (_, index) => {
+      const date = new Date(year, index, 1);
+      const prefix = this.toDateInputValue(date).slice(0, 7);
+      return {
+        date: this.toDateInputValue(date),
+        label: date.toLocaleDateString('en-ZA', { month: 'long' }),
+        bookingCount: this.workshopJobs.filter(job => job.bookingDate.startsWith(prefix)).length
       };
     });
   }
@@ -652,12 +700,40 @@ export class AppComponent implements OnDestroy, OnInit {
 
   selectCalendarDate(date: string): void {
     this.selectedCalendarDate = date;
+    const selected = this.calendarDateFromIso(date);
+    this.calendarCursor = new Date(selected.getFullYear(), selected.getMonth(), 1);
     this.markAdminActivity();
   }
 
-  moveCalendar(monthOffset: number): void {
-    this.calendarCursor = new Date(this.calendarCursor.getFullYear(), this.calendarCursor.getMonth() + monthOffset, 1);
+  setCalendarView(view: string): void {
+    this.calendarView = view as CalendarView;
     this.markAdminActivity();
+  }
+
+  moveCalendar(offset: number): void {
+    const selected = this.calendarDateFromIso(this.selectedCalendarDate);
+    if (this.calendarView === 'Day') {
+      selected.setDate(selected.getDate() + offset);
+      this.selectCalendarDate(this.toDateInputValue(selected));
+    } else if (this.calendarView === 'Week') {
+      selected.setDate(selected.getDate() + (offset * 7));
+      this.selectCalendarDate(this.toDateInputValue(selected));
+    } else if (this.calendarView === 'Year') {
+      this.calendarCursor = new Date(this.calendarCursor.getFullYear() + offset, 0, 1);
+    } else {
+      this.calendarCursor = new Date(this.calendarCursor.getFullYear(), this.calendarCursor.getMonth() + offset, 1);
+    }
+    this.markAdminActivity();
+  }
+
+  openCalendarMonth(date: string): void {
+    this.selectCalendarDate(date);
+    this.calendarView = 'Month';
+  }
+
+  goToCalendarToday(): void {
+    this.selectCalendarDate(this.toDateInputValue(new Date()));
+    this.calendarView = 'Day';
   }
 
   toggleBookingSort(): void {
@@ -1652,6 +1728,16 @@ export class AppComponent implements OnDestroy, OnInit {
     const month = String(date.getMonth() + 1).padStart(2, '0');
     const day = String(date.getDate()).padStart(2, '0');
     return year + '-' + month + '-' + day;
+  }
+
+  private calendarDateFromIso(value: string): Date {
+    const [year, month, day] = value.split('-').map(Number);
+    return new Date(year, (month || 1) - 1, day || 1);
+  }
+
+  private startOfWeek(date: Date): Date {
+    const day = date.getDay() || 7;
+    return new Date(date.getFullYear(), date.getMonth(), date.getDate() - day + 1);
   }
 
   private toTimeInputValue(date: Date): string {
