@@ -1,5 +1,5 @@
 import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
-import { StoredGalleryImage, SupabaseSiteService } from './supabase-site.service';
+import { OperatingHoursEntry, StoredGalleryImage, SupabaseSiteService } from './supabase-site.service';
 
 interface GalleryImage {
   id?: string;
@@ -140,12 +140,19 @@ export class AppComponent implements OnDestroy, OnInit {
   readonly defaultCallNumber = '067 825 2864';
   readonly defaultWhatsappNumber = '073 015 1945';
   readonly defaultEmailAddress = 'ab@abautomobile.co.za';
+  readonly defaultOperatingHours: OperatingHoursEntry[] = [
+    { label: 'Mon - Fri', hours: '08:00 - 17:00' },
+    { label: 'Sat', hours: '08:00 - 12:00' },
+    { label: 'Sun', hours: 'Closed' },
+    { label: 'Public Holiday', hours: '08:00 - 12:00' }
+  ];
   private readonly galleryStorageKey = 'abautomobile-gallery-images';
   private readonly galleryInitializedStorageKey = 'abautomobile-gallery-initialized';
   private readonly locationStorageKey = 'abautomobile-workshop-location';
   private readonly callNumberStorageKey = 'abautomobile-call-number';
   private readonly whatsappNumberStorageKey = 'abautomobile-whatsapp-number';
   private readonly emailAddressStorageKey = 'abautomobile-email-address';
+  private readonly operatingHoursStorageKey = 'abautomobile-operating-hours';
   private readonly workshopJobsStorageKey = 'abautomobile-workshop-jobs';
   private readonly workshopMechanicsStorageKey = 'abautomobile-workshop-mechanics';
   private readonly workshopStorageFeeStorageKey = 'abautomobile-workshop-storage-fee';
@@ -252,6 +259,8 @@ export class AppComponent implements OnDestroy, OnInit {
   callNumberDraft = this.defaultCallNumber;
   whatsappNumberDraft = this.defaultWhatsappNumber;
   emailAddressDraft = this.defaultEmailAddress;
+  operatingHours: OperatingHoursEntry[] = this.copyOperatingHours(this.defaultOperatingHours);
+  operatingHoursDraft: OperatingHoursEntry[] = this.copyOperatingHours(this.defaultOperatingHours);
   isSignedIn = false;
   showAdmin = false;
   signInError = '';
@@ -263,6 +272,7 @@ export class AppComponent implements OnDestroy, OnInit {
   isProcessingImages = false;
   isSavingLocation = false;
   isSavingContactDetails = false;
+  isSavingOperatingHours = false;
   isSavingWorkshopJob = false;
   isUploadingWorkshopAttachment = false;
   queuedWorkshopAttachments: QueuedWorkshopAttachment[] = [];
@@ -355,6 +365,7 @@ export class AppComponent implements OnDestroy, OnInit {
     return this.isProcessingImages ||
       this.isSavingLocation ||
       this.isSavingContactDetails ||
+      this.isSavingOperatingHours ||
       this.isSavingWorkshopJob ||
       this.isUploadingWorkshopAttachment ||
       this.savingImageTitleIndexes.size > 0 ||
@@ -1288,6 +1299,34 @@ export class AppComponent implements OnDestroy, OnInit {
     }
   }
 
+  addOperatingHoursRow(): void {
+    this.markAdminActivity();
+    this.operatingHoursDraft = [...this.operatingHoursDraft, { label: '', hours: '' }];
+  }
+
+  removeOperatingHoursRow(index: number): void {
+    this.markAdminActivity();
+    this.operatingHoursDraft = this.operatingHoursDraft.filter((_, itemIndex) => itemIndex !== index);
+  }
+
+  async saveOperatingHours(): Promise<void> {
+    this.markAdminActivity();
+    if (this.operatingHoursDraft.some(entry => !entry.label.trim() || !entry.hours.trim())) {
+      this.uploadError = 'Complete or remove every operating-hours row before saving.';
+      return;
+    }
+
+    this.operatingHours = this.copyOperatingHours(this.operatingHoursDraft);
+    this.operatingHoursDraft = this.copyOperatingHours(this.operatingHours);
+    this.isSavingOperatingHours = true;
+    this.uploadError = '';
+    try {
+      await this.persistSettings();
+    } finally {
+      this.isSavingOperatingHours = false;
+    }
+  }
+
   async saveWorkshopJob(): Promise<void> {
     this.markAdminActivity();
     const customerName = this.workshopDraft.customerName.trim();
@@ -1537,9 +1576,11 @@ export class AppComponent implements OnDestroy, OnInit {
     this.callNumber = localStorage.getItem(this.callNumberStorageKey) || this.defaultCallNumber;
     this.whatsappNumber = localStorage.getItem(this.whatsappNumberStorageKey) || this.defaultWhatsappNumber;
     this.emailAddress = localStorage.getItem(this.emailAddressStorageKey) || this.defaultEmailAddress;
+    this.operatingHours = this.loadOperatingHours(localStorage.getItem(this.operatingHoursStorageKey));
     this.callNumberDraft = this.callNumber;
     this.whatsappNumberDraft = this.whatsappNumber;
     this.emailAddressDraft = this.emailAddress;
+    this.operatingHoursDraft = this.copyOperatingHours(this.operatingHours);
     this.workshopJobs = this.loadWorkshopJobs();
     this.workshopMechanics = this.loadWorkshopMechanics();
     this.storageFee = Number(localStorage.getItem(this.workshopStorageFeeStorageKey)) || 250;
@@ -1562,10 +1603,12 @@ export class AppComponent implements OnDestroy, OnInit {
         this.callNumber = settings.callNumber || this.defaultCallNumber;
         this.whatsappNumber = settings.whatsappNumber || this.defaultWhatsappNumber;
         this.emailAddress = settings.emailAddress || this.defaultEmailAddress;
+        this.operatingHours = this.loadOperatingHours(settings.operatingHours);
         this.locationDraft = this.workshopLocation;
         this.callNumberDraft = this.callNumber;
         this.whatsappNumberDraft = this.whatsappNumber;
         this.emailAddressDraft = this.emailAddress;
+        this.operatingHoursDraft = this.copyOperatingHours(this.operatingHours);
       }
 
       if (gallery) {
@@ -1585,6 +1628,7 @@ export class AppComponent implements OnDestroy, OnInit {
       localStorage.setItem(this.callNumberStorageKey, this.callNumber);
       localStorage.setItem(this.whatsappNumberStorageKey, this.whatsappNumber);
       localStorage.setItem(this.emailAddressStorageKey, this.emailAddress);
+      localStorage.setItem(this.operatingHoursStorageKey, JSON.stringify(this.operatingHours));
       this.adminNotice = 'Site information saved in this browser.';
       return;
     }
@@ -1594,11 +1638,33 @@ export class AppComponent implements OnDestroy, OnInit {
         location: this.workshopLocation,
         callNumber: this.callNumber,
         whatsappNumber: this.whatsappNumber,
-        emailAddress: this.emailAddress
+        emailAddress: this.emailAddress,
+        operatingHours: this.operatingHours
       });
       this.adminNotice = 'Site information saved for all visitors.';
     } catch (error) {
       this.uploadError = 'Site information could not be saved.';
+    }
+  }
+
+  private copyOperatingHours(entries: OperatingHoursEntry[]): OperatingHoursEntry[] {
+    return entries.map(entry => ({ label: entry.label, hours: entry.hours }));
+  }
+
+  private loadOperatingHours(value: OperatingHoursEntry[] | string | null): OperatingHoursEntry[] {
+    try {
+      const parsed = typeof value === 'string' ? JSON.parse(value) : value;
+      if (!Array.isArray(parsed)) {
+        return this.copyOperatingHours(this.defaultOperatingHours);
+      }
+
+      const entries = parsed
+        .filter((entry): entry is OperatingHoursEntry => Boolean(entry) && typeof entry.label === 'string' && typeof entry.hours === 'string')
+        .map(entry => ({ label: entry.label.trim(), hours: entry.hours.trim() }))
+        .filter(entry => entry.label && entry.hours);
+      return entries.length ? entries : this.copyOperatingHours(this.defaultOperatingHours);
+    } catch {
+      return this.copyOperatingHours(this.defaultOperatingHours);
     }
   }
 

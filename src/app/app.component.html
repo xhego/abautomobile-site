@@ -88,6 +88,10 @@
           <a [href]="whatsappHref" target="_blank" rel="noopener"><i class="fa fa-whatsapp"></i> {{ whatsappNumber }}</a>
           <a [href]="emailHref"><i class="fa fa-envelope-o"></i> {{ emailAddress }}</a>
         </div>
+        <div class="operating-hours" *ngIf="operatingHours.length">
+          <h3>Operating hours</h3>
+          <div *ngFor="let entry of operatingHours"><strong>{{ entry.label }}</strong><span>{{ entry.hours }}</span></div>
+        </div>
       </div>
       <a class="map-panel" [href]="mapUrl" target="_blank" rel="noopener" aria-label="Open workshop location in Google Maps">
         <i class="fa fa-map-marker"></i>
@@ -857,6 +861,19 @@
               <span class="loader-dot button-loader" *ngIf="isSavingContactDetails"></span>
               <span>{{ isSavingContactDetails ? 'Saving contact details...' : 'Save contact details' }}</span>
             </button>
+          </form>
+
+          <form class="operating-hours-form" (ngSubmit)="saveOperatingHours()">
+            <div class="admin-section-heading"><div><h3>Operating hours</h3><span>Shown in the public location section</span></div><button type="button" class="icon-action-button" (click)="addOperatingHoursRow()" [disabled]="isSavingOperatingHours" aria-label="Add operating-hours row"><i class="fa fa-plus"></i></button></div>
+            <div class="operating-hours-editor" *ngIf="operatingHoursDraft.length; else noOperatingHours">
+              <div class="operating-hours-row" *ngFor="let entry of operatingHoursDraft; let index = index">
+                <input type="text" name="operatingHoursLabel{{ index }}" [(ngModel)]="entry.label" placeholder="Days, for example Mon - Fri" [disabled]="isSavingOperatingHours" aria-label="Operating-hours day or label">
+                <input type="text" name="operatingHoursValue{{ index }}" [(ngModel)]="entry.hours" placeholder="Hours, for example 08:00 - 17:00" [disabled]="isSavingOperatingHours" aria-label="Operating-hours time or status">
+                <button type="button" class="icon-action-button danger-icon-button" (click)="removeOperatingHoursRow(index)" [disabled]="isSavingOperatingHours" [attr.aria-label]="'Remove ' + (entry.label || 'operating-hours row')"><i class="fa fa-trash"></i></button>
+              </div>
+            </div>
+            <ng-template #noOperatingHours><p class="operating-hours-empty">No operating hours will be shown. Use the add button to create a row.</p></ng-template>
+            <button type="submit" [disabled]="isSavingOperatingHours"><span class="loader-dot button-loader" *ngIf="isSavingOperatingHours"></span><span>{{ isSavingOperatingHours ? 'Saving operating hours...' : 'Save operating hours' }}</span></button>
           </form>
         </ng-container>
 

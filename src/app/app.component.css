@@ -168,7 +168,8 @@ footer a:hover {
 .secondary-action,
 .signin-form button,
 .location-form button,
-.contact-form button {
+.contact-form button,
+.operating-hours-form > button[type="submit"] {
   align-items: center;
   border: 0;
   border-radius: 5px;
@@ -184,7 +185,8 @@ footer a:hover {
 .primary-action,
 .signin-form button,
 .location-form button,
-.contact-form button {
+.contact-form button,
+.operating-hours-form > button[type="submit"] {
   background: #f2b84b;
   color: #111820;
 }
@@ -470,6 +472,36 @@ footer a:hover {
   text-decoration: none;
 }
 
+.operating-hours {
+  border-top: 1px solid #dfe4e8;
+  display: grid;
+  gap: 8px;
+  margin-top: 24px;
+  padding-top: 20px;
+}
+
+.operating-hours h3 {
+  color: #172029;
+  font-size: 17px;
+  margin: 0 0 2px;
+}
+
+.operating-hours div {
+  display: flex;
+  gap: 18px;
+  justify-content: space-between;
+}
+
+.operating-hours strong {
+  color: #39434c;
+}
+
+.operating-hours span {
+  color: #5d6871;
+  font-weight: 700;
+  text-align: right;
+}
+
 .map-panel {
   align-items: center;
   background: #172029;
@@ -507,6 +539,7 @@ footer a:hover {
 .signin-form,
 .location-form,
 .contact-form,
+.operating-hours-form,
 .upload-description {
   display: grid;
   gap: 14px;
@@ -761,9 +794,67 @@ footer a:hover {
 
 .signin-form button:disabled,
 .location-form button:disabled,
-.contact-form button:disabled {
+.contact-form button:disabled,
+.operating-hours-form button:disabled {
   cursor: wait;
   opacity: 0.72;
+}
+
+.operating-hours-form {
+  border-top: 1px solid #dfe4e8;
+  margin-top: 24px;
+  padding-top: 22px;
+}
+
+.operating-hours-form .admin-section-heading {
+  margin: 0;
+}
+
+.operating-hours-form .admin-section-heading h3 {
+  margin: 0 0 4px;
+}
+
+.operating-hours-editor {
+  display: grid;
+  gap: 8px;
+}
+
+.operating-hours-row {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: minmax(150px, .8fr) minmax(190px, 1fr) 34px;
+}
+
+.operating-hours-row input {
+  border: 1px solid #cfd6dc;
+  border-radius: 5px;
+  font: inherit;
+  padding: 11px;
+}
+
+.icon-action-button {
+  align-items: center;
+  background: #edf2f4;
+  border: 1px solid #cfd6dc;
+  border-radius: 5px;
+  color: #172029;
+  cursor: pointer;
+  display: inline-flex;
+  height: 34px;
+  justify-content: center;
+  width: 34px;
+}
+
+.danger-icon-button {
+  align-self: center;
+  background: #fff4f1;
+  border-color: #e5b9ae;
+  color: #a13b27;
+}
+
+.operating-hours-empty {
+  color: #66737c;
+  margin: 0;
 }
 
 @keyframes loader-spin {
@@ -2171,6 +2262,14 @@ footer a {
   footer {
     align-items: stretch;
     flex-direction: column;
+  }
+
+  .operating-hours-row {
+    grid-template-columns: minmax(0, 1fr) 34px;
+  }
+
+  .operating-hours-row input:first-child {
+    grid-column: 1 / -1;
   }
 
   .workshop-form {

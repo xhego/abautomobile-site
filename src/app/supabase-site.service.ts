@@ -7,6 +7,12 @@ export interface SiteSettings {
   callNumber: string;
   whatsappNumber: string;
   emailAddress: string;
+  operatingHours: OperatingHoursEntry[];
+}
+
+export interface OperatingHoursEntry {
+  label: string;
+  hours: string;
 }
 
 export interface StoredGalleryImage {
@@ -28,6 +34,7 @@ interface SiteSettingsRow {
   call_number: string;
   whatsapp_number: string;
   email_address: string;
+  operating_hours: OperatingHoursEntry[] | null;
 }
 
 interface GalleryImageRow {
@@ -94,7 +101,7 @@ export class SupabaseSiteService {
 
     const { data, error } = await this.client
       .from('site_settings')
-      .select('id, location, call_number, whatsapp_number, email_address')
+      .select('id, location, call_number, whatsapp_number, email_address, operating_hours')
       .eq('id', this.settingsId)
       .maybeSingle<SiteSettingsRow>();
 
@@ -110,7 +117,8 @@ export class SupabaseSiteService {
       location: data.location,
       callNumber: data.call_number,
       whatsappNumber: data.whatsapp_number,
-      emailAddress: data.email_address
+      emailAddress: data.email_address,
+      operatingHours: data.operating_hours || []
     };
   }
 
@@ -124,6 +132,7 @@ export class SupabaseSiteService {
         call_number: settings.callNumber,
         whatsapp_number: settings.whatsappNumber,
         email_address: settings.emailAddress,
+        operating_hours: settings.operatingHours,
         updated_at: new Date().toISOString()
       });
 

@@ -6,8 +6,12 @@ create table if not exists public.site_settings (
   call_number text not null default '067 825 2864',
   whatsapp_number text not null default '073 015 1945',
   email_address text not null default 'ab@abautomobile.co.za',
+  operating_hours jsonb not null default '[{"label":"Mon - Fri","hours":"08:00 - 17:00"},{"label":"Sat","hours":"08:00 - 12:00"},{"label":"Sun","hours":"Closed"},{"label":"Public Holiday","hours":"08:00 - 12:00"}]'::jsonb,
   updated_at timestamptz not null default now()
 );
+
+alter table public.site_settings
+add column if not exists operating_hours jsonb not null default '[{"label":"Mon - Fri","hours":"08:00 - 17:00"},{"label":"Sat","hours":"08:00 - 12:00"},{"label":"Sun","hours":"Closed"},{"label":"Public Holiday","hours":"08:00 - 12:00"}]'::jsonb;
 
 create table if not exists public.gallery_images (
   id uuid primary key default gen_random_uuid(),
@@ -65,8 +69,8 @@ before insert on public.gallery_images
 for each row
 execute function public.prevent_gallery_overflow();
 
-insert into public.site_settings (id, location, call_number, whatsapp_number, email_address)
-values ('main', 'Meyerton, Gauteng, South Africa', '067 825 2864', '073 015 1945', 'ab@abautomobile.co.za')
+insert into public.site_settings (id, location, call_number, whatsapp_number, email_address, operating_hours)
+values ('main', 'Meyerton, Gauteng, South Africa', '067 825 2864', '073 015 1945', 'ab@abautomobile.co.za', '[{"label":"Mon - Fri","hours":"08:00 - 17:00"},{"label":"Sat","hours":"08:00 - 12:00"},{"label":"Sun","hours":"Closed"},{"label":"Public Holiday","hours":"08:00 - 12:00"}]'::jsonb)
 on conflict (id) do nothing;
 
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
