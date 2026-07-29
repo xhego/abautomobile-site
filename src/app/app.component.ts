@@ -84,6 +84,8 @@ interface WorkshopMetric {
   label: string;
   value: string | number;
   tone: string;
+  icon: string;
+  page: WorkshopPage;
 }
 
 interface WorkshopBoardColumn {
@@ -411,18 +413,12 @@ export class AppComponent implements OnDestroy, OnInit {
   get workshopMetrics(): WorkshopMetric[] {
     const inProgressCount = this.workshopJobs.filter(job => job.status === 'In repair').length;
     const waitingCount = this.workshopJobs.filter(job => job.status === 'Waiting for parts').length;
-    const overdueCount = this.overdueWorkshopJobs.length;
     return [
-      { label: 'Bookings today', value: this.todaysWorkshopJobs.length, tone: 'warm' },
-      { label: 'Vehicles checked in', value: this.workshopJobs.filter(job => job.status === 'Checked in').length, tone: 'neutral' },
-      { label: 'Open jobs', value: this.openWorkshopJobs, tone: 'strong' },
-      { label: 'Jobs in progress', value: inProgressCount, tone: 'blue' },
-      { label: 'Waiting for parts', value: waitingCount, tone: 'orange' },
-      { label: 'Overdue jobs', value: overdueCount, tone: overdueCount ? 'danger' : 'neutral' },
-      { label: 'Ready for collection', value: this.readyWorkshopJobs, tone: 'green' },
-      { label: 'Mobile bookings', value: this.mobileBookings.length, tone: 'blue' },
-      { label: 'Workshop bookings', value: this.workshopBookings.length, tone: 'neutral' },
-      { label: 'Active mechanics', value: this.activeMechanics.length, tone: 'green' }
+      { label: 'Bookings today', value: this.todaysWorkshopJobs.length, tone: 'warm', icon: 'fa-calendar-check-o', page: 'calendar' },
+      { label: 'Checked in', value: this.workshopJobs.filter(job => job.status === 'Checked in').length, tone: 'blue', icon: 'fa-car', page: 'board' },
+      { label: 'In repair', value: inProgressCount, tone: 'strong', icon: 'fa-wrench', page: 'board' },
+      { label: 'Waiting for parts', value: waitingCount, tone: 'orange', icon: 'fa-cubes', page: 'board' },
+      { label: 'Ready to collect', value: this.readyWorkshopJobs, tone: 'green', icon: 'fa-check-circle', page: 'board' }
     ];
   }
 
