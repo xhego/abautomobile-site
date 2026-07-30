@@ -455,12 +455,13 @@
 
           <section class="workshop-page" *ngSwitchCase="'mechanics'">
             <article class="operation-panel">
-              <h2>Mechanics database</h2>
+              <div class="panel-title-row"><div><p class="eyebrow">Workshop team</p><h2>{{ editingMechanicId ? 'Update mechanic' : 'Add mechanic' }}</h2></div><span>{{ activeMechanics.length }} active</span></div>
               <form class="mechanic-form" (ngSubmit)="saveMechanic()">
                 <label>Mechanic name<input type="text" name="mechanicName" [(ngModel)]="mechanicDraft.name" placeholder="Mechanic name"></label>
                 <label>Phone<input type="tel" name="mechanicPhone" [(ngModel)]="mechanicDraft.phone" placeholder="Phone number"></label>
                 <label class="wide-field">Skills<textarea name="mechanicSkills" [(ngModel)]="mechanicDraft.skills" rows="3" placeholder="Diagnostics, engines, brakes, mobile call-outs"></textarea></label>
-                <button type="submit">Save mechanic</button>
+                <label class="mechanic-active-toggle wide-field"><input type="checkbox" name="mechanicActive" [(ngModel)]="mechanicDraft.active"> Available for new job assignments</label>
+                <div class="mechanic-form-actions wide-field"><button type="submit"><i class="fa" [ngClass]="editingMechanicId ? 'fa-save' : 'fa-plus'"></i>{{ editingMechanicId ? 'Update mechanic' : 'Add mechanic' }}</button><button type="button" class="ghost-button" *ngIf="editingMechanicId" (click)="cancelMechanicEdit()">Cancel</button></div>
               </form>
               <div class="mechanic-list">
                 <article *ngFor="let mechanic of workshopMechanics">
@@ -468,6 +469,7 @@
                   <span>{{ mechanic.phone || 'No phone captured' }}</span>
                   <small>{{ mechanic.skills || 'No skills captured' }}</small>
                   <div class="job-actions">
+                    <button type="button" (click)="editMechanic(mechanic)"><i class="fa fa-pencil"></i> Update</button>
                     <button type="button" (click)="toggleMechanic(mechanic)">{{ mechanic.active ? 'Deactivate' : 'Activate' }}</button>
                     <button type="button" class="danger-button" (click)="removeMechanic(mechanic.id)">Remove</button>
                   </div>

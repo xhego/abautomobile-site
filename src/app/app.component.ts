@@ -297,6 +297,7 @@ export class AppComponent implements OnDestroy, OnInit {
   workshopJobs: WorkshopJob[] = [];
   workshopMechanics: WorkshopMechanic[] = [];
   editingWorkshopJobId: string | null = null;
+  editingMechanicId: string | null = null;
   workshopDraft: Omit<WorkshopJob, 'id' | 'createdAt' | 'updatedAt'> = this.createEmptyWorkshopDraft();
   mechanicDraft: Omit<WorkshopMechanic, 'id'> = this.createEmptyMechanicDraft();
   bookingSortNewestFirst = true;
@@ -937,18 +938,46 @@ export class AppComponent implements OnDestroy, OnInit {
       return;
     }
 
+    const currentMechanic = this.workshopMechanics.find(mechanic => mechanic.id === this.editingMechanicId);
     const mechanic: WorkshopMechanic = {
-      id: crypto.randomUUID(),
+      id: this.editingMechanicId || crypto.randomUUID(),
       name,
       phone: this.mechanicDraft.phone.trim(),
       skills: this.mechanicDraft.skills.trim(),
-      active: true
+      active: this.mechanicDraft.active
     };
-    this.workshopMechanics = [...this.workshopMechanics, mechanic];
+    this.workshopMechanics = currentMechanic
+      ? this.workshopMechanics.map(item => item.id === mechanic.id ? mechanic : item)
+      : [...this.workshopMechanics, mechanic];
+    if (currentMechanic && currentMechanic.name !== mechanic.name) {
+      this.workshopJobs = this.workshopJobs.map(job => job.assignedMechanic === currentMechanic.name
+        ? { ...job, assignedMechanic: mechanic.name, updatedAt: new Date().toISOString() }
+        : job);
+      this.saveWorkshopJobs();
+    }
     this.saveWorkshopMechanics();
+    this.editingMechanicId = null;
     this.mechanicDraft = this.createEmptyMechanicDraft();
-    this.adminNotice = 'Mechanic saved.';
+    this.adminNotice = currentMechanic ? 'Mechanic updated.' : 'Mechanic added.';
     this.uploadError = '';
+  }
+
+  editMechanic(mechanic: WorkshopMechanic): void {
+    this.markAdminActivity();
+    this.editingMechanicId = mechanic.id;
+    this.mechanicDraft = {
+      name: mechanic.name,
+      phone: mechanic.phone,
+      skills: mechanic.skills,
+      active: mechanic.active
+    };
+    this.uploadError = '';
+  }
+
+  cancelMechanicEdit(): void {
+    this.editingMechanicId = null;
+    this.mechanicDraft = this.createEmptyMechanicDraft();
+    this.markAdminActivity();
   }
 
   toggleMechanic(mechanic: WorkshopMechanic): void {
@@ -960,6 +989,9 @@ export class AppComponent implements OnDestroy, OnInit {
   removeMechanic(mechanicId: string): void {
     this.markAdminActivity();
     this.workshopMechanics = this.workshopMechanics.filter(mechanic => mechanic.id !== mechanicId);
+    if (this.editingMechanicId === mechanicId) {
+      this.cancelMechanicEdit();
+    }
     this.saveWorkshopMechanics();
   }
 

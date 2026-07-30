@@ -2028,6 +2028,7 @@ footer a {
 .calendar-toolbar,
 .document-actions,
 .mechanic-form,
+.mechanic-form-actions,
 .settings-form {
   display: flex;
   flex-wrap: wrap;
@@ -2294,6 +2295,41 @@ footer a {
   flex: 1 1 220px;
   font-weight: 800;
   gap: 7px;
+}
+
+.mechanic-active-toggle {
+  align-items: center;
+  background: #f7f8f9;
+  border: 1px solid #dfe5e8;
+  border-radius: 6px;
+  display: flex !important;
+  gap: 9px;
+  padding: 12px;
+}
+
+.mechanic-active-toggle input {
+  height: 16px;
+  width: 16px;
+}
+
+.mechanic-form-actions button {
+  align-items: center;
+  background: #172029;
+  border: 0;
+  border-radius: 5px;
+  color: #fff;
+  cursor: pointer;
+  display: inline-flex;
+  font: inherit;
+  font-weight: 800;
+  gap: 8px;
+  padding: 10px 12px;
+}
+
+.mechanic-form-actions .ghost-button {
+  background: #ffffff;
+  border: 1px solid #aeb9c1;
+  color: #26333d;
 }
 
 .filter-field select,
