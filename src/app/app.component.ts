@@ -307,6 +307,11 @@ export class AppComponent implements OnDestroy, OnInit {
   boardFilter: 'All' | 'Workshop booking' | 'Mobile booking' = 'All';
   boardFlowView: BoardFlowView = 'Weekly';
   activeBoardJobId: string | null = null;
+  boardDropColumnTitle = '';
+  activeBoardMenuPlacement: 'above' | 'below' = 'below';
+  activeBoardMenuAlignRight = false;
+  private draggedBoardJobId: string | null = null;
+  private boardClickSuppressedUntil = 0;
   bookingPage = 1;
   readonly bookingsPerPage = 10;
   showBookingModal = false;
@@ -912,9 +917,70 @@ export class AppComponent implements OnDestroy, OnInit {
     this.activeBoardJobId = null;
   }
 
-  toggleBoardJobStatus(job: WorkshopJob): void {
+  toggleBoardJobStatus(job: WorkshopJob, event?: Event): void {
+    if (Date.now() < this.boardClickSuppressedUntil) {
+      return;
+    }
+
     this.activeBoardJobId = this.activeBoardJobId === job.id ? null : job.id;
+    if (this.activeBoardJobId && event?.currentTarget instanceof HTMLElement) {
+      const tile = event.currentTarget;
+      const availableBelow = window.innerHeight - tile.getBoundingClientRect().bottom;
+      const availableAbove = tile.getBoundingClientRect().top;
+      const menuHeight = 88 + (this.getElevatableStatuses(job.status).length * 34);
+      this.activeBoardMenuPlacement = availableBelow < menuHeight && availableAbove > availableBelow ? 'above' : 'below';
+      this.activeBoardMenuAlignRight = tile.getBoundingClientRect().left + 220 > window.innerWidth;
+    }
     this.markAdminActivity();
+  }
+
+  startBoardDrag(event: DragEvent, job: WorkshopJob): void {
+    this.draggedBoardJobId = job.id;
+    this.activeBoardJobId = null;
+    event.dataTransfer?.setData('text/plain', job.id);
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+    }
+    this.markAdminActivity();
+  }
+
+  allowBoardDrop(event: DragEvent, column: WorkshopBoardColumn): void {
+    event.preventDefault();
+    if (!this.draggedBoardJobId) {
+      return;
+    }
+    this.boardDropColumnTitle = column.title;
+    if (event.dataTransfer) {
+      event.dataTransfer.dropEffect = 'move';
+    }
+  }
+
+  clearBoardDrop(column: WorkshopBoardColumn): void {
+    if (this.boardDropColumnTitle === column.title) {
+      this.boardDropColumnTitle = '';
+    }
+  }
+
+  dropBoardJob(event: DragEvent, column: WorkshopBoardColumn): void {
+    event.preventDefault();
+    const jobId = event.dataTransfer?.getData('text/plain') || this.draggedBoardJobId;
+    const job = this.workshopJobs.find(item => item.id === jobId);
+    this.boardDropColumnTitle = '';
+    this.draggedBoardJobId = null;
+    if (!job) {
+      return;
+    }
+
+    const status = column.statuses.includes(job.status) ? job.status : column.statuses[0];
+    if (status !== job.status) {
+      this.updateBoardJobStatus(job, status);
+    }
+  }
+
+  finishBoardDrag(): void {
+    this.draggedBoardJobId = null;
+    this.boardDropColumnTitle = '';
+    this.boardClickSuppressedUntil = Date.now() + 180;
   }
 
   updateBoardJobStatus(job: WorkshopJob, status: string): void {
@@ -925,6 +991,8 @@ export class AppComponent implements OnDestroy, OnInit {
       this.editWorkshopJob(updatedJob);
     }
     this.activeBoardJobId = null;
+    this.activeBoardMenuPlacement = 'below';
+    this.activeBoardMenuAlignRight = false;
     this.adminNotice = job.vehicle + ' moved to ' + status + '.';
     this.markAdminActivity();
   }
