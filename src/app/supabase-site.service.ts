@@ -49,6 +49,7 @@ interface GalleryImageRow {
 export class SupabaseSiteService {
   private readonly settingsId = 'main';
   private readonly requestTimeoutMs = 20000;
+  private readonly accessTokenStorageKey = 'abautomobile-supabase-workshop-token';
   private accessToken = '';
   private readonly client: SupabaseClient | null = environment.supabaseUrl && environment.supabaseAnonKey
     ? createClient(environment.supabaseUrl, environment.supabaseAnonKey, {
@@ -65,6 +66,20 @@ export class SupabaseSiteService {
 
   get isConfigured(): boolean {
     return this.client !== null;
+  }
+
+  get hasActiveSession(): boolean {
+    if (!this.accessToken) {
+      this.accessToken = this.readStoredAccessToken();
+    }
+
+    if (!this.accessToken || !this.isAccessTokenCurrent(this.accessToken)) {
+      this.clearStoredAccessToken();
+      this.accessToken = '';
+      return false;
+    }
+
+    return true;
   }
 
   async signIn(email: string, password: string): Promise<void> {
@@ -88,10 +103,12 @@ export class SupabaseSiteService {
     }
 
     this.accessToken = data.access_token;
+    this.storeAccessToken(this.accessToken);
   }
 
   async signOut(): Promise<void> {
     this.accessToken = '';
+    this.clearStoredAccessToken();
   }
 
   async loadSettings(): Promise<SiteSettings | null> {
@@ -301,6 +318,40 @@ export class SupabaseSiteService {
     }
 
     return this.client;
+  }
+
+  private readStoredAccessToken(): string {
+    try {
+      return sessionStorage.getItem(this.accessTokenStorageKey) || '';
+    } catch {
+      return '';
+    }
+  }
+
+  private storeAccessToken(token: string): void {
+    try {
+      sessionStorage.setItem(this.accessTokenStorageKey, token);
+    } catch {
+      // The active in-memory token still supports the current session.
+    }
+  }
+
+  private clearStoredAccessToken(): void {
+    try {
+      sessionStorage.removeItem(this.accessTokenStorageKey);
+    } catch {
+      // Storage can be unavailable in a restricted browser context.
+    }
+  }
+
+  private isAccessTokenCurrent(token: string): boolean {
+    try {
+      const payload = token.split('.')[1];
+      const decoded = JSON.parse(atob(payload.replace(/-/g, '+').replace(/_/g, '/'))) as { exp?: number };
+      return typeof decoded.exp === 'number' && decoded.exp * 1000 > Date.now();
+    } catch {
+      return false;
+    }
   }
 
   private buildStoragePath(fileName: string): string {

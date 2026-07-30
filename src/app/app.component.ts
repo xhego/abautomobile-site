@@ -302,6 +302,7 @@ export class AppComponent implements OnDestroy, OnInit {
   mechanicDraft: Omit<WorkshopMechanic, 'id'> = this.createEmptyMechanicDraft();
   bookingSortNewestFirst = true;
   bookingFilter = 'All';
+  bookingSearch = '';
   boardFilter: 'All' | 'Workshop booking' | 'Mobile booking' = 'All';
   boardFlowView: BoardFlowView = 'Weekly';
   activeBoardJobId: string | null = null;
@@ -328,6 +329,10 @@ export class AppComponent implements OnDestroy, OnInit {
   ngOnInit(): void {
     this.setCurrentPage();
     this.loadLocalFallback();
+    if (this.siteService.hasActiveSession) {
+      this.isSignedIn = true;
+      this.resetAdminInactivityTimer();
+    }
     void this.loadRemoteContent();
     setTimeout(() => {
       this.scrollToCurrentHash();
@@ -547,7 +552,20 @@ export class AppComponent implements OnDestroy, OnInit {
     const filtered = this.bookingFilter === 'All'
       ? [...this.workshopJobs]
       : this.workshopJobs.filter(job => job.bookingType === this.bookingFilter || job.status === this.bookingFilter);
-    return filtered.sort((left, right) => {
+    const searchTerm = this.bookingSearch.trim().toLocaleLowerCase();
+    const matchingBookings = searchTerm
+      ? filtered.filter(job => [
+        job.customerName,
+        job.customerContact,
+        job.vehicle,
+        job.registration,
+        job.vin,
+        job.assignedMechanic,
+        job.jobType,
+        job.bookingDate
+      ].some(value => value.toLocaleLowerCase().includes(searchTerm)))
+      : filtered;
+    return matchingBookings.sort((left, right) => {
       const leftDate = left.bookingDate || left.createdAt;
       const rightDate = right.bookingDate || right.createdAt;
       return this.bookingSortNewestFirst
@@ -921,6 +939,11 @@ export class AppComponent implements OnDestroy, OnInit {
 
   onBookingFilterChange(): void {
     this.bookingPage = 1;
+  }
+
+  onBookingSearchChange(): void {
+    this.bookingPage = 1;
+    this.markAdminActivity();
   }
 
   applyMileageServiceSuggestion(): void {

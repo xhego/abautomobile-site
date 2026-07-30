@@ -1,7 +1,7 @@
 <div class="site-shell" id="page-top">
   <nav class="topbar">
     <a class="brand" href="/" (click)="navigateToPage('home', $event)" aria-label="AB's Auto Mobile Mechanic (Pty) Ltd home">
-      <img class="brand-logo" src="assets/img/ab-auto-logo.png" alt="AB's Auto Mobile Mechanic (Pty) Ltd logo">
+      <img class="brand-logo" src="/assets/img/ab-auto-logo.png" alt="AB's Auto Mobile Mechanic (Pty) Ltd logo">
       <span>
         <strong>AB's Auto Mobile Mechanic (Pty) Ltd</strong>
         <small>Mobile workshop | Meyerton</small>
@@ -217,7 +217,7 @@
     <section class="workshop-app-shell" *ngIf="isSignedIn" (click)="markAdminActivity()" (input)="markAdminActivity()" (change)="markAdminActivity()">
       <aside class="workshop-sidebar">
         <div class="workshop-sidebar-brand">
-          <img src="assets/img/ab-auto-logo.png" alt="AB's Auto Mobile Mechanic (Pty) Ltd logo">
+          <img src="/assets/img/ab-auto-logo.png" alt="AB's Auto Mobile Mechanic (Pty) Ltd logo">
           <span>
             <strong>Workshop</strong>
             <small>Operations system</small>
@@ -339,7 +339,7 @@
 
           <section class="workshop-page" *ngSwitchCase="'board'">
             <article class="board-control-panel board-flow-header">
-              <div class="board-control-header"><div><p class="eyebrow">Workshop flow control</p><h2>Vehicle status timeline</h2><p>Each tile is a booking. Click it to update the current stage; the job card updates immediately.</p></div><button type="button" class="small-action-button" (click)="openNewBooking(selectedCalendarDate)"><i class="fa fa-plus"></i> Add booking</button></div>
+              <div class="board-control-header"><div><p class="eyebrow">Workshop flow control</p><h2>Vehicle status timeline</h2><p>Each tile is a booking. Click it to update the current stage; the job card updates immediately.</p></div></div>
               <div class="board-filter-row"><div class="chart-segmented"><button type="button" *ngFor="let view of ['Daily', 'Weekly', 'Monthly']" [class.active]="boardFlowView === view" (click)="setBoardFlowView(view)">{{ view }}</button></div><div class="board-period-navigation" aria-label="Board date navigation"><button type="button" class="board-nav-button" (click)="moveBoardFlow(-1)" aria-label="Previous period"><i class="fa fa-chevron-left"></i></button><strong>{{ boardFlowTitle }}</strong><button type="button" class="board-nav-button" (click)="moveBoardFlow(1)" aria-label="Next period"><i class="fa fa-chevron-right"></i></button><button type="button" class="board-today-button" (click)="goToBoardToday()">Today</button></div><div class="chart-segmented"><button type="button" *ngFor="let filter of ['All', 'Workshop booking', 'Mobile booking']" [class.active]="boardFilter === filter" (click)="setBoardFilter(filter)">{{ filter === 'All' ? 'All work' : filter === 'Workshop booking' ? 'Workshop' : 'Mobile' }}</button></div></div>
               <div class="board-type-key" aria-label="Booking type key"><span class="workshop-key"><i class="fa fa-wrench"></i> Workshop service</span><span class="mobile-key"><i class="fa fa-map-marker"></i> Mobile call-out</span><small>Use the date arrows to review past or upcoming jobs.</small></div>
             </article>
@@ -353,7 +353,6 @@
             <article class="operation-panel">
               <div class="calendar-header">
                 <div><p class="eyebrow">Workshop schedule</p><h2>{{ calendarTitle }}</h2></div>
-                <button type="button" class="small-action-button" (click)="openNewBooking(selectedCalendarDate)"><i class="fa fa-plus"></i> New booking</button>
               </div>
               <div class="calendar-toolbar calendar-controls">
                 <div class="calendar-view-switch"><button type="button" *ngFor="let view of ['Day', 'Week', 'Month', 'Year']" [class.active]="calendarView === view" (click)="setCalendarView(view)">{{ view }}</button></div>
@@ -388,10 +387,10 @@
             <article class="operation-panel">
               <div class="panel-title-row">
                 <h2>Booking list</h2>
-                <button type="button" class="small-action-button" (click)="openNewBooking()"><i class="fa fa-plus"></i> Add booking</button>
               </div>
               <p>Every booking creates a job card. Open any booking to update vehicle details, work, evidence and documents.</p>
               <div class="booking-table-controls">
+                <label class="filter-field booking-search">Search<input type="search" name="bookingSearch" [(ngModel)]="bookingSearch" (ngModelChange)="onBookingSearchChange()" placeholder="Customer, vehicle, VIN or registration"></label>
                 <label class="filter-field">Filter<select name="bookingFilter" [(ngModel)]="bookingFilter" (ngModelChange)="onBookingFilterChange()">
                   <option *ngFor="let filter of bookingFilters" [value]="filter">{{ filter }}</option>
                 </select></label>
@@ -399,7 +398,7 @@
               </div>
               <div class="booking-table-wrap" *ngIf="paginatedBookings.length; else noFilteredBookings">
                 <table class="booking-table"><thead><tr><th>Booking</th><th>Customer</th><th>Vehicle</th><th>Type</th><th>Status</th><th>Next service</th><th></th></tr></thead>
-                  <tbody><tr *ngFor="let job of paginatedBookings"><td>{{ job.bookingDate }}</td><td>{{ job.customerName }}</td><td>{{ job.vehicle }}<small>VIN {{ job.vin || 'not captured' }}</small></td><td>{{ job.bookingType }}</td><td><span class="status-pill">{{ job.status }}</span></td><td>{{ job.nextServiceMileage ? (job.nextServiceMileage | number) + ' km' : 'Not set' }}</td><td><button type="button" class="table-open-button" (click)="openBookingJobCard(job)">Open</button></td></tr></tbody>
+                  <tbody><tr *ngFor="let job of paginatedBookings"><td data-label="Booking">{{ job.bookingDate }}<small>{{ job.bookingTime || 'Time to confirm' }}</small></td><td data-label="Customer">{{ job.customerName }}<small>{{ job.customerContact || 'No contact captured' }}</small></td><td data-label="Vehicle">{{ job.vehicle }}<small>VIN {{ job.vin || 'not captured' }}</small></td><td data-label="Type"><span class="booking-type-chip" [class.mobile]="job.bookingType === 'Mobile booking'"><i class="fa" [ngClass]="job.bookingType === 'Mobile booking' ? 'fa-map-marker' : 'fa-wrench'"></i>{{ job.bookingType === 'Mobile booking' ? 'Mobile' : 'Workshop' }}</span></td><td data-label="Status"><span class="status-pill">{{ job.status }}</span></td><td data-label="Next service">{{ job.nextServiceMileage ? (job.nextServiceMileage | number) + ' km' : 'Not set' }}</td><td class="booking-open-cell"><button type="button" class="table-open-button" (click)="openBookingJobCard(job)">Open job card <i class="fa fa-arrow-right"></i></button></td></tr></tbody>
                 </table>
                 <div class="pagination"><button type="button" (click)="setBookingPage(bookingPage - 1)" [disabled]="bookingPage === 1"><i class="fa fa-chevron-left"></i></button><span>Page {{ bookingPage }} of {{ bookingPageCount }}</span><button type="button" (click)="setBookingPage(bookingPage + 1)" [disabled]="bookingPage === bookingPageCount"><i class="fa fa-chevron-right"></i></button></div>
               </div>
@@ -1046,7 +1045,7 @@
     </section>
   </main>
 
-  <a class="floating-call" [href]="callHref" aria-label="Call AB's Auto Mobile Mechanic (Pty) Ltd">
+  <a class="floating-call" *ngIf="!isWorkshopManagementPage" [href]="callHref" aria-label="Call AB's Auto Mobile Mechanic (Pty) Ltd">
     <i class="fa fa-phone"></i>
   </a>
 
