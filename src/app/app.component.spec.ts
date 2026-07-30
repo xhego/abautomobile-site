@@ -451,6 +451,7 @@ describe('AppComponent', () => {
       approvalMethod: 'WhatsApp',
       estimate: 2500,
       paid: 500,
+      paymentDate: '2026-07-24',
       bookingDate: '2026-07-24',
       bookingTime: '09:00',
       dueDate: '2026-08-01',
@@ -512,6 +513,16 @@ describe('AppComponent', () => {
           srcImg: 'data:application/pdf;base64,test',
           storagePath: '',
           createdAt: '2026-07-24T08:00:00.000Z'
+        },
+        {
+          id: 'payment-proof',
+          type: 'Proof of payment' as const,
+          fileName: 'payment-proof.pdf',
+          mimeType: 'application/pdf',
+          fileSize: 1024,
+          srcImg: 'data:application/pdf;base64,test',
+          storagePath: '',
+          createdAt: '2026-07-24T08:00:00.000Z'
         }
       ]
     };
@@ -522,6 +533,34 @@ describe('AppComponent', () => {
     expect(documentHtml).toContain('vehicle-condition.jpg');
     expect(documentHtml).toContain('Parts and supplier slips');
     expect(documentHtml).toContain('supplier-slip.pdf');
+    expect(documentHtml).toContain('Proof of payment');
+    expect(documentHtml).toContain('payment-proof.pdf');
+  });
+
+  it('should record a payment from the payment modal workflow', async () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    const job = {
+      ...app.workshopDraft,
+      id: 'job-payment',
+      customerName: 'Test Customer',
+      vehicle: 'Toyota Hilux',
+      estimate: 2500,
+      paid: 500,
+      paymentDate: '',
+      createdAt: '2026-07-24T08:00:00.000Z',
+      updatedAt: '2026-07-24T08:00:00.000Z'
+    };
+    app.workshopJobs = [job];
+
+    app.openPaymentEditor(job);
+    app.paymentDraft.amount = 1000;
+    app.paymentDraft.paymentDate = '2026-07-30';
+    await app.recordPayment();
+
+    expect(app.workshopJobs[0].paid).toBe(1500);
+    expect(app.workshopJobs[0].paymentDate).toBe('2026-07-30');
+    expect(app.showPaymentModal).toBeFalse();
   });
 
   it('should save contact details and build links after reload', () => {

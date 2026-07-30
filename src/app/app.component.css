@@ -2166,6 +2166,23 @@ footer a {
 .booking-modal-header h2 { color: #172029; margin: 0; }
 .modal-close { background: #f0f3f5; border: 0; border-radius: 5px; color: #172029; cursor: pointer; height: 36px; width: 36px; }
 .workshop-form label small { color: #66737c; font-size: 12px; font-weight: 600; }
+.payment-modal { max-width: 580px; }
+.payment-record-summary { background: #f5f7f8; border: 1px solid #d8e0e4; display: grid; gap: 1px; grid-template-columns: repeat(3, minmax(0, 1fr)); margin-bottom: 18px; }
+.payment-record-summary div { background: #fff; min-height: 72px; padding: 12px; }
+.payment-record-summary span { color: #63717c; display: block; font-size: 11px; font-weight: 800; margin-bottom: 5px; text-transform: uppercase; }
+.payment-record-summary strong { color: #172029; display: block; font-size: 14px; overflow-wrap: anywhere; }
+.payment-record-form { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.payment-record-form > label { color: #34424e; display: grid; font-size: 13px; font-weight: 800; gap: 7px; }
+.payment-record-form input { border: 1px solid #cfd6dc; border-radius: 5px; font: inherit; min-height: 42px; padding: 9px 10px; }
+.payment-record-form label small, .payment-proof-field > small { color: #66737c; font-size: 12px; font-weight: 600; }
+.payment-proof-field { background: #f8fafb; border: 1px solid #d8e0e4; display: grid; gap: 12px; grid-column: 1 / -1; padding: 16px; }
+.payment-proof-field h3 { color: #172029; font-size: 17px; margin: 2px 0 4px; }
+.payment-proof-field p { color: #4f5d67; margin: 0; }
+.payment-proof-button { justify-content: center; width: 100%; }
+.selected-payment-proof { align-items: center; background: #eaf0f3; color: #34424e; display: flex; font-size: 13px; font-weight: 800; gap: 9px; min-height: 42px; padding: 7px 10px; }
+.selected-payment-proof span { flex: 1; overflow-wrap: anywhere; }
+.selected-payment-proof .attachment-remove { margin-left: auto; }
+.payment-record-form .workshop-form-actions { grid-column: 1 / -1; }
 
 .queued-evidence { display: flex; flex-wrap: wrap; gap: 8px; }
 .queued-evidence span { background: #edf2f4; border-radius: 5px; color: #34424e; font-size: 12px; font-weight: 800; padding: 7px 9px; }
@@ -2517,6 +2534,8 @@ footer a {
   .year-calendar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .board-status-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .payment-summary-grid { grid-template-columns: 1fr; }
+  .payment-record-summary,
+  .payment-record-form { grid-template-columns: 1fr; }
 
   .booking-modal-backdrop { padding: 0; }
 

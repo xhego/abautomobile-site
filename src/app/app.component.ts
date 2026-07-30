@@ -44,6 +44,7 @@ interface WorkshopJob {
   approvalMethod: string;
   estimate: number;
   paid: number;
+  paymentDate: string;
   bookingDate: string;
   bookingTime: string;
   dueDate: string;
@@ -57,7 +58,7 @@ interface WorkshopJob {
   updatedAt: string;
 }
 
-type WorkshopAttachmentType = 'Vehicle photo' | 'Parts slip';
+type WorkshopAttachmentType = 'Vehicle photo' | 'Parts slip' | 'Proof of payment';
 
 interface WorkshopAttachment {
   id: string;
@@ -281,6 +282,7 @@ export class AppComponent implements OnDestroy, OnInit {
   isSavingContactDetails = false;
   isSavingOperatingHours = false;
   isSavingWorkshopJob = false;
+  isRecordingPayment = false;
   isUploadingWorkshopAttachment = false;
   queuedWorkshopAttachments: QueuedWorkshopAttachment[] = [];
   removingWorkshopAttachmentIds = new Set<string>();
@@ -315,6 +317,13 @@ export class AppComponent implements OnDestroy, OnInit {
   bookingPage = 1;
   readonly bookingsPerPage = 10;
   showBookingModal = false;
+  showPaymentModal = false;
+  paymentJobId: string | null = null;
+  paymentDraft = {
+    amount: 0,
+    paymentDate: this.toDateInputValue(new Date()),
+    proofFile: null as File | null
+  };
   selectedCalendarDate = new Date().toISOString().slice(0, 10);
   calendarCursor = new Date(new Date().getFullYear(), new Date().getMonth(), 1);
   calendarView: CalendarView = 'Month';
@@ -389,6 +398,7 @@ export class AppComponent implements OnDestroy, OnInit {
       this.isSavingContactDetails ||
       this.isSavingOperatingHours ||
       this.isSavingWorkshopJob ||
+      this.isRecordingPayment ||
       this.isUploadingWorkshopAttachment ||
       this.savingImageTitleIndexes.size > 0 ||
       this.removingImageIndexes.size > 0;
@@ -698,6 +708,10 @@ export class AppComponent implements OnDestroy, OnInit {
     return this.paymentDueJobs.reduce((total, job) => total + Math.max(job.estimate - job.paid, 0), 0);
   }
 
+  getWorkshopJobById(jobId: string): WorkshopJob | undefined {
+    return this.workshopJobs.find(job => job.id === jobId);
+  }
+
   getJobReference(job: Pick<WorkshopJob, 'id' | 'bookingDate'>): string {
     const datePart = (job.bookingDate || '').replace(/-/g, '') || 'JOB';
     const idPart = (job.id || '').replace(/-/g, '').slice(-5).toUpperCase();
@@ -896,7 +910,98 @@ export class AppComponent implements OnDestroy, OnInit {
   }
 
   openPaymentEditor(job: WorkshopJob): void {
-    this.openBookingJobCard(job);
+    this.paymentJobId = job.id;
+    this.paymentDraft = {
+      amount: Math.max((job.estimate || 0) - (job.paid || 0), 0),
+      paymentDate: this.todayIso,
+      proofFile: null
+    };
+    this.uploadError = '';
+    this.adminNotice = '';
+    this.showPaymentModal = true;
+    this.markAdminActivity();
+  }
+
+  closePaymentModal(): void {
+    this.showPaymentModal = false;
+    this.paymentJobId = null;
+    this.paymentDraft = { amount: 0, paymentDate: this.todayIso, proofFile: null };
+  }
+
+  selectPaymentProof(event: Event): void {
+    this.markAdminActivity();
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0] || null;
+    input.value = '';
+
+    if (!file) {
+      return;
+    }
+
+    const allowedTypes = new Set([...this.allowedImageTypes, 'application/pdf']);
+    if (!allowedTypes.has(file.type) || file.size > this.maxUploadBytes) {
+      this.uploadError = 'Proof of payment must be a JPG, PNG, WEBP, GIF or PDF file no larger than 5 MB.';
+      return;
+    }
+
+    this.uploadError = '';
+    this.paymentDraft.proofFile = file;
+  }
+
+  clearPaymentProof(): void {
+    this.paymentDraft.proofFile = null;
+    this.markAdminActivity();
+  }
+
+  async recordPayment(): Promise<void> {
+    this.markAdminActivity();
+    const job = this.workshopJobs.find(item => item.id === this.paymentJobId);
+    const amount = Number(this.paymentDraft.amount) || 0;
+    const balance = job ? Math.max((job.estimate || 0) - (job.paid || 0), 0) : 0;
+
+    if (!job) {
+      this.uploadError = 'This job card is no longer available. Reopen the payment and try again.';
+      return;
+    }
+    if (!amount || amount < 0) {
+      this.uploadError = 'Enter the payment amount received.';
+      return;
+    }
+    if (amount > balance) {
+      this.uploadError = 'The payment amount cannot be more than the outstanding balance of R' + balance + '.';
+      return;
+    }
+    if (!this.paymentDraft.paymentDate) {
+      this.uploadError = 'Select the date the payment was received.';
+      return;
+    }
+
+    this.isRecordingPayment = true;
+    this.uploadError = '';
+    try {
+      const proof = this.paymentDraft.proofFile
+        ? await this.createWorkshopAttachment(this.paymentDraft.proofFile, 'Proof of payment', job.id)
+        : null;
+      const updatedJob: WorkshopJob = {
+        ...job,
+        paid: job.paid + amount,
+        paymentDate: this.paymentDraft.paymentDate,
+        attachments: proof ? [...job.attachments, proof] : job.attachments,
+        updatedAt: new Date().toISOString()
+      };
+      this.workshopJobs = this.workshopJobs.map(item => item.id === job.id ? updatedJob : item);
+      this.saveWorkshopJobs();
+      if (this.editingWorkshopJobId === job.id) {
+        this.workshopDraft = { ...this.workshopDraft, paid: updatedJob.paid, paymentDate: updatedJob.paymentDate, attachments: updatedJob.attachments };
+      }
+      this.adminNotice = 'Payment of R' + amount + ' recorded' + (proof ? ' with proof attached.' : '.');
+      this.closePaymentModal();
+    } catch (error) {
+      this.uploadError = error instanceof Error ? error.message : 'The payment could not be recorded.';
+    } finally {
+      this.isRecordingPayment = false;
+      this.renderState();
+    }
   }
 
   moveBoardFlow(offset: number): void {
@@ -1302,6 +1407,7 @@ export class AppComponent implements OnDestroy, OnInit {
 
   async signOut(): Promise<void> {
     this.clearAdminInactivityTimer();
+    this.closePaymentModal();
     this.isSignedIn = false;
     this.showAdmin = false;
     this.login = { username: '', password: '' };
@@ -1572,6 +1678,7 @@ export class AppComponent implements OnDestroy, OnInit {
       approvalMethod: this.workshopDraft.approvalMethod,
       estimate: Number(this.workshopDraft.estimate) || 0,
       paid: Number(this.workshopDraft.paid) || 0,
+      paymentDate: this.workshopDraft.paymentDate || '',
       bookingDate: this.workshopDraft.bookingDate || this.toDateInputValue(new Date()),
       bookingTime: this.workshopDraft.bookingTime || this.toTimeInputValue(new Date()),
       dueDate: this.workshopDraft.dueDate,
@@ -1621,6 +1728,7 @@ export class AppComponent implements OnDestroy, OnInit {
       approvalMethod: job.approvalMethod,
       estimate: job.estimate,
       paid: job.paid,
+      paymentDate: job.paymentDate || '',
       bookingDate: job.bookingDate,
       bookingTime: job.bookingTime,
       dueDate: job.dueDate,
@@ -1650,7 +1758,9 @@ export class AppComponent implements OnDestroy, OnInit {
     if (invalidFile) {
       this.uploadError = type === 'Vehicle photo'
         ? 'Vehicle photos must be JPG, PNG, WEBP or GIF and no larger than 5 MB.'
-        : 'Parts slips must be JPG, PNG, WEBP, GIF or PDF and no larger than 5 MB.';
+        : (type === 'Proof of payment'
+          ? 'Proof of payment must be JPG, PNG, WEBP, GIF or PDF and no larger than 5 MB.'
+          : 'Parts slips must be JPG, PNG, WEBP, GIF or PDF and no larger than 5 MB.');
       return;
     }
 
@@ -1948,6 +2058,7 @@ export class AppComponent implements OnDestroy, OnInit {
             ...job,
             estimate: Number(job.estimate) || 0,
             paid: Number(job.paid) || 0,
+            paymentDate: job.paymentDate || '',
             bookingDate: job.bookingDate || job.dueDate || (job.createdAt || this.toDateInputValue(new Date())).slice(0, 10),
             bookingTime: job.bookingTime || '',
             status: job.status || this.workshopStatuses[0],
@@ -2027,6 +2138,7 @@ export class AppComponent implements OnDestroy, OnInit {
       approvalMethod: '',
       estimate: 0,
       paid: 0,
+      paymentDate: '',
       bookingDate: this.toDateInputValue(new Date()),
       bookingTime: this.toTimeInputValue(new Date()),
       dueDate: '',
@@ -2167,6 +2279,7 @@ export class AppComponent implements OnDestroy, OnInit {
     const balance = Math.max((job.estimate || 0) - (job.paid || 0), 0);
     const photos = job.attachments.filter(attachment => attachment.type === 'Vehicle photo' && attachment.srcImg);
     const slips = job.attachments.filter(attachment => attachment.type === 'Parts slip');
+    const paymentProofs = job.attachments.filter(attachment => attachment.type === 'Proof of payment');
     const slipImages = slips.filter(slip => slip.mimeType.startsWith('image/') && slip.srcImg);
     const slipFiles = slips.filter(slip => !slip.mimeType.startsWith('image/'));
     const photoHtml = photos.length
@@ -2183,6 +2296,17 @@ export class AppComponent implements OnDestroy, OnInit {
           ? '<ul>' + slipFiles.map(slip => '<li>' + this.escapeHtml(slip.fileName) + ' - added ' + this.escapeHtml(new Date(slip.createdAt).toLocaleDateString('en-ZA')) + '</li>').join('') + '</ul>'
           : '')
       : '<p>No parts or supplier slip files were attached to this job card.</p>') + '</section>';
+    const paymentProofImages = paymentProofs.filter(proof => proof.mimeType.startsWith('image/') && proof.srcImg);
+    const paymentProofFiles = paymentProofs.filter(proof => !proof.mimeType.startsWith('image/'));
+    const paymentProofHtml = '<section class="evidence"><h2>Proof of payment</h2>' + (paymentProofs.length
+      ? (paymentProofImages.length
+          ? '<div class="photo-grid">' + paymentProofImages.map(proof =>
+            '<figure><img src="' + this.escapeHtml(proof.srcImg) + '" alt="Proof of payment"><figcaption>' + this.escapeHtml(proof.fileName) + '</figcaption></figure>'
+          ).join('') + '</div>'
+          : '') + (paymentProofFiles.length
+          ? '<ul>' + paymentProofFiles.map(proof => '<li>' + this.escapeHtml(proof.fileName) + ' - added ' + this.escapeHtml(new Date(proof.createdAt).toLocaleDateString('en-ZA')) + '</li>').join('') + '</ul>'
+          : '')
+      : '<p>No proof of payment was attached.</p>') + '</section>';
     return `
       <!doctype html>
       <html>
@@ -2224,6 +2348,7 @@ export class AppComponent implements OnDestroy, OnInit {
             <tr><th>Customer approval</th><td>${this.escapeHtml(job.customerApproval || 'Not requested')}${job.approvalMethod ? ' by ' + this.escapeHtml(job.approvalMethod) : ''}</td></tr>
             <tr><th>Estimate</th><td>R${job.estimate || 0}</td></tr>
             <tr><th>Paid</th><td>R${job.paid || 0}</td></tr>
+            <tr><th>Last payment date</th><td>${this.escapeHtml(job.paymentDate ? new Date(job.paymentDate + 'T00:00:00').toLocaleDateString('en-ZA') : 'Not recorded')}</td></tr>
             <tr><th>Balance</th><td>R${balance}</td></tr>
           </table>
           <div class="note"><strong>Work notes</strong><p>${this.escapeHtml(job.notes || 'No notes captured.')}</p></div>
@@ -2231,17 +2356,18 @@ export class AppComponent implements OnDestroy, OnInit {
           <div class="note"><strong>Quality control</strong><p>${this.escapeHtml(job.qualityNotes || 'No quality notes captured.')}</p></div>
           ${photoHtml}
           ${slipHtml}
+          ${paymentProofHtml}
         </body>
       </html>
     `;
   }
 
-  private async createWorkshopAttachment(file: File, type: WorkshopAttachmentType): Promise<WorkshopAttachment> {
+  private async createWorkshopAttachment(file: File, type: WorkshopAttachmentType, jobId = this.editingWorkshopJobId || crypto.randomUUID()): Promise<WorkshopAttachment> {
     let srcImg = '';
     let storagePath = '';
     if (this.siteService.isConfigured && this.isSignedIn) {
       try {
-        const stored = await this.siteService.uploadWorkshopAttachment(file, this.editingWorkshopJobId || crypto.randomUUID(), type);
+        const stored = await this.siteService.uploadWorkshopAttachment(file, jobId, type);
         srcImg = stored.srcImg;
         storagePath = stored.storagePath;
       } catch (error) {

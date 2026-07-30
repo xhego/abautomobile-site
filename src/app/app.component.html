@@ -430,7 +430,7 @@
                 <div><p class="eyebrow">Payment workflow</p><h2>Record payment, then issue an invoice</h2></div>
                 <span>{{ paymentDueJobs.length }} awaiting payment</span>
               </div>
-              <p class="workflow-copy">Payments are entered on the job card. Once the full estimate is paid, the invoice becomes available here. Every printable document includes the booking images that were attached to the job.</p>
+              <p class="workflow-copy">Record each payment here with the payment date and optional proof of payment. Once the full estimate is paid, the invoice becomes available. Every printable document includes the booking images and payment proof attached to the job.</p>
               <div class="payment-summary-grid">
                 <div><span>Outstanding amount</span><strong>R{{ paymentTotalDue | number:'1.0-0' }}</strong></div>
                 <div><span>Awaiting payment</span><strong>{{ paymentDueJobs.length }} job{{ paymentDueJobs.length === 1 ? '' : 's' }}</strong></div>
@@ -441,7 +441,7 @@
               <div class="panel-title-row"><div><p class="eyebrow">Step 2</p><h2>Awaiting payment</h2></div><span>{{ paymentDueJobs.length }}</span></div>
               <div class="workshop-jobs" *ngIf="paymentDueJobs.length; else noPaymentsDue">
                 <article class="workshop-job-card payment-job-card" *ngFor="let job of paymentDueJobs">
-                  <div><strong>{{ job.vehicle }}</strong><span>{{ job.customerName }} | {{ job.customerContact || 'No contact captured' }}</span><small>Estimate R{{ job.estimate | number:'1.0-0' }} | Paid R{{ job.paid | number:'1.0-0' }} | Balance R{{ (job.estimate - job.paid) | number:'1.0-0' }}</small></div>
+                  <div><strong>{{ job.vehicle }}</strong><span>{{ job.customerName }} | {{ job.customerContact || 'No contact captured' }}</span><small>Estimate R{{ job.estimate | number:'1.0-0' }} | Paid R{{ job.paid | number:'1.0-0' }} | Balance R{{ (job.estimate - job.paid) | number:'1.0-0' }}<ng-container *ngIf="job.paymentDate"> | Last payment {{ job.paymentDate | date:'d MMM y' }}</ng-container></small></div>
                   <div class="document-actions"><button type="button" (click)="openPaymentEditor(job)"><i class="fa fa-credit-card"></i> Record payment</button><button type="button" class="document-secondary-action" (click)="openPrintableDocument(job, 'Estimate')"><i class="fa fa-file-pdf-o"></i> Print / save estimate</button><a [href]="getDocumentWhatsappHref(job, 'Estimate')" target="_blank" rel="noopener"><i class="fa fa-whatsapp"></i> Send estimate</a></div>
                 </article>
               </div>
@@ -620,10 +620,6 @@
         Estimate
         <input type="number" min="0" name="pageEstimate" [(ngModel)]="workshopDraft.estimate" placeholder="0">
       </label>
-      <label>
-        Paid
-        <input type="number" min="0" name="pagePaid" [(ngModel)]="workshopDraft.paid" placeholder="0">
-      </label>
       <label class="wide-field">
         Notes and next steps
         <textarea name="pageNotes" [(ngModel)]="workshopDraft.notes" rows="4" placeholder="Faults, parts, approval, supplier notes, collection instructions"></textarea>
@@ -685,6 +681,44 @@
     </form>
     <p class="form-message" *ngIf="uploadError">{{ uploadError }}</p>
     <p class="form-success" *ngIf="adminNotice">{{ adminNotice }}</p>
+    </div>
+  </section>
+
+  <section class="booking-modal-backdrop payment-modal-backdrop" *ngIf="showPaymentModal" role="dialog" aria-modal="true" aria-labelledby="payment-modal-title">
+    <div class="booking-modal payment-modal">
+      <header class="booking-modal-header"><div><p class="eyebrow">Payment received</p><h2 id="payment-modal-title">Record payment</h2></div><button type="button" class="modal-close" (click)="closePaymentModal()" [disabled]="isRecordingPayment" aria-label="Close payment"><i class="fa fa-times"></i></button></header>
+      <ng-container *ngIf="paymentJobId && getWorkshopJobById(paymentJobId) as paymentJob">
+        <div class="payment-record-summary">
+          <div><span>Customer</span><strong>{{ paymentJob.customerName }}</strong></div>
+          <div><span>Vehicle</span><strong>{{ paymentJob.vehicle }}</strong></div>
+          <div><span>Outstanding balance</span><strong>R{{ (paymentJob.estimate - paymentJob.paid) | number:'1.0-0' }}</strong></div>
+        </div>
+        <form class="payment-record-form" (ngSubmit)="recordPayment()">
+          <label>
+            Payment amount
+            <input type="number" min="0.01" [max]="paymentJob.estimate - paymentJob.paid" step="0.01" name="paymentAmount" [(ngModel)]="paymentDraft.amount" [disabled]="isRecordingPayment" required>
+            <small>This amount is added to the payment total for this job.</small>
+          </label>
+          <label>
+            Payment date
+            <input type="date" name="paymentDate" [(ngModel)]="paymentDraft.paymentDate" [disabled]="isRecordingPayment" required>
+          </label>
+          <section class="payment-proof-field">
+            <div><p class="eyebrow">Optional record</p><h3>Proof of payment</h3><p>Attach one image or PDF for this payment. It will be saved securely on the job card and included in printable documents.</p></div>
+            <label class="file-button payment-proof-button" [class.disabled]="isRecordingPayment">
+              <i class="fa fa-paperclip"></i><span>{{ paymentDraft.proofFile ? 'Replace proof' : 'Add proof of payment' }}</span>
+              <input type="file" accept="image/jpeg,image/png,image/webp,image/gif,application/pdf" [disabled]="isRecordingPayment" (change)="selectPaymentProof($event)">
+            </label>
+            <div class="selected-payment-proof" *ngIf="paymentDraft.proofFile"><i class="fa" [ngClass]="paymentDraft.proofFile.type.indexOf('image/') === 0 ? 'fa-image' : 'fa-file-pdf-o'"></i><span>{{ paymentDraft.proofFile.name }}</span><button type="button" class="attachment-remove" (click)="clearPaymentProof()" [disabled]="isRecordingPayment" aria-label="Remove selected proof"><i class="fa fa-times"></i></button></div>
+            <small>Accepted: JPG, PNG, WEBP, GIF or PDF. Maximum 5 MB.</small>
+          </section>
+          <div class="workshop-form-actions">
+            <button type="submit" [disabled]="isRecordingPayment"><span class="loader-dot button-loader" *ngIf="isRecordingPayment"></span><span>{{ isRecordingPayment ? 'Recording payment...' : 'Record payment' }}</span></button>
+            <button type="button" class="ghost-button" (click)="closePaymentModal()" [disabled]="isRecordingPayment">Cancel</button>
+          </div>
+        </form>
+      </ng-container>
+      <p class="form-message" *ngIf="uploadError">{{ uploadError }}</p>
     </div>
   </section>
 
@@ -980,10 +1014,6 @@
             <label>
               Estimate
               <input type="number" min="0" name="estimate" [(ngModel)]="workshopDraft.estimate" placeholder="0">
-            </label>
-            <label>
-              Paid
-              <input type="number" min="0" name="paid" [(ngModel)]="workshopDraft.paid" placeholder="0">
             </label>
             <label class="wide-field">
               Notes and next steps

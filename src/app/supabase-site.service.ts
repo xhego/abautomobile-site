@@ -260,7 +260,7 @@ export class SupabaseSiteService {
     }
   }
 
-  async uploadWorkshopAttachment(file: File, jobId: string, type: 'Vehicle photo' | 'Parts slip'): Promise<StoredWorkshopAttachment> {
+  async uploadWorkshopAttachment(file: File, jobId: string, type: 'Vehicle photo' | 'Parts slip' | 'Proof of payment'): Promise<StoredWorkshopAttachment> {
     const client = this.requireClient();
     const bucket = type === 'Vehicle photo' ? 'workshop-vehicle-photos' : 'workshop-payment-documents';
     const storagePath = this.buildWorkshopStoragePath(jobId, file.name);
@@ -287,7 +287,7 @@ export class SupabaseSiteService {
     return { srcImg: data.signedUrl, storagePath };
   }
 
-  async getWorkshopAttachmentUrl(storagePath: string, type: 'Vehicle photo' | 'Parts slip'): Promise<string> {
+  async getWorkshopAttachmentUrl(storagePath: string, type: 'Vehicle photo' | 'Parts slip' | 'Proof of payment'): Promise<string> {
     const client = this.requireClient();
     const bucket = type === 'Vehicle photo' ? 'workshop-vehicle-photos' : 'workshop-payment-documents';
     const { data, error } = await client.storage
@@ -300,7 +300,7 @@ export class SupabaseSiteService {
     return data.signedUrl;
   }
 
-  async removeWorkshopAttachment(storagePath: string, type: 'Vehicle photo' | 'Parts slip'): Promise<void> {
+  async removeWorkshopAttachment(storagePath: string, type: 'Vehicle photo' | 'Parts slip' | 'Proof of payment'): Promise<void> {
     if (!storagePath || !this.client) {
       return;
     }
