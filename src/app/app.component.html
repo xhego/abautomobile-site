@@ -412,9 +412,10 @@
           <section class="workshop-page" *ngSwitchCase="'estimates'">
             <article class="operation-panel">
               <div class="panel-title-row">
-                <h2>Estimates</h2>
-                <span>{{ estimateJobs.length }} awaiting payment</span>
+                <div><p class="eyebrow">Step 1</p><h2>Estimates awaiting payment</h2></div>
+                <span>{{ estimateJobs.length }} open</span>
               </div>
+              <p class="workflow-copy">Open the job card to review the work and amount. Then print or save the estimate PDF before sending it by WhatsApp or email. Booking photos and image parts slips are included in the PDF.</p>
               <ng-container *ngTemplateOutlet="documentList; context: { jobs: estimateJobs, type: 'Estimate' }"></ng-container>
             </article>
           </section>
@@ -422,24 +423,32 @@
           <section class="workshop-page" *ngSwitchCase="'payments'">
             <article class="operation-panel">
               <div class="panel-title-row">
-                <h2>Payments and invoice readiness</h2>
-                <span>{{ canIssueInvoiceJobs.length }} paid in full</span>
+                <div><p class="eyebrow">Payment workflow</p><h2>Record payment, then issue an invoice</h2></div>
+                <span>{{ paymentDueJobs.length }} awaiting payment</span>
               </div>
-              <div class="compact-table">
-                <div class="table-row table-head"><span>Customer</span><span>Vehicle</span><span>Payment status</span><span>Document</span></div>
-                <div class="table-row" *ngFor="let job of orderedWorkshopJobs">
-                  <span>{{ job.customerName }}</span>
-                  <span>{{ job.vehicle }}</span>
-                  <span>{{ job.paid >= job.estimate && job.estimate > 0 ? 'Paid in full' : 'Estimate stage' }}</span>
-                  <span>{{ job.paid >= job.estimate && job.estimate > 0 ? 'Invoice available' : 'Send estimate first' }}</span>
-                </div>
+              <p class="workflow-copy">Payments are entered on the job card. Once the full estimate is paid, the invoice becomes available here. Every printable document includes the booking images that were attached to the job.</p>
+              <div class="payment-summary-grid">
+                <div><span>Outstanding amount</span><strong>R{{ paymentTotalDue | number:'1.0-0' }}</strong></div>
+                <div><span>Awaiting payment</span><strong>{{ paymentDueJobs.length }} job{{ paymentDueJobs.length === 1 ? '' : 's' }}</strong></div>
+                <div><span>Ready to invoice</span><strong>{{ canIssueInvoiceJobs.length }} job{{ canIssueInvoiceJobs.length === 1 ? '' : 's' }}</strong></div>
               </div>
             </article>
             <article class="operation-panel">
+              <div class="panel-title-row"><div><p class="eyebrow">Step 2</p><h2>Awaiting payment</h2></div><span>{{ paymentDueJobs.length }}</span></div>
+              <div class="workshop-jobs" *ngIf="paymentDueJobs.length; else noPaymentsDue">
+                <article class="workshop-job-card payment-job-card" *ngFor="let job of paymentDueJobs">
+                  <div><strong>{{ job.vehicle }}</strong><span>{{ job.customerName }} | {{ job.customerContact || 'No contact captured' }}</span><small>Estimate R{{ job.estimate | number:'1.0-0' }} | Paid R{{ job.paid | number:'1.0-0' }} | Balance R{{ (job.estimate - job.paid) | number:'1.0-0' }}</small></div>
+                  <div class="document-actions"><button type="button" (click)="openPaymentEditor(job)"><i class="fa fa-credit-card"></i> Record payment</button><button type="button" class="document-secondary-action" (click)="openPrintableDocument(job, 'Estimate')"><i class="fa fa-file-pdf-o"></i> Print / save estimate</button><a [href]="getDocumentWhatsappHref(job, 'Estimate')" target="_blank" rel="noopener"><i class="fa fa-whatsapp"></i> Send estimate</a></div>
+                </article>
+              </div>
+              <ng-template #noPaymentsDue><div class="empty-admin-state"><strong>No payments are currently outstanding.</strong><span>Invoices become available below once a job is paid in full.</span></div></ng-template>
+            </article>
+            <article class="operation-panel">
               <div class="panel-title-row">
-                <h2>Invoices ready to send</h2>
+                <div><p class="eyebrow">Step 3</p><h2>Invoices ready to send</h2></div>
                 <span>{{ canIssueInvoiceJobs.length }}</span>
               </div>
+              <p class="workflow-copy">Only fully paid jobs appear here. Print or save the invoice as a PDF, then send the customer the document using your preferred channel.</p>
               <ng-container *ngTemplateOutlet="documentList; context: { jobs: canIssueInvoiceJobs, type: 'Invoice' }"></ng-container>
             </article>
           </section>
@@ -721,7 +730,8 @@
           <span>Balance: R{{ (job.estimate || 0) - (job.paid || 0) }}</span>
         </div>
         <div class="document-actions">
-          <button type="button" (click)="openPrintableDocument(job, type)"><i class="fa fa-download"></i> {{ type }} PDF</button>
+          <button type="button" (click)="openBookingJobCard(job)"><i class="fa fa-folder-open-o"></i> Open job card</button>
+          <button type="button" class="document-secondary-action" (click)="openPrintableDocument(job, type)"><i class="fa fa-file-pdf-o"></i> Print / save {{ type }}</button>
           <a [href]="getDocumentWhatsappHref(job, type)" target="_blank" rel="noopener"><i class="fa fa-whatsapp"></i> WhatsApp</a>
           <a [href]="getDocumentEmailHref(job, type)"><i class="fa fa-envelope-o"></i> Email</a>
         </div>

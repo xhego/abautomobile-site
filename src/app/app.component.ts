@@ -661,6 +661,14 @@ export class AppComponent implements OnDestroy, OnInit {
     return this.workshopJobs.filter(job => job.estimate > 0 && job.paid < job.estimate);
   }
 
+  get paymentDueJobs(): WorkshopJob[] {
+    return this.orderedWorkshopJobs.filter(job => job.estimate > 0 && job.paid < job.estimate);
+  }
+
+  get paymentTotalDue(): number {
+    return this.paymentDueJobs.reduce((total, job) => total + Math.max(job.estimate - job.paid, 0), 0);
+  }
+
   get boardJobs(): WorkshopJob[] {
     return this.boardFilter === 'All'
       ? this.orderedWorkshopJobs
@@ -823,6 +831,10 @@ export class AppComponent implements OnDestroy, OnInit {
     this.markAdminActivity();
   }
 
+  openPaymentEditor(job: WorkshopJob): void {
+    this.openBookingJobCard(job);
+  }
+
   moveBoardFlow(offset: number): void {
     const selected = this.calendarDateFromIso(this.selectedCalendarDate);
     if (this.boardFlowView === 'Daily') {
@@ -925,7 +937,7 @@ export class AppComponent implements OnDestroy, OnInit {
     this.adminNotice = 'Workshop settings saved.';
   }
 
-  openPrintableDocument(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): void {
+  async openPrintableDocument(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): Promise<void> {
     this.markAdminActivity();
     if (documentType === 'Invoice' && job.paid < job.estimate) {
       this.uploadError = 'Invoice can only be created after full payment. Send the estimate first.';
@@ -937,6 +949,13 @@ export class AppComponent implements OnDestroy, OnInit {
       this.uploadError = 'Allow pop-ups to open the printable document.';
       return;
     }
+
+    try {
+      await this.refreshWorkshopAttachmentUrls();
+    } catch {
+      // A previously loaded image can still be used if refreshing its secure URL is unavailable.
+    }
+    const printableJob = this.workshopJobs.find(item => item.id === job.id) || job;
 
     let printStarted = false;
     const printWhenReady = () => {
@@ -963,7 +982,7 @@ export class AppComponent implements OnDestroy, OnInit {
     };
 
     documentWindow.addEventListener('load', printWhenReady, { once: true });
-    documentWindow.document.write(this.buildPrintableDocument(job, documentType));
+    documentWindow.document.write(this.buildPrintableDocument(printableJob, documentType));
     documentWindow.document.close();
     documentWindow.setTimeout(printWhenReady, 500);
   }

@@ -2001,6 +2001,53 @@ footer a {
   cursor: not-allowed;
 }
 
+.document-actions .document-secondary-action {
+  background: #ffffff;
+  border: 1px solid #aeb9c1;
+  color: #26333d;
+}
+
+.workflow-copy {
+  color: #5d6871;
+  line-height: 1.55;
+  margin: -4px 0 18px;
+  max-width: 820px;
+}
+
+.payment-summary-grid {
+  display: grid;
+  gap: 12px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.payment-summary-grid div {
+  background: #f7f8f9;
+  border: 1px solid #e1e6e9;
+  border-radius: 6px;
+  padding: 16px;
+}
+
+.payment-summary-grid span,
+.payment-summary-grid strong {
+  display: block;
+}
+
+.payment-summary-grid span {
+  color: #66737c;
+  font-size: 12px;
+  font-weight: 800;
+}
+
+.payment-summary-grid strong {
+  color: #172029;
+  font-size: 22px;
+  margin-top: 8px;
+}
+
+.payment-job-card {
+  border-left: 4px solid #f2b84b;
+}
+
 .workshop-calendar {
   display: grid;
   gap: 8px;
@@ -2376,6 +2423,7 @@ footer a {
   .calendar-navigation { width: max-content; }
   .year-calendar { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .board-status-summary { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .payment-summary-grid { grid-template-columns: 1fr; }
 
   .booking-modal-backdrop { padding: 0; }
 
