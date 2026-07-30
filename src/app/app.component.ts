@@ -823,6 +823,10 @@ export class AppComponent implements OnDestroy, OnInit {
       .sort((left, right) => (left.bookingDate + left.bookingTime).localeCompare(right.bookingDate + right.bookingTime));
   }
 
+  isBoardColumnMenuOpen(column: WorkshopBoardColumn): boolean {
+    return this.getBoardColumnJobs(column).some(job => job.id === this.activeBoardJobId || job.id === this.activeReadyClientActionsJobId);
+  }
+
   getWorkshopStatusClass(status: string): string {
     return 'status-' + status.toLowerCase().replace(/[^a-z]+/g, '-').replace(/^-|-$/g, '');
   }
