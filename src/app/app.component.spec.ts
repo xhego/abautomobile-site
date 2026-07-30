@@ -447,6 +447,8 @@ describe('AppComponent', () => {
       jobType: 'Brake service',
       status: 'Booked',
       priority: 'Urgent',
+      customerApproval: 'Approved',
+      approvalMethod: 'WhatsApp',
       estimate: 2500,
       paid: 500,
       bookingDate: '2026-07-24',

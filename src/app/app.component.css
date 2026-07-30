@@ -1741,6 +1741,91 @@ footer a {
   gap: 12px;
 }
 
+.job-card-control,
+.vehicle-history {
+  background: #ffffff;
+  display: grid;
+  gap: 14px;
+}
+
+.job-card-control {
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.job-card-control .eyebrow,
+.vehicle-history .eyebrow {
+  margin-bottom: 4px;
+}
+
+.job-card-control h3,
+.vehicle-history h3 {
+  color: #172029;
+  font-size: 18px;
+  margin: 0;
+}
+
+.job-card-control > div > span {
+  color: #66737c;
+  display: block;
+  font-size: 13px;
+  margin-top: 5px;
+}
+
+.job-readiness {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 7px;
+  justify-content: flex-end;
+}
+
+.job-readiness span {
+  background: #f4f6f7;
+  border: 1px solid #dbe2e6;
+  border-radius: 999px;
+  color: #66737c;
+  font-size: 11px;
+  font-weight: 800;
+  padding: 6px 9px;
+}
+
+.job-readiness span.done {
+  background: #e7f4eb;
+  border-color: #9ecdb0;
+  color: #236941;
+}
+
+.job-readiness i {
+  margin-right: 4px;
+}
+
+.history-list {
+  display: grid;
+  gap: 8px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 2px;
+}
+
+.history-list span {
+  background: #f7f8f9;
+  border: 1px solid #e0e5e8;
+  border-radius: 5px;
+  color: #34424e;
+  display: grid;
+  font-size: 12px;
+  gap: 3px;
+  padding: 10px;
+}
+
+.history-list strong,
+.history-list small {
+  display: block;
+}
+
+.history-list small {
+  color: #66737c;
+}
+
 .job-card-flow p,
 .job-evidence-editor p {
   margin: 0;
@@ -2297,7 +2382,9 @@ footer a {
   .quality-check-grid,
   .settings-list,
   .evidence-upload-actions,
-  .job-photo-grid {
+  .job-photo-grid,
+  .job-card-control,
+  .history-list {
     grid-template-columns: 1fr;
   }
 }

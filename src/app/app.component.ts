@@ -40,6 +40,8 @@ interface WorkshopJob {
   jobType: string;
   status: string;
   priority: string;
+  customerApproval: string;
+  approvalMethod: string;
   estimate: number;
   paid: number;
   bookingDate: string;
@@ -218,6 +220,8 @@ export class AppComponent implements OnDestroy, OnInit {
 
   readonly workshopStatuses = ['Booked', 'Checked in', 'Diagnosing', 'Waiting for parts', 'In repair', 'Ready for collection', 'Collected'];
   readonly workshopPriorities = ['Normal', 'Urgent', 'Waiting customer', 'Warranty check'];
+  readonly customerApprovalStatuses = ['Not requested', 'Awaiting approval', 'Approved', 'Declined'];
+  readonly approvalMethods = ['WhatsApp', 'Phone call', 'Email', 'In person', 'Signature'];
   readonly bookingTypes = ['Workshop booking', 'Mobile booking'];
   readonly workshopManagementNav: WorkshopNavItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: 'fa-tachometer' },
@@ -667,6 +671,35 @@ export class AppComponent implements OnDestroy, OnInit {
 
   get paymentTotalDue(): number {
     return this.paymentDueJobs.reduce((total, job) => total + Math.max(job.estimate - job.paid, 0), 0);
+  }
+
+  getJobReference(job: Pick<WorkshopJob, 'id' | 'bookingDate'>): string {
+    const datePart = (job.bookingDate || '').replace(/-/g, '') || 'JOB';
+    const idPart = (job.id || '').replace(/-/g, '').slice(-5).toUpperCase();
+    return 'JOB-' + datePart + '-' + idPart;
+  }
+
+  getVehicleServiceHistory(job: WorkshopJob): WorkshopJob[] {
+    const vehicleKey = job.vin || job.registration;
+    if (!vehicleKey) {
+      return [];
+    }
+    return this.workshopJobs
+      .filter(item => item.id !== job.id && (job.vin ? item.vin === job.vin : item.registration === job.registration))
+      .sort((left, right) => right.bookingDate.localeCompare(left.bookingDate));
+  }
+
+  getDraftVehicleServiceHistory(): WorkshopJob[] {
+    if (!this.editingWorkshopJobId) {
+      return [];
+    }
+    const vehicleKey = this.workshopDraft.vin || this.workshopDraft.registration;
+    if (!vehicleKey) {
+      return [];
+    }
+    return this.workshopJobs
+      .filter(job => job.id !== this.editingWorkshopJobId && (this.workshopDraft.vin ? job.vin === this.workshopDraft.vin : job.registration === this.workshopDraft.registration))
+      .sort((left, right) => right.bookingDate.localeCompare(left.bookingDate));
   }
 
   get boardJobs(): WorkshopJob[] {
@@ -1405,6 +1438,8 @@ export class AppComponent implements OnDestroy, OnInit {
       jobType: this.workshopDraft.jobType.trim(),
       status: this.workshopDraft.status || this.workshopStatuses[0],
       priority: this.workshopDraft.priority || this.workshopPriorities[0],
+      customerApproval: this.workshopDraft.customerApproval || this.customerApprovalStatuses[0],
+      approvalMethod: this.workshopDraft.approvalMethod,
       estimate: Number(this.workshopDraft.estimate) || 0,
       paid: Number(this.workshopDraft.paid) || 0,
       bookingDate: this.workshopDraft.bookingDate || this.toDateInputValue(new Date()),
@@ -1452,6 +1487,8 @@ export class AppComponent implements OnDestroy, OnInit {
       jobType: job.jobType,
       status: job.status,
       priority: job.priority,
+      customerApproval: job.customerApproval,
+      approvalMethod: job.approvalMethod,
       estimate: job.estimate,
       paid: job.paid,
       bookingDate: job.bookingDate,
@@ -1785,6 +1822,8 @@ export class AppComponent implements OnDestroy, OnInit {
             bookingTime: job.bookingTime || '',
             status: job.status || this.workshopStatuses[0],
             priority: job.priority || this.workshopPriorities[0],
+            customerApproval: job.customerApproval || this.customerApprovalStatuses[0],
+            approvalMethod: job.approvalMethod || '',
             vin: (job.vin || '').toUpperCase(),
             bookingType: job.bookingType || this.bookingTypes[0],
             mobileLocation: job.mobileLocation || '',
@@ -1854,6 +1893,8 @@ export class AppComponent implements OnDestroy, OnInit {
       jobType: '',
       status: 'Booked',
       priority: 'Normal',
+      customerApproval: 'Not requested',
+      approvalMethod: '',
       estimate: 0,
       paid: 0,
       bookingDate: this.toDateInputValue(new Date()),
@@ -2050,6 +2091,7 @@ export class AppComponent implements OnDestroy, OnInit {
             <tr><th>Location</th><td>${this.escapeHtml(job.mobileLocation || this.workshopLocation)}</td></tr>
             <tr><th>Mechanic</th><td>${this.escapeHtml(job.assignedMechanic || 'Not assigned')}</td></tr>
             <tr><th>Status</th><td>${this.escapeHtml(job.status)}</td></tr>
+            <tr><th>Customer approval</th><td>${this.escapeHtml(job.customerApproval || 'Not requested')}${job.approvalMethod ? ' by ' + this.escapeHtml(job.approvalMethod) : ''}</td></tr>
             <tr><th>Estimate</th><td>R${job.estimate || 0}</td></tr>
             <tr><th>Paid</th><td>R${job.paid || 0}</td></tr>
             <tr><th>Balance</th><td>R${balance}</td></tr>

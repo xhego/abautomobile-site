@@ -513,6 +513,15 @@
         <span class="flow-step" [class.done]="editingWorkshopJobId">1</span>
         <p><strong>{{ editingWorkshopJobId ? 'Booking job card' : 'Create the booking' }}</strong><br><small>Save the booking first, then add vehicle photos and supplier slips to the job card.</small></p>
       </div>
+      <section class="job-card-control wide-field" *ngIf="editingWorkshopJobId">
+        <div><p class="eyebrow">Vehicle service record</p><h3>{{ getJobReference({ id: editingWorkshopJobId, bookingDate: workshopDraft.bookingDate }) }}</h3><span>{{ workshopDraft.customerName }} | {{ workshopDraft.vehicle }}</span></div>
+        <div class="job-readiness" aria-label="Job card readiness">
+          <span [class.done]="workshopDraft.vin || workshopDraft.registration"><i class="fa" [ngClass]="workshopDraft.vin || workshopDraft.registration ? 'fa-check' : 'fa-circle-o'"></i> Vehicle ID</span>
+          <span [class.done]="workshopDraft.assignedMechanic"><i class="fa" [ngClass]="workshopDraft.assignedMechanic ? 'fa-check' : 'fa-circle-o'"></i> Mechanic</span>
+          <span [class.done]="workshopDraft.customerApproval === 'Approved'"><i class="fa" [ngClass]="workshopDraft.customerApproval === 'Approved' ? 'fa-check' : 'fa-circle-o'"></i> Approval</span>
+          <span [class.done]="workshopDraft.attachments.length"><i class="fa" [ngClass]="workshopDraft.attachments.length ? 'fa-check' : 'fa-circle-o'"></i> Evidence</span>
+        </div>
+      </section>
       <label>
         Booking date
         <input type="date" name="pageBookingDate" [(ngModel)]="workshopDraft.bookingDate" [disabled]="!!editingWorkshopJobId" required>
@@ -589,6 +598,19 @@
         </select>
       </label>
       <label>
+        Customer approval
+        <select name="pageCustomerApproval" [(ngModel)]="workshopDraft.customerApproval">
+          <option *ngFor="let approval of customerApprovalStatuses" [value]="approval">{{ approval }}</option>
+        </select>
+      </label>
+      <label>
+        Approval method
+        <select name="pageApprovalMethod" [(ngModel)]="workshopDraft.approvalMethod" [disabled]="workshopDraft.customerApproval !== 'Approved'">
+          <option value="">Select when approved</option>
+          <option *ngFor="let method of approvalMethods" [value]="method">{{ method }}</option>
+        </select>
+      </label>
+      <label>
         Estimate
         <input type="number" min="0" name="pageEstimate" [(ngModel)]="workshopDraft.estimate" placeholder="0">
       </label>
@@ -608,6 +630,10 @@
         Quality control notes
         <textarea name="pageQualityNotes" [(ngModel)]="workshopDraft.qualityNotes" rows="4" placeholder="Test drive, warning lights, leaks, brakes, final checks"></textarea>
       </label>
+      <section class="vehicle-history wide-field" *ngIf="getDraftVehicleServiceHistory().length">
+        <p class="eyebrow">Vehicle history</p><h3>Previous visits</h3>
+        <div class="history-list"><span *ngFor="let history of getDraftVehicleServiceHistory()"><strong>{{ history.bookingDate | date:'d MMM y' }}</strong>{{ history.jobType || 'Workshop visit' }}<small>{{ history.status }} | {{ history.mileage | number }} km</small></span></div>
+      </section>
       <section class="job-evidence-editor wide-field">
         <div>
           <p class="eyebrow">Job card evidence</p>
