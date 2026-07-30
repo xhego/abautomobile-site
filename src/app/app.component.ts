@@ -93,6 +93,8 @@ interface WorkshopMetric {
 interface WorkshopBoardColumn {
   title: string;
   statuses: string[];
+  description: string;
+  icon: string;
 }
 
 interface WorkshopMechanic {
@@ -234,13 +236,12 @@ export class AppComponent implements OnDestroy, OnInit {
     { id: 'settings', label: 'Settings', icon: 'fa-sliders' }
   ];
   readonly workshopBoardColumns: WorkshopBoardColumn[] = [
-    { title: 'Booked', statuses: ['Booked'] },
-    { title: 'Checked in', statuses: ['Checked in'] },
-    { title: 'Diagnosis', statuses: ['Diagnosing'] },
-    { title: 'Waiting', statuses: ['Waiting for parts'] },
-    { title: 'In repair', statuses: ['In repair'] },
-    { title: 'Ready', statuses: ['Ready for collection'] },
-    { title: 'Collected', statuses: ['Collected'] }
+    { title: 'Incoming', statuses: ['Booked', 'Checked in'], description: 'Bookings and arrivals', icon: 'fa-sign-in' },
+    { title: 'Assessment', statuses: ['Diagnosing'], description: 'Inspect and diagnose', icon: 'fa-search' },
+    { title: 'Parts and approval', statuses: ['Waiting for parts'], description: 'Awaiting parts or customer approval', icon: 'fa-cubes' },
+    { title: 'Repair bay', statuses: ['In repair'], description: 'Work currently in progress', icon: 'fa-wrench' },
+    { title: 'Ready', statuses: ['Ready for collection'], description: 'Final checks and collection', icon: 'fa-check-circle' },
+    { title: 'Collected', statuses: ['Collected'], description: 'Completed job cards', icon: 'fa-archive' }
   ];
 
   defaultImages: GalleryImage[] = [
@@ -771,6 +772,12 @@ export class AppComponent implements OnDestroy, OnInit {
 
   getBoardStatusCount(column: WorkshopBoardColumn): number {
     return this.boardJobs.filter(job => column.statuses.includes(job.status)).length;
+  }
+
+  getBoardColumnJobs(column: WorkshopBoardColumn): WorkshopJob[] {
+    return this.boardJobs
+      .filter(job => column.statuses.includes(job.status))
+      .sort((left, right) => (left.bookingDate + left.bookingTime).localeCompare(right.bookingDate + right.bookingTime));
   }
 
   getWorkshopStatusClass(status: string): string {
