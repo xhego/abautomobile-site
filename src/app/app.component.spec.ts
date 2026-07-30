@@ -563,6 +563,28 @@ describe('AppComponent', () => {
     expect(app.showPaymentModal).toBeFalse();
   });
 
+  it('should move collected jobs from the board into the completed archive', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    const job = {
+      ...app.workshopDraft,
+      id: 'job-archive',
+      customerName: 'Test Customer',
+      vehicle: 'Toyota Hilux',
+      status: 'Collected',
+      createdAt: '2026-07-24T08:00:00.000Z',
+      updatedAt: '2026-07-24T08:00:00.000Z'
+    };
+    app.workshopJobs = [job];
+
+    app.archiveWorkshopJob(job);
+
+    expect(app.workshopJobs).toHaveSize(0);
+    expect(app.archivedWorkshopJobs).toHaveSize(1);
+    expect(app.archivedWorkshopJobs[0].archivedAt).toBeTruthy();
+    expect(app.completedArchiveJobs[0].vehicle).toBe('Toyota Hilux');
+  });
+
   it('should save contact details and build links after reload', () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;

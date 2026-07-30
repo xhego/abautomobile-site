@@ -22,6 +22,7 @@ type WorkshopPage =
   'calendar' |
   'bookings' |
   'board' |
+  'archive' |
   'estimates' |
   'payments' |
   'mechanics' |
@@ -56,6 +57,7 @@ interface WorkshopJob {
   attachments: WorkshopAttachment[];
   createdAt: string;
   updatedAt: string;
+  archivedAt?: string;
 }
 
 type WorkshopAttachmentType = 'Vehicle photo' | 'Parts slip' | 'Proof of payment';
@@ -161,6 +163,7 @@ export class AppComponent implements OnDestroy, OnInit {
   private readonly emailAddressStorageKey = 'abautomobile-email-address';
   private readonly operatingHoursStorageKey = 'abautomobile-operating-hours';
   private readonly workshopJobsStorageKey = 'abautomobile-workshop-jobs';
+  private readonly workshopArchiveStorageKey = 'abautomobile-workshop-archive';
   private readonly workshopMechanicsStorageKey = 'abautomobile-workshop-mechanics';
   private readonly workshopStorageFeeStorageKey = 'abautomobile-workshop-storage-fee';
   private readonly signInTimeoutMs = 22000;
@@ -231,6 +234,7 @@ export class AppComponent implements OnDestroy, OnInit {
     { id: 'calendar', label: 'Calendar', icon: 'fa-calendar' },
     { id: 'bookings', label: 'Bookings', icon: 'fa-book' },
     { id: 'board', label: 'Workshop Board', icon: 'fa-columns' },
+    { id: 'archive', label: 'Completed Jobs', icon: 'fa-archive' },
     { id: 'estimates', label: 'Estimates', icon: 'fa-calculator' },
     { id: 'payments', label: 'Payments', icon: 'fa-credit-card' },
     { id: 'mechanics', label: 'Mechanics', icon: 'fa-wrench' },
@@ -242,7 +246,7 @@ export class AppComponent implements OnDestroy, OnInit {
     { title: 'Parts and approval', statuses: ['Waiting for parts'], description: 'Awaiting parts or customer approval', icon: 'fa-cubes' },
     { title: 'Repair bay', statuses: ['In repair'], description: 'Work currently in progress', icon: 'fa-wrench' },
     { title: 'Ready', statuses: ['Ready for collection'], description: 'Final checks and collection', icon: 'fa-check-circle' },
-    { title: 'Collected', statuses: ['Collected'], description: 'Completed job cards', icon: 'fa-archive' }
+    { title: 'Complete', statuses: ['Collected'], description: 'Collected and ready to archive', icon: 'fa-archive' }
   ];
 
   defaultImages: GalleryImage[] = [
@@ -298,6 +302,7 @@ export class AppComponent implements OnDestroy, OnInit {
   adminRefreshKey = 0;
   activeGalleryIndex: number | null = null;
   workshopJobs: WorkshopJob[] = [];
+  archivedWorkshopJobs: WorkshopJob[] = [];
   workshopMechanics: WorkshopMechanic[] = [];
   editingWorkshopJobId: string | null = null;
   editingMechanicId: string | null = null;
@@ -306,9 +311,11 @@ export class AppComponent implements OnDestroy, OnInit {
   bookingSortNewestFirst = true;
   bookingFilter = 'All';
   bookingSearch = '';
+  archiveSearch = '';
   boardFilter: 'All' | 'Workshop booking' | 'Mobile booking' = 'All';
   boardFlowView: BoardFlowView = 'Weekly';
   activeBoardJobId: string | null = null;
+  activeReadyClientActionsJobId: string | null = null;
   boardDropColumnTitle = '';
   activeBoardMenuPlacement: 'above' | 'below' = 'below';
   activeBoardMenuAlignRight = false;
@@ -599,6 +606,15 @@ export class AppComponent implements OnDestroy, OnInit {
     return Math.max(1, Math.ceil(this.filteredBookings.length / this.bookingsPerPage));
   }
 
+  get completedArchiveJobs(): WorkshopJob[] {
+    const searchTerm = this.archiveSearch.trim().toLocaleLowerCase();
+    const matchingJobs = searchTerm
+      ? this.archivedWorkshopJobs.filter(job => [job.customerName, job.customerContact, job.vehicle, job.registration, job.vin, job.bookingDate]
+        .some(value => value.toLocaleLowerCase().includes(searchTerm)))
+      : this.archivedWorkshopJobs;
+    return [...matchingJobs].sort((left, right) => (right.archivedAt || right.updatedAt).localeCompare(left.archivedAt || left.updatedAt));
+  }
+
   get selectedDateBookings(): WorkshopJob[] {
     return this.orderedWorkshopJobs.filter(job => job.bookingDate === this.selectedCalendarDate);
   }
@@ -787,6 +803,14 @@ export class AppComponent implements OnDestroy, OnInit {
   getElevatableStatuses(status: string): string[] {
     const currentIndex = this.workshopStatuses.indexOf(status);
     return currentIndex === -1 ? this.workshopStatuses : this.workshopStatuses.slice(currentIndex);
+  }
+
+  isReadyForCollection(job: WorkshopJob): boolean {
+    return job.status === 'Ready for collection';
+  }
+
+  isCompletedJob(job: WorkshopJob): boolean {
+    return job.status === 'Collected';
   }
 
   getBoardStatusCount(column: WorkshopBoardColumn): number {
@@ -1027,6 +1051,13 @@ export class AppComponent implements OnDestroy, OnInit {
       return;
     }
 
+    if (this.isReadyForCollection(job) || this.isCompletedJob(job)) {
+      this.activeBoardJobId = null;
+      this.activeReadyClientActionsJobId = null;
+      this.openBookingJobCard(job);
+      return;
+    }
+
     this.activeBoardJobId = this.activeBoardJobId === job.id ? null : job.id;
     if (this.activeBoardJobId && event?.currentTarget instanceof HTMLElement) {
       const tile = event.currentTarget;
@@ -1039,9 +1070,30 @@ export class AppComponent implements OnDestroy, OnInit {
     this.markAdminActivity();
   }
 
+  toggleReadyClientActions(job: WorkshopJob, event: Event): void {
+    event.stopPropagation();
+    this.activeBoardJobId = null;
+    this.activeReadyClientActionsJobId = this.activeReadyClientActionsJobId === job.id ? null : job.id;
+    if (this.activeReadyClientActionsJobId && event.currentTarget instanceof HTMLElement) {
+      const badge = event.currentTarget;
+      const availableBelow = window.innerHeight - badge.getBoundingClientRect().bottom;
+      const availableAbove = badge.getBoundingClientRect().top;
+      this.activeBoardMenuPlacement = availableBelow < 190 && availableAbove > availableBelow ? 'above' : 'below';
+      this.activeBoardMenuAlignRight = badge.getBoundingClientRect().left + 220 > window.innerWidth;
+    }
+    this.markAdminActivity();
+  }
+
+  getReadyNotificationWhatsappHref(job: WorkshopJob): string {
+    const recipient = this.toWhatsappHref(job.customerContact || this.whatsappNumber);
+    const message = "Hello " + job.customerName + ", AB's Auto Mobile Mechanic (Pty) Ltd confirms that your " + job.vehicle + " is ready for collection. Please contact us to arrange collection.";
+    return 'https://wa.me/' + recipient + '?text=' + encodeURIComponent(message);
+  }
+
   startBoardDrag(event: DragEvent, job: WorkshopJob): void {
     this.draggedBoardJobId = job.id;
     this.activeBoardJobId = null;
+    this.activeReadyClientActionsJobId = null;
     event.dataTransfer?.setData('text/plain', job.id);
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
@@ -1096,10 +1148,42 @@ export class AppComponent implements OnDestroy, OnInit {
       this.editWorkshopJob(updatedJob);
     }
     this.activeBoardJobId = null;
+    this.activeReadyClientActionsJobId = null;
     this.activeBoardMenuPlacement = 'below';
     this.activeBoardMenuAlignRight = false;
     this.adminNotice = job.vehicle + ' moved to ' + status + '.';
     this.markAdminActivity();
+  }
+
+  archiveWorkshopJob(job: WorkshopJob, event?: Event): void {
+    event?.stopPropagation();
+    this.markAdminActivity();
+    if (!this.isCompletedJob(job)) {
+      this.uploadError = 'Only completed and collected jobs can be archived.';
+      return;
+    }
+
+    const archivedJob: WorkshopJob = { ...job, archivedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
+    this.workshopJobs = this.workshopJobs.filter(item => item.id !== job.id);
+    this.archivedWorkshopJobs = [archivedJob, ...this.archivedWorkshopJobs.filter(item => item.id !== job.id)];
+    if (this.editingWorkshopJobId === job.id) {
+      this.closeBookingModal();
+    }
+    this.saveWorkshopJobs();
+    this.saveArchivedWorkshopJobs();
+    this.activeBoardJobId = null;
+    this.activeReadyClientActionsJobId = null;
+    this.adminNotice = job.vehicle + ' moved to Completed Jobs.';
+  }
+
+  restoreArchivedWorkshopJob(job: WorkshopJob): void {
+    this.markAdminActivity();
+    const restoredJob: WorkshopJob = { ...job, status: 'Collected', archivedAt: undefined, updatedAt: new Date().toISOString() };
+    this.archivedWorkshopJobs = this.archivedWorkshopJobs.filter(item => item.id !== job.id);
+    this.workshopJobs = [restoredJob, ...this.workshopJobs.filter(item => item.id !== job.id)];
+    this.saveArchivedWorkshopJobs();
+    this.saveWorkshopJobs();
+    this.adminNotice = job.vehicle + ' restored to the Complete column.';
   }
 
   setBookingPage(page: number): void {
@@ -1909,6 +1993,7 @@ export class AppComponent implements OnDestroy, OnInit {
     this.emailAddressDraft = this.emailAddress;
     this.operatingHoursDraft = this.copyOperatingHours(this.operatingHours);
     this.workshopJobs = this.loadWorkshopJobs();
+    this.archivedWorkshopJobs = this.loadArchivedWorkshopJobs();
     this.workshopMechanics = this.loadWorkshopMechanics();
     this.storageFee = Number(localStorage.getItem(this.workshopStorageFeeStorageKey)) || 250;
     this.storageFeeDraft = this.storageFee;
@@ -2088,6 +2173,54 @@ export class AppComponent implements OnDestroy, OnInit {
 
   private saveWorkshopJobs(): void {
     localStorage.setItem(this.workshopJobsStorageKey, JSON.stringify(this.workshopJobs));
+  }
+
+  private loadArchivedWorkshopJobs(): WorkshopJob[] {
+    const storedJobs = localStorage.getItem(this.workshopArchiveStorageKey);
+    if (!storedJobs) {
+      return [];
+    }
+
+    try {
+      const parsedJobs = JSON.parse(storedJobs) as WorkshopJob[];
+      if (Array.isArray(parsedJobs)) {
+        return parsedJobs
+          .filter(job => job && job.id && job.customerName && job.vehicle)
+          .map(job => ({
+            ...job,
+            estimate: Number(job.estimate) || 0,
+            paid: Number(job.paid) || 0,
+            paymentDate: job.paymentDate || '',
+            bookingDate: job.bookingDate || (job.createdAt || this.toDateInputValue(new Date())).slice(0, 10),
+            bookingTime: job.bookingTime || '',
+            status: 'Collected',
+            priority: job.priority || this.workshopPriorities[0],
+            customerApproval: job.customerApproval || this.customerApprovalStatuses[0],
+            approvalMethod: job.approvalMethod || '',
+            vin: (job.vin || '').toUpperCase(),
+            bookingType: job.bookingType || this.bookingTypes[0],
+            mobileLocation: job.mobileLocation || '',
+            assignedMechanic: job.assignedMechanic || '',
+            partsNotes: job.partsNotes || '',
+            qualityNotes: job.qualityNotes || '',
+            notes: job.notes || '',
+            mileage: Math.max(Number(job.mileage) || 0, 0),
+            nextServiceMileage: Math.max(Number(job.nextServiceMileage) || 0, 0),
+            attachments: Array.isArray(job.attachments)
+              ? job.attachments.filter(attachment => attachment && attachment.id && attachment.fileName)
+              : [],
+            archivedAt: job.archivedAt || job.updatedAt || new Date().toISOString()
+          }));
+      }
+    } catch (error) {
+      localStorage.removeItem(this.workshopArchiveStorageKey);
+    }
+
+    return [];
+  }
+
+  private saveArchivedWorkshopJobs(): void {
+    localStorage.setItem(this.workshopArchiveStorageKey, JSON.stringify(this.archivedWorkshopJobs));
   }
 
   private loadWorkshopMechanics(): WorkshopMechanic[] {

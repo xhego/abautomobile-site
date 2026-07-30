@@ -352,7 +352,10 @@
                     <strong>{{ job.customerName }}</strong>
                     <span class="board-job-vehicle">{{ job.vehicle }}<small>{{ job.registration || 'Registration not captured' }}</small></span>
                     <div class="board-job-expected"><i class="fa fa-flag-checkered"></i><span>Expected end</span><strong>{{ job.dueDate ? (job.dueDate | date:'d MMM') : 'To confirm' }}</strong></div>
-                    <div class="board-status-popover" *ngIf="activeBoardJobId === job.id" (click)="$event.stopPropagation()"><strong>Move {{ job.vehicle }}</strong><button type="button" *ngFor="let status of getElevatableStatuses(job.status)" [class.active]="status === job.status" (click)="updateBoardJobStatus(job, status)">{{ status }}</button><button type="button" class="open-card-link" (click)="openBookingJobCard(job)">Open full job card</button></div>
+                    <button type="button" class="ready-client-badge" *ngIf="isReadyForCollection(job)" (click)="toggleReadyClientActions(job, $event)"><i class="fa fa-bell"></i> Client actions <i class="fa fa-chevron-down"></i></button>
+                    <button type="button" class="archive-board-job" *ngIf="isCompletedJob(job)" (click)="archiveWorkshopJob(job, $event)"><i class="fa fa-archive"></i> Archive job</button>
+                    <div class="board-status-popover board-ready-popover" *ngIf="activeReadyClientActionsJobId === job.id" (click)="$event.stopPropagation()"><strong>Ready for collection</strong><a [href]="getReadyNotificationWhatsappHref(job)" target="_blank" rel="noopener"><i class="fa fa-whatsapp"></i> Notify client</a><a [href]="getDocumentWhatsappHref(job, 'Estimate')" target="_blank" rel="noopener"><i class="fa fa-file-text-o"></i> Send estimate</a><button type="button" (click)="openPrintableDocument(job, 'Estimate')"><i class="fa fa-file-pdf-o"></i> Print / save estimate</button><button type="button" class="open-card-link" (click)="openBookingJobCard(job)">Open full job card</button></div>
+                    <div class="board-status-popover" *ngIf="activeBoardJobId === job.id && !isReadyForCollection(job) && !isCompletedJob(job)" (click)="$event.stopPropagation()"><strong>Move {{ job.vehicle }}</strong><button type="button" *ngFor="let status of getElevatableStatuses(job.status)" [class.active]="status === job.status" (click)="updateBoardJobStatus(job, status)">{{ status }}</button><button type="button" class="open-card-link" (click)="openBookingJobCard(job)">Open full job card</button></div>
                   </article>
                 </div>
                 <ng-template #emptyBoardColumn><p class="static-board-empty">No jobs in this section.</p></ng-template>
@@ -416,6 +419,21 @@
               <ng-template #noFilteredBookings>
                 <div class="soft-empty">No bookings match this filter.</div>
               </ng-template>
+            </article>
+          </section>
+
+          <section class="workshop-page" *ngSwitchCase="'archive'">
+            <article class="operation-panel">
+              <div class="panel-title-row"><div><p class="eyebrow">Completed records</p><h2>Completed Jobs</h2></div><span>{{ completedArchiveJobs.length }} archived</span></div>
+              <p>Collected vehicles are removed from the active board and kept here with their job card, estimate, invoice, photos and payment proof.</p>
+              <div class="booking-table-controls"><label class="filter-field booking-search">Search completed jobs<input type="search" name="archiveSearch" [(ngModel)]="archiveSearch" placeholder="Customer, vehicle, VIN or registration"></label></div>
+              <div class="completed-job-list" *ngIf="completedArchiveJobs.length; else noArchivedWorkshopJobs">
+                <article class="completed-job-card" *ngFor="let job of completedArchiveJobs">
+                  <div><strong>{{ job.vehicle }}</strong><span>{{ job.customerName }} | {{ job.registration || 'Registration not captured' }}</span><small>Completed {{ (job.archivedAt || job.updatedAt) | date:'d MMM y, HH:mm' }} | {{ job.bookingType === 'Mobile booking' ? 'Mobile' : 'Workshop' }}</small></div>
+                  <div class="document-actions"><button type="button" (click)="openPrintableDocument(job, 'Job Card')"><i class="fa fa-file-pdf-o"></i> Job card PDF</button><button type="button" (click)="restoreArchivedWorkshopJob(job)"><i class="fa fa-undo"></i> Restore to complete</button></div>
+                </article>
+              </div>
+              <ng-template #noArchivedWorkshopJobs><div class="soft-empty">No completed jobs have been archived yet.</div></ng-template>
             </article>
           </section>
 
