@@ -319,6 +319,8 @@ export class AppComponent implements OnDestroy, OnInit {
   boardDropColumnTitle = '';
   activeBoardMenuPlacement: 'above' | 'below' = 'below';
   activeBoardMenuAlignRight = false;
+  boardMenuTop = 0;
+  boardMenuLeft = 0;
   private draggedBoardJobId: string | null = null;
   private boardClickSuppressedUntil = 0;
   bookingPage = 1;
@@ -1064,12 +1066,8 @@ export class AppComponent implements OnDestroy, OnInit {
 
     this.activeBoardJobId = this.activeBoardJobId === job.id ? null : job.id;
     if (this.activeBoardJobId && event?.currentTarget instanceof HTMLElement) {
-      const tile = event.currentTarget;
-      const availableBelow = window.innerHeight - tile.getBoundingClientRect().bottom;
-      const availableAbove = tile.getBoundingClientRect().top;
-      const menuHeight = 88 + (this.getElevatableStatuses(job.status).length * 34);
-      this.activeBoardMenuPlacement = availableBelow < menuHeight && availableAbove > availableBelow ? 'above' : 'below';
-      this.activeBoardMenuAlignRight = tile.getBoundingClientRect().left + 220 > window.innerWidth;
+      const menuHeight = 116 + (this.getElevatableStatuses(job.status).length * 34);
+      this.positionBoardMenu(event.currentTarget, menuHeight);
     }
     this.markAdminActivity();
   }
@@ -1079,11 +1077,7 @@ export class AppComponent implements OnDestroy, OnInit {
     this.activeBoardJobId = null;
     this.activeReadyClientActionsJobId = this.activeReadyClientActionsJobId === job.id ? null : job.id;
     if (this.activeReadyClientActionsJobId && event.currentTarget instanceof HTMLElement) {
-      const badge = event.currentTarget;
-      const availableBelow = window.innerHeight - badge.getBoundingClientRect().bottom;
-      const availableAbove = badge.getBoundingClientRect().top;
-      this.activeBoardMenuPlacement = availableBelow < 190 && availableAbove > availableBelow ? 'above' : 'below';
-      this.activeBoardMenuAlignRight = badge.getBoundingClientRect().left + 220 > window.innerWidth;
+      this.positionBoardMenu(event.currentTarget, 236);
     }
     this.markAdminActivity();
   }
@@ -1094,10 +1088,27 @@ export class AppComponent implements OnDestroy, OnInit {
     return 'https://wa.me/' + recipient + '?text=' + encodeURIComponent(message);
   }
 
+  private positionBoardMenu(target: HTMLElement, menuHeight: number): void {
+    const rect = target.getBoundingClientRect();
+    const menuWidth = 216;
+    const gutter = 8;
+    const availableBelow = window.innerHeight - rect.bottom;
+    const availableAbove = rect.top;
+    const opensAbove = availableBelow < menuHeight && availableAbove > availableBelow;
+    this.activeBoardMenuPlacement = opensAbove ? 'above' : 'below';
+    this.activeBoardMenuAlignRight = false;
+    this.boardMenuTop = opensAbove
+      ? Math.max(gutter, rect.top - menuHeight - gutter)
+      : Math.min(window.innerHeight - menuHeight - gutter, rect.bottom + gutter);
+    this.boardMenuLeft = Math.min(Math.max(gutter, rect.left), window.innerWidth - menuWidth - gutter);
+  }
+
   startBoardDrag(event: DragEvent, job: WorkshopJob): void {
     this.draggedBoardJobId = job.id;
     this.activeBoardJobId = null;
     this.activeReadyClientActionsJobId = null;
+    this.boardMenuTop = 0;
+    this.boardMenuLeft = 0;
     event.dataTransfer?.setData('text/plain', job.id);
     if (event.dataTransfer) {
       event.dataTransfer.effectAllowed = 'move';
@@ -1155,6 +1166,8 @@ export class AppComponent implements OnDestroy, OnInit {
     this.activeReadyClientActionsJobId = null;
     this.activeBoardMenuPlacement = 'below';
     this.activeBoardMenuAlignRight = false;
+    this.boardMenuTop = 0;
+    this.boardMenuLeft = 0;
     this.adminNotice = job.vehicle + ' moved to ' + status + '.';
     this.markAdminActivity();
   }
