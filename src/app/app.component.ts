@@ -2115,9 +2115,14 @@ export class AppComponent implements OnDestroy, OnInit {
         srcImg = stored.srcImg;
         storagePath = stored.storagePath;
       } catch (error) {
-        if (file.size > 750 * 1024) {
-          throw new Error('The secure file upload failed. Check that the workshop Supabase storage setup has been run, then try again.');
+        const message = error instanceof Error ? error.message : 'Unknown Supabase Storage error.';
+        if (message.toLowerCase().includes('bucket not found')) {
+          throw new Error('Workshop file storage has not been configured. Run supabase-storage-repair.sql in the Supabase SQL Editor, then try again.');
         }
+        if (message.toLowerCase().includes('not authorized') || message.toLowerCase().includes('row-level security')) {
+          throw new Error('Your workshop account is not allowed to upload files. Sign out and back in, then check the Storage policies in supabase-storage-repair.sql.');
+        }
+        throw new Error('Secure file upload failed: ' + message);
       }
     }
 

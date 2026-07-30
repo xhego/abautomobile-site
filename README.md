@@ -27,6 +27,8 @@ When you are ready to create the full workshop database foundation, open the Sup
 
 The workshop setup creates private operational tables, RLS permission helpers, status/payment functions, scheduling guards, and private Storage buckets for vehicle photos and workshop documents.
 
+If the live workshop shows `Workshop file storage has not been configured`, run `supabase-storage-repair.sql` in Supabase SQL Editor. It creates the two private evidence buckets and restricts access to the workshop admin account.
+
 ## Development server
 
 Run `ng serve` for a dev server. Navigate to `http://localhost:4200/`. The app will automatically reload if you change any of the source files.
