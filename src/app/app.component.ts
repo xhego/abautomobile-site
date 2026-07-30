@@ -363,6 +363,10 @@ export class AppComponent implements OnDestroy, OnInit {
     return this.activeGalleryIndex === null ? null : this.galleryImages[this.activeGalleryIndex] || null;
   }
 
+  get todayIso(): string {
+    return this.toDateInputValue(new Date());
+  }
+
   get isAdminBusy(): boolean {
     return this.isProcessingImages ||
       this.isSavingLocation ||
@@ -677,6 +681,19 @@ export class AppComponent implements OnDestroy, OnInit {
     return Array.from({ length: daysInMonth }, (_, index) => this.toDateInputValue(new Date(start.getFullYear(), start.getMonth(), index + 1)));
   }
 
+  get boardFlowTitle(): string {
+    const selected = this.calendarDateFromIso(this.selectedCalendarDate);
+    if (this.boardFlowView === 'Daily') {
+      return selected.toLocaleDateString('en-ZA', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    }
+    if (this.boardFlowView === 'Weekly') {
+      const start = this.startOfWeek(selected);
+      const end = new Date(start.getFullYear(), start.getMonth(), start.getDate() + 6);
+      return start.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short' }) + ' - ' + end.toLocaleDateString('en-ZA', { day: 'numeric', month: 'short', year: 'numeric' });
+    }
+    return selected.toLocaleDateString('en-ZA', { month: 'long', year: 'numeric' });
+  }
+
   getBoardJobsForDate(date: string): WorkshopJob[] {
     return this.boardJobs.filter(job => job.bookingDate === date).sort((left, right) => left.bookingTime.localeCompare(right.bookingTime));
   }
@@ -804,6 +821,24 @@ export class AppComponent implements OnDestroy, OnInit {
     this.boardFlowView = view as BoardFlowView;
     this.activeBoardJobId = null;
     this.markAdminActivity();
+  }
+
+  moveBoardFlow(offset: number): void {
+    const selected = this.calendarDateFromIso(this.selectedCalendarDate);
+    if (this.boardFlowView === 'Daily') {
+      selected.setDate(selected.getDate() + offset);
+    } else if (this.boardFlowView === 'Weekly') {
+      selected.setDate(selected.getDate() + (offset * 7));
+    } else {
+      selected.setMonth(selected.getMonth() + offset);
+    }
+    this.selectCalendarDate(this.toDateInputValue(selected));
+    this.activeBoardJobId = null;
+  }
+
+  goToBoardToday(): void {
+    this.selectCalendarDate(this.toDateInputValue(new Date()));
+    this.activeBoardJobId = null;
   }
 
   toggleBoardJobStatus(job: WorkshopJob): void {
