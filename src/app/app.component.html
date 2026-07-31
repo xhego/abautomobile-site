@@ -339,9 +339,9 @@
 
           <section class="workshop-page" *ngSwitchCase="'board'">
             <article class="board-control-panel static-board-header">
-              <div class="board-control-header"><div><p class="eyebrow">Workshop flow control</p><h2>Visual workshop board</h2><p>Every job remains in a clear operational section until its status changes. Select a tile to advance it or open the complete job card.</p></div></div>
+              <div class="board-control-header"><div><p class="eyebrow">Live workflow</p><h2>Job control board</h2></div></div>
               <div class="board-filter-row"><div class="chart-segmented"><button type="button" *ngFor="let filter of ['All', 'Workshop booking', 'Mobile booking']" [class.active]="boardFilter === filter" (click)="setBoardFilter(filter)">{{ filter === 'All' ? 'All work' : filter === 'Workshop booking' ? 'Workshop' : 'Mobile' }}</button></div><span>{{ boardJobs.length }} visible job{{ boardJobs.length === 1 ? '' : 's' }}</span></div>
-              <div class="board-type-key" aria-label="Booking type key"><span class="workshop-key"><i class="fa fa-wrench"></i> Workshop service</span><span class="mobile-key"><i class="fa fa-map-marker"></i> Mobile call-out</span><small>Use the calendar to schedule; use this board to run the work.</small></div>
+              <div class="board-type-key" aria-label="Booking type key"><span class="workshop-key"><i class="fa fa-wrench"></i> Workshop</span><span class="mobile-key"><i class="fa fa-map-marker"></i> Mobile</span></div>
             </article>
             <article class="static-workshop-board" aria-label="Workshop control sections">
               <section class="static-board-section" *ngFor="let column of workshopBoardColumns" [class]="'static-board-section ' + getWorkshopStatusClass(column.statuses[0])" [class.board-drop-target]="boardDropColumnTitle === column.title" [class.board-menu-open]="isBoardColumnMenuOpen(column)" (dragover)="allowBoardDrop($event, column)" (dragleave)="clearBoardDrop(column)" (drop)="dropBoardJob($event, column)">
