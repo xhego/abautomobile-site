@@ -2750,7 +2750,7 @@ export class AppComponent implements OnDestroy, OnInit {
     const date = job.bookingDate ? this.formatClientPdfDate(job.bookingDate) : '';
     const total = Math.max(Number(job.estimate) || 0, 0);
     const balance = Math.max(total - (Number(job.paid) || 0), 0);
-    const amount = (value: number): string => value ? 'R ' + Number(value).toFixed(2) : '';
+    const amount = (value: number): string => value ? Number(value).toFixed(2) : '';
     const draw = (value: unknown, x: number, y: number, width = 150, size = 7.2, bold = false) =>
       this.drawPdfText(firstPage, text(value), x, y, width, size, bold ? boldFont : font);
     const mark = (selected: boolean, x: number, y: number) => {
@@ -2798,8 +2798,11 @@ export class AppComponent implements OnDestroy, OnInit {
     mark(selected(job.accessoriesReceived, 'Service book'), 293, 461);
     mark(selected(job.accessoriesReceived, 'Radio code'), 355, 461);
     mark(selected(job.accessoriesReceived, 'Wheel caps'), 412, 461);
-    this.drawPdfText(firstPage, job.notes || job.jobType, 36, 425, 520, 7.2, font, 5);
-    this.drawPdfText(firstPage, job.qualityNotes || job.partsNotes, 36, 328, 520, 7.2, font, 5);
+    const overflowNotes: Array<{ title: string; value: string }> = [];
+    const requestedWork = job.notes || job.jobType;
+    const findings = job.qualityNotes || job.partsNotes;
+    this.drawBoundedPdfText(firstPage, requestedWork, 36, 425, 520, 7.2, font, 4, 'Requested work / customer complaint', overflowNotes);
+    this.drawBoundedPdfText(firstPage, findings, 36, 328, 520, 7.2, font, 4, 'Technician findings / diagnosis', overflowNotes);
     draw(amount(job.diagnosticFee), 142, 248, 96);
     draw(amount(job.labourEstimate), 402, 248, 96);
     draw(amount(job.partsEstimate), 142, 227, 96);
@@ -2809,7 +2812,8 @@ export class AppComponent implements OnDestroy, OnInit {
     draw(amount(job.depositRequired), 142, 185, 96);
     draw(documentType === 'Invoice' ? amount(job.paid) : amount(balance), 402, 185, 96, 8, true);
 
-    this.drawInspectionMarks(document, job, font, boldFont);
+    this.drawInspectionMarks(document, job, font, boldFont, overflowNotes);
+    this.appendOverflowNotes(document, overflowNotes, font, boldFont);
 
     await this.appendPdfEvidence(document, job, font, boldFont);
     const bytes = await document.save();
@@ -2819,14 +2823,16 @@ export class AppComponent implements OnDestroy, OnInit {
     return new File([fileBytes.buffer], safeReference + '-' + documentType.toLowerCase().replace(' ', '-') + '.pdf', { type: 'application/pdf' });
   }
 
-  private drawInspectionMarks(document: any, job: WorkshopJob, font: any, boldFont: any): void {
+  private drawInspectionMarks(document: any, job: WorkshopJob, font: any, boldFont: any, overflowNotes: Array<{ title: string; value: string }>): void {
     const inspection = this.normaliseWorkshopInspection(job.inspection);
     const mark = (page: any, active: boolean, x: number, y: number) => {
       if (active) {
         page.drawText('X', { x, y, size: 6.2, font: boldFont });
       }
     };
-    const value = (page: any, text: string, x: number, y: number, width: number, size = 6.4) => this.drawPdfText(page, text, x, y, width, size, font);
+    const value = (page: any, text: string, x: number, y: number, width: number, size = 6.4, title = '') => title
+      ? this.drawBoundedPdfText(page, text, x, y, width, size, font, 1, title, overflowNotes)
+      : this.drawPdfText(page, text, x, y, width, size, font);
     const pageTwo = document.getPage(1);
     value(pageTwo, this.getJobReference(job), 70, 740, 90);
     value(pageTwo, job.customerName, 212, 740, 85);
@@ -2841,7 +2847,7 @@ export class AppComponent implements OnDestroy, OnInit {
       mark(pageTwo, status === 'G', 132, y);
       mark(pageTwo, status === 'D', 156, y);
       mark(pageTwo, status === 'N/C', 187, y);
-      value(pageTwo, inspection.intake[item]?.notes || '', 207, y, 75, 6);
+      value(pageTwo, inspection.intake[item]?.notes || '', 207, y, 75, 6, 'Vehicle intake - ' + item);
     });
     this.intakeInteriorItems.forEach((item, index) => {
       const status = inspection.intake[item]?.status;
@@ -2849,11 +2855,11 @@ export class AppComponent implements OnDestroy, OnInit {
       mark(pageTwo, status === 'G', 394, y);
       mark(pageTwo, status === 'D', 418, y);
       mark(pageTwo, status === 'N/C', 449, y);
-      value(pageTwo, inspection.intake[item]?.notes || '', 470, y, 75, 6);
+      value(pageTwo, inspection.intake[item]?.notes || '', 470, y, 75, 6, 'Vehicle intake - ' + item);
     });
     const warningLightXs = [38, 99, 129, 166, 221, 260, 319, 354, 404];
     this.dashboardWarningItems.forEach((item, index) => mark(pageTwo, inspection.warningLights.includes(item), warningLightXs[index], 367));
-    this.drawPdfText(pageTwo, inspection.existingDamage, 36, 337, 520, 7, font, 5);
+    this.drawBoundedPdfText(pageTwo, inspection.existingDamage, 36, 337, 520, 7, font, 5, 'Existing damage notes', overflowNotes);
 
     const pageThree = document.getPage(2);
     const drawDetailedRows = (items: string[], rows: Record<string, InspectionRow>, startY: number) => items.forEach((item, index) => {
@@ -2863,7 +2869,7 @@ export class AppComponent implements OnDestroy, OnInit {
       mark(pageThree, row?.status === 'ATTN', 225, y);
       mark(pageThree, row?.status === 'URG', 258, y);
       mark(pageThree, row?.status === 'N/C', 291, y);
-      value(pageThree, row?.notes || '', 309, y, 230, 6);
+      value(pageThree, row?.notes || '', 309, y, 230, 6, 'Inspection - ' + item);
     });
     drawDetailedRows(this.safetyInspectionItems, inspection.safety, 613);
     drawDetailedRows(this.underBonnetItems, inspection.underBonnet, 421);
@@ -2879,7 +2885,7 @@ export class AppComponent implements OnDestroy, OnInit {
       mark(pageFour, row?.status === 'N/C', 144, y);
       value(pageFour, row?.tread || '', 199, y, 70);
       value(pageFour, row?.pressure || '', 288, y, 55);
-      value(pageFour, row?.notes || '', 359, y, 180);
+      value(pageFour, row?.notes || '', 359, y, 180, 6.4, 'Tyre - ' + position);
     });
     this.brakePositions.forEach((position, index) => {
       const row = inspection.brakes[position];
@@ -2890,7 +2896,7 @@ export class AppComponent implements OnDestroy, OnInit {
       mark(pageFour, row?.status === 'N/C', 144, y);
       value(pageFour, row?.pad || '', 199, y, 55);
       value(pageFour, row?.disc || '', 261, y, 110);
-      value(pageFour, row?.notes || '', 386, y, 150);
+      value(pageFour, row?.notes || '', 386, y, 150, 6.4, 'Brake - ' + position);
     });
     inspection.recommendedWork.forEach((row, index) => {
       const y = 329 - index * 20.2;
@@ -2988,8 +2994,49 @@ export class AppComponent implements OnDestroy, OnInit {
     }
   }
 
-  private drawPdfText(page: any, value: string, x: number, y: number, width: number, size: number, font: any, maxLines = 1): void {
-    const words = value.split(/\s+/).filter(Boolean);
+  private drawBoundedPdfText(page: any, value: string, x: number, y: number, width: number, size: number, font: any, maxLines: number, title: string, overflowNotes: Array<{ title: string; value: string }>): void {
+    const lines = this.wrapPdfText(value, width, size, font);
+    lines.slice(0, maxLines).forEach((item, index) => page.drawText(item, { x, y: y - index * (size + 2), size, font }));
+    if (lines.length > maxLines) {
+      overflowNotes.push({ title, value: lines.slice(maxLines).join(' ') });
+    }
+  }
+
+  private appendOverflowNotes(document: any, notes: Array<{ title: string; value: string }>, font: any, boldFont: any): void {
+    const remaining = notes.filter(note => note.value.trim());
+    if (!remaining.length) {
+      return;
+    }
+    let page = document.addPage([595.28, 841.89]);
+    let y = 795;
+    const newPage = () => {
+      page = document.addPage([595.28, 841.89]);
+      y = 795;
+    };
+    this.drawPdfText(page, 'ADDITIONAL JOB CARD NOTES', 45, y, 500, 15, boldFont);
+    y -= 26;
+    this.drawPdfText(page, 'Continued notes from the completed job card and inspection checklist.', 45, y, 500, 8.5, font);
+    y -= 27;
+    remaining.forEach(note => {
+      const lines = this.wrapPdfText(note.value, 500, 8.5, font);
+      const requiredHeight = 18 + lines.length * 12;
+      if (y - requiredHeight < 45) {
+        newPage();
+        this.drawPdfText(page, 'ADDITIONAL JOB CARD NOTES', 45, y, 500, 15, boldFont);
+        y -= 28;
+      }
+      this.drawPdfText(page, note.title, 45, y, 500, 9.5, boldFont);
+      y -= 14;
+      lines.forEach(line => {
+        page.drawText(line, { x: 45, y, size: 8.5, font });
+        y -= 12;
+      });
+      y -= 8;
+    });
+  }
+
+  private wrapPdfText(value: string, width: number, size: number, font: any): string[] {
+    const words = (value || '').split(/\s+/).filter(Boolean);
     const lines: string[] = [];
     let line = '';
     for (const word of words) {
@@ -3004,6 +3051,11 @@ export class AppComponent implements OnDestroy, OnInit {
     if (line) {
       lines.push(line);
     }
+    return lines;
+  }
+
+  private drawPdfText(page: any, value: string, x: number, y: number, width: number, size: number, font: any, maxLines = 1): void {
+    const lines = this.wrapPdfText(value, width, size, font);
     lines.slice(0, maxLines).forEach((item, index) => page.drawText(item, { x, y: y - index * (size + 2), size, font }));
   }
 
