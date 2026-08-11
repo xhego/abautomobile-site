@@ -2737,14 +2737,18 @@ export class AppComponent implements OnDestroy, OnInit {
   }
 
   private async createClientPdf(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): Promise<File> {
-    const { PDFDocument, StandardFonts } = await import('pdf-lib');
+    const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
     const response = await fetch('/assets/documents/AB_Auto_Mobile_Mechanic_Workshop_Pack_v1.pdf');
     if (!response.ok) {
       throw new Error('Workshop pack template was unavailable.');
     }
-    const document = await PDFDocument.load(await response.arrayBuffer());
+    const sourceDocument = await PDFDocument.load(await response.arrayBuffer());
+    const document = await PDFDocument.create();
     const font = await document.embedFont(StandardFonts.Helvetica);
     const boldFont = await document.embedFont(StandardFonts.HelveticaBold);
+    this.buildDynamicWorkshopPack(document, job, documentType, font, boldFont, rgb);
+    const termsPages = await document.copyPages(sourceDocument, [4, 5]);
+    termsPages.forEach(page => document.addPage(page));
     const firstPage = document.getPage(0);
     const text = (value: unknown): string => String(value || '').trim();
     const date = job.bookingDate ? this.formatClientPdfDate(job.bookingDate) : '';
@@ -2760,7 +2764,11 @@ export class AppComponent implements OnDestroy, OnInit {
     };
     const selected = (value: string, option: string) => value.split(',').map(item => item.trim()).includes(option);
 
-    // Page one remains the supplied form. Only the blank capture areas receive live job data.
+    /*
+     * The client pack is reflowing rather than an overlay. The source terms pages stay intact,
+     * while operational pages grow with the recorded notes and measurements.
+     */
+    /*
     draw(this.getJobReference(job), 113, 753, 78, 6.2, true);
     draw(date, 299, 753, 73, 6.2);
     draw(job.bookingTime, 431, 753, 56, 6.2);
@@ -2814,6 +2822,7 @@ export class AppComponent implements OnDestroy, OnInit {
 
     this.drawInspectionMarks(document, job, font, boldFont, overflowNotes);
     this.appendOverflowNotes(document, overflowNotes, font, boldFont);
+    */
 
     await this.appendPdfEvidence(document, job, font, boldFont);
     const bytes = await document.save();
@@ -2821,6 +2830,132 @@ export class AppComponent implements OnDestroy, OnInit {
     const fileBytes = new Uint8Array(bytes.length);
     fileBytes.set(bytes);
     return new File([fileBytes.buffer], safeReference + '-' + documentType.toLowerCase().replace(' ', '-') + '.pdf', { type: 'application/pdf' });
+  }
+
+  private buildDynamicWorkshopPack(document: any, job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice', font: any, boldFont: any, rgb: any): void {
+    const red = rgb(0.55, 0.04, 0.08);
+    const dark = rgb(0.09, 0.12, 0.15);
+    const pale = rgb(0.94, 0.95, 0.96);
+    const inspection = this.normaliseWorkshopInspection(job.inspection);
+    const pageSize: [number, number] = [595.28, 841.89];
+    let page: any;
+    let y = 0;
+    let currentTitle = '';
+    let currentSubtitle = '';
+    const startPage = (title: string, subtitle: string, continuation = false) => {
+      currentTitle = title;
+      currentSubtitle = subtitle;
+      page = document.addPage(pageSize);
+      page.drawText("AB's Auto Mobile Mechanic (Pty) Ltd", { x: 330, y: 810, size: 10, font: boldFont, color: dark });
+      page.drawText(title, { x: 45, y: 777, size: 19, font: boldFont, color: dark });
+      page.drawText(continuation ? subtitle + ' (continued)' : subtitle, { x: 45, y: 757, size: 9.5, font, color: dark });
+      page.drawLine({ start: { x: 45, y: 746 }, end: { x: 550, y: 746 }, thickness: 1.4, color: red });
+      y = 724;
+    };
+    const ensure = (height: number) => {
+      if (y - height < 52) {
+        startPage(currentTitle, currentSubtitle, true);
+      }
+    };
+    const section = (label: string) => {
+      ensure(28);
+      page.drawRectangle({ x: 45, y: y - 20, width: 505, height: 20, color: red });
+      page.drawText(label, { x: 52, y: y - 14, size: 10, font: boldFont, color: rgb(1, 1, 1) });
+      y -= 26;
+    };
+    const paragraph = (label: string, value: string) => {
+      const lines = this.wrapPdfText(value || 'Not recorded.', 488, 9, font);
+      ensure(18 + lines.length * 12);
+      page.drawText(label, { x: 45, y, size: 9.5, font: boldFont, color: dark });
+      y -= 13;
+      lines.forEach(line => { page.drawText(line, { x: 52, y, size: 9, font, color: dark }); y -= 12; });
+      y -= 8;
+    };
+    const table = (headers: string[], rows: string[][], widths: number[]) => {
+      const x = 45;
+      const drawRow = (cells: string[], header = false) => {
+        const lines = cells.map((cell, index) => this.wrapPdfText(cell || '', widths[index] - 8, header ? 8.3 : 8, header ? boldFont : font));
+        const height = Math.max(22, ...lines.map(linesForCell => linesForCell.length * 10 + 10));
+        ensure(height + (header ? 22 : 0));
+        let cursor = x;
+        cells.forEach((_, index) => {
+          page.drawRectangle({ x: cursor, y: y - height, width: widths[index], height, color: header ? pale : rgb(1, 1, 1), borderColor: rgb(0.72, 0.75, 0.77), borderWidth: .5 });
+          lines[index].forEach((line, lineIndex) => page.drawText(line, { x: cursor + 4, y: y - 13 - lineIndex * 10, size: header ? 8.3 : 8, font: header ? boldFont : font, color: dark }));
+          cursor += widths[index];
+        });
+        y -= height;
+      };
+      if (headers.length) {
+        drawRow(headers, true);
+      }
+      rows.forEach(row => drawRow(row));
+      y -= 10;
+    };
+    const status = (value: string) => value || 'N/C';
+    const money = (value: number) => value ? 'R ' + Number(value).toFixed(2) : 'R 0.00';
+
+    startPage('CUSTOMER JOB CARD', 'Workshop job card and customer authorisation');
+    section('JOB DETAILS');
+    table(['Job card number', 'Date in', 'Time in', 'Estimated completion', 'Technician'], [[
+      this.getJobReference(job), this.formatClientPdfDate(job.bookingDate), job.bookingTime || 'To confirm',
+      job.dueDate ? this.formatClientPdfDate(job.dueDate) : 'To confirm', job.assignedMechanic || 'Not assigned'
+    ]], [105, 95, 72, 125, 108]);
+    section('CUSTOMER AND VEHICLE DETAILS');
+    table(['Customer detail', 'Value', 'Vehicle detail', 'Value'], [
+      ['Customer name', job.customerName, 'Make', job.vehicleMake || job.vehicle],
+      ['ID / passport number', job.customerId, 'Model', job.vehicleModel],
+      ['Cell number', job.customerContact, 'Year', job.vehicleYear],
+      ['Alternative number', job.alternateContact, 'Registration number', job.registration],
+      ['Email', job.customerEmail, 'VIN / chassis number', job.vin],
+      ['Address', job.customerAddress, 'Engine number', job.engineNumber],
+      ['Preferred contact', job.preferredContact, 'Mileage', job.mileage ? job.mileage.toLocaleString('en-ZA') + ' km' : 'Not recorded'],
+      ['Accessories received', job.accessoriesReceived, 'Fuel / keys', [job.fuelLevel, job.keysReceived].filter(Boolean).join(' | ')]
+    ], [105, 148, 105, 147]);
+    section('REQUESTED WORK / CUSTOMER COMPLAINT');
+    paragraph('Customer request', job.notes || job.jobType);
+    section('TECHNICIAN FINDINGS / DIAGNOSIS');
+    paragraph('Findings', job.qualityNotes || job.partsNotes);
+    section('QUOTATION SUMMARY');
+    table(['Diagnostic fee', 'Labour', 'Parts', 'Consumables'], [[money(job.diagnosticFee), money(job.labourEstimate), money(job.partsEstimate), money(job.consumablesEstimate)]], [126, 126, 126, 127]);
+    table(['VAT', 'Total estimate', 'Deposit required', documentType === 'Invoice' ? 'Invoice paid' : 'Balance due'], [[money(job.vatEstimate), money(job.estimate), money(job.depositRequired), money(documentType === 'Invoice' ? job.paid : Math.max(job.estimate - job.paid, 0))]], [126, 126, 126, 127]);
+    section('CUSTOMER AUTHORISATION');
+    paragraph('Authorisation', 'The customer authorises the recorded inspection, diagnosis and approved repair work. Approval method: ' + (job.approvalMethod || 'Not recorded') + '.');
+
+    startPage('VEHICLE INSPECTION AND QUALITY CHECKLIST', 'Vehicle intake condition and existing damage');
+    section('A. VEHICLE INTAKE CONDITION - EXTERIOR');
+    table(['Item', 'Condition', 'Notes'], this.intakeExteriorItems.map(item => [item, status(inspection.intake[item]?.status), inspection.intake[item]?.notes || '']), [205, 80, 220]);
+    section('A. VEHICLE INTAKE CONDITION - INTERIOR');
+    table(['Item', 'Condition', 'Notes'], this.intakeInteriorItems.map(item => [item, status(inspection.intake[item]?.status), inspection.intake[item]?.notes || '']), [205, 80, 220]);
+    section('B. DASHBOARD WARNING LIGHTS');
+    paragraph('Warning lights recorded', inspection.warningLights.join(', ') || 'None recorded.');
+    section('C. EXISTING DAMAGE NOTES');
+    paragraph('Damage at intake', inspection.existingDamage);
+
+    startPage('DETAILED MECHANICAL AND SAFETY INSPECTION', 'Safety, under-bonnet and under-vehicle checks');
+    const inspectionTable = (title: string, items: string[], rows: Record<string, InspectionRow>) => {
+      section(title);
+      table(['Inspection item', 'Status', 'Notes / measurements'], items.map(item => [item, status(rows[item]?.status), rows[item]?.notes || '']), [245, 80, 180]);
+    };
+    inspectionTable('E. SAFETY AND OPERATIONAL CHECKS', this.safetyInspectionItems, inspection.safety);
+    inspectionTable('F. UNDER-BONNET CHECKS', this.underBonnetItems, inspection.underBonnet);
+    inspectionTable('G. UNDER-VEHICLE CHECKS', this.underVehicleItems, inspection.underVehicle);
+
+    startPage('TYRES, BRAKES AND RECOMMENDATIONS', 'Measurements, recommendations and final quality control');
+    section('H. TYRE CONDITION AND MEASUREMENTS');
+    table(['Position', 'Status', 'Tread (mm)', 'Pressure (kPa)', 'Wear / recommendation'], this.tyrePositions.map(position => {
+      const row = inspection.tyres[position];
+      return [position, status(row?.status), row?.tread || '', row?.pressure || '', row?.notes || ''];
+    }), [65, 70, 105, 105, 160]);
+    paragraph('Suggested tyre action', inspection.tyreActions.join(', ') || 'None recorded.');
+    section('I. BRAKE CONDITION AND MEASUREMENTS');
+    table(['Position', 'Status', 'Pad / shoe (mm)', 'Disc / drum condition', 'Notes / recommendation'], this.brakePositions.map(position => {
+      const row = inspection.brakes[position];
+      return [position, status(row?.status), row?.pad || '', row?.disc || '', row?.notes || ''];
+    }), [65, 70, 105, 130, 135]);
+    section('J. FINDINGS AND RECOMMENDED WORK');
+    table(['Priority', 'Recommended repair / action', 'Estimate / reference', 'Customer decision'], inspection.recommendedWork.map(row => [row.priority, row.repair, row.estimate, row.decision]), [85, 210, 105, 105]);
+    section('K. FINAL QUALITY CONTROL');
+    table(['Quality check', 'Result'], this.finalQualityItems.map(item => [item, inspection.finalQuality.includes(item) ? 'Checked' : 'Not checked']), [350, 155]);
   }
 
   private drawInspectionMarks(document: any, job: WorkshopJob, font: any, boldFont: any, overflowNotes: Array<{ title: string; value: string }>): void {
