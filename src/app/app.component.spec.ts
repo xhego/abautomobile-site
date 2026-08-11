@@ -479,6 +479,7 @@ describe('AppComponent', () => {
       partsNotes: 'Front brake pads from supplier slip.',
       qualityNotes: 'Brake pedal checked after test drive.',
       notes: 'Customer approved front pads.',
+      inspection: (app as any).createEmptyWorkshopInspection(),
       attachments: []
     };
 

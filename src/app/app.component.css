@@ -1731,6 +1731,38 @@ footer a {
 .booking-intake-optional summary { color: #26333d; cursor: pointer; font-size: 13px; font-weight: 800; padding: 15px 0; }
 .booking-intake-optional[open] summary { border-bottom: 1px solid #e3e8eb; margin-bottom: 15px; }
 
+.pdf-form-section { border-top: 2px solid #a9131b; display: grid; gap: 16px; padding-top: 14px; }
+.pdf-form-section > header { display: grid; gap: 3px; }
+.pdf-form-section > header .eyebrow { margin: 0; }
+.pdf-form-section > header h3 { color: #172029; font-size: 19px; margin: 0; }
+.pdf-form-section > header span { color: #64727c; font-size: 12px; }
+.inspection-split-grid { display: grid; gap: 16px; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.inspection-group { border: 1px solid #d7dfe4; overflow: hidden; }
+.inspection-group h4 { background: #95101a; color: #fff; font-size: 13px; margin: 0; padding: 9px 11px; }
+.inspection-row { align-items: center; border-top: 1px solid #e1e6e9; display: grid; gap: 6px; min-height: 38px; padding: 5px 8px; }
+.inspection-row strong { color: #2d3a43; font-size: 12px; font-weight: 700; }
+.intake-row { grid-template-columns: minmax(100px, 1fr) repeat(3, auto) minmax(78px, .9fr); }
+.detailed-row { grid-template-columns: minmax(160px, 1fr) repeat(4, auto) minmax(120px, 1.25fr); }
+.inspection-row input[type='text'], .inspection-row input:not([type]) { min-width: 0; }
+.check-choice { align-items: center; color: #43515b; display: inline-flex !important; font-size: 10px !important; font-weight: 800 !important; gap: 3px !important; white-space: nowrap; }
+.check-choice input { accent-color: #a9131b; height: 14px; margin: 0; width: 14px; }
+.checklist-strip { align-items: center; background: #fafbfc; border: 1px solid #d7dfe4; display: flex; flex-wrap: wrap; gap: 9px 13px; padding: 10px; }
+.checklist-strip strong { color: #26333d; font-size: 12px; }
+.checklist-strip label, .final-quality-grid label { align-items: center; color: #43515b; display: inline-flex; font-size: 12px; gap: 5px; }
+.checklist-strip input, .final-quality-grid input { accent-color: #a9131b; height: 14px; margin: 0; width: 14px; }
+.measurement-group { overflow: visible; }
+.measurement-heading, .measurement-row { align-items: center; display: grid; gap: 7px; grid-template-columns: 66px minmax(150px, 1.2fr) minmax(130px, 1fr) minmax(95px, .72fr) minmax(170px, 1.35fr); padding: 7px 8px; }
+.measurement-heading { background: #f0f2f3; color: #34424e; font-size: 11px; }
+.measurement-row { border-top: 1px solid #e1e6e9; min-height: 44px; }
+.measurement-row > strong { font-size: 12px; text-align: center; }
+.status-options { display: flex; flex-wrap: wrap; gap: 5px; }
+.brake-heading, .brake-row { grid-template-columns: 66px minmax(150px, 1.2fr) minmax(130px, 1fr) minmax(150px, 1.2fr) minmax(170px, 1.35fr); }
+.recommendation-row { border-top: 1px solid #e1e6e9; display: grid; gap: 7px; grid-template-columns: minmax(100px, .65fr) minmax(200px, 1.5fr) minmax(120px, .8fr) minmax(160px, 1fr); padding: 7px 8px; }
+.recommendation-row:first-of-type { border-top: 0; }
+.final-quality-grid { display: grid; gap: 0; grid-template-columns: repeat(2, minmax(0, 1fr)); }
+.final-quality-grid label { border-bottom: 1px solid #e1e6e9; min-height: 38px; padding: 7px 10px; }
+.final-quality-grid label:nth-last-child(-n + 2) { border-bottom: 0; }
+
 .job-card-flow,
 .job-evidence-editor,
 .job-evidence {
@@ -2605,6 +2637,14 @@ footer a {
   .booking-intake-grid { grid-template-columns: 1fr; }
   .booking-intake-section header { align-items: flex-start; flex-direction: column; gap: 3px; }
   .booking-intake-optional { padding-left: 12px; padding-right: 12px; }
+  .inspection-split-grid { grid-template-columns: 1fr; }
+  .inspection-group { overflow-x: auto; }
+  .inspection-row { min-width: 560px; }
+  .measurement-heading, .measurement-row, .brake-heading, .brake-row { min-width: 720px; }
+  .recommendation-row { min-width: 650px; }
+  .final-quality-grid { grid-template-columns: 1fr; }
+  .final-quality-grid label:nth-last-child(-n + 2) { border-bottom: 1px solid #e1e6e9; }
+  .final-quality-grid label:last-child { border-bottom: 0; }
   .client-pdf-frame { height: 56vh; }
   .client-pdf-actions { display: grid; grid-template-columns: 1fr 1fr; }
   .client-pdf-actions button, .client-pdf-actions a { min-height: 44px; padding: 9px; text-align: center; }

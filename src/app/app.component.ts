@@ -74,10 +74,51 @@ interface WorkshopJob {
   partsNotes: string;
   qualityNotes: string;
   notes: string;
+  inspection: WorkshopInspection;
   attachments: WorkshopAttachment[];
   createdAt: string;
   updatedAt: string;
   archivedAt?: string;
+}
+
+interface InspectionRow {
+  status: string;
+  notes: string;
+}
+
+interface TyreInspection {
+  status: string;
+  tread: string;
+  pressure: string;
+  notes: string;
+}
+
+interface BrakeInspection {
+  status: string;
+  pad: string;
+  disc: string;
+  notes: string;
+}
+
+interface RecommendedWork {
+  priority: string;
+  repair: string;
+  estimate: string;
+  decision: string;
+}
+
+interface WorkshopInspection {
+  intake: Record<string, InspectionRow>;
+  warningLights: string[];
+  existingDamage: string;
+  safety: Record<string, InspectionRow>;
+  underBonnet: Record<string, InspectionRow>;
+  underVehicle: Record<string, InspectionRow>;
+  tyres: Record<string, TyreInspection>;
+  tyreActions: string[];
+  brakes: Record<string, BrakeInspection>;
+  recommendedWork: RecommendedWork[];
+  finalQuality: string[];
 }
 
 type WorkshopAttachmentType = 'Vehicle photo' | 'Parts slip' | 'Proof of payment';
@@ -249,6 +290,23 @@ export class AppComponent implements OnDestroy, OnInit {
   readonly customerApprovalStatuses = ['Not requested', 'Awaiting approval', 'Approved', 'Declined'];
   readonly approvalMethods = ['WhatsApp', 'Phone call', 'Email', 'In person', 'Signature'];
   readonly bookingTypes = ['Workshop booking', 'Mobile booking'];
+  readonly intakeExteriorItems = ['Front bumper', 'Rear bumper', 'Bonnet', 'Roof', 'Left front fender', 'Right front fender', 'Left doors', 'Right doors', 'Mirrors', 'Windscreen', 'Rear window', 'Headlights', 'Taillights', 'Wheels', 'Tyres'];
+  readonly intakeInteriorItems = ['Dashboard', 'Warning lights', 'Radio', 'Air conditioning', 'Seats', 'Carpets', 'Boot', 'Spare wheel', 'Jack', 'Wheel spanner', 'Locking wheel nut key', 'Service book', 'Customer valuables removed'];
+  readonly dashboardWarningItems = ['Check engine', 'ABS', 'Airbag', 'Oil pressure', 'Battery', 'Temperature', 'Brake', 'TPMS', 'Other'];
+  readonly safetyInspectionItems = ['Lights: head, brake, turn and parking', 'Windscreen, windows and mirrors', 'Wipers and washer operation', 'Horn', 'Dashboard warning lights', 'Seat belts and seat security', 'Air conditioning and heating', 'Steering operation and free play', 'Road-test observations, if authorised'];
+  readonly underBonnetItems = ['Engine oil level and condition', 'Coolant / antifreeze', 'Brake fluid', 'Power steering fluid, if applicable', 'Transmission fluid, if accessible', 'Windscreen washer fluid', 'Belts and hoses', 'Air filter', 'Cabin filter', 'Battery charge and condition', 'Battery terminals and connections', 'Visible leaks'];
+  readonly underVehicleItems = ['Brake lines and hoses', 'Steering components', 'Suspension, shocks and struts', 'Driveshafts, axles and CV boots', 'Exhaust system and mountings', 'Fuel lines and hoses', 'Fluid leaks', 'Underbody damage or loose shields'];
+  readonly tyrePositions = ['LF', 'RF', 'LR', 'RR', 'Spare'];
+  readonly brakePositions = ['LF', 'RF', 'LR', 'RR'];
+  readonly tyreActions = ['Alignment', 'Balance', 'Rotation', 'Puncture repair', 'Replace tyre(s)', 'None'];
+  readonly finalQualityItems = ['Oil level checked', 'Coolant checked', 'Brake fluid checked', 'Leaks checked', 'Battery checked', 'Tyre pressures checked', 'Lights and indicators tested', 'Wipers tested', 'Horn tested', 'Wheel nuts checked', 'Tools removed from vehicle', 'Road test completed, if applicable', 'Warning lights rechecked', 'Vehicle ready for collection'];
+  readonly preferredContactOptions = ['Call', 'WhatsApp', 'SMS', 'Email'];
+  readonly fuelLevelOptions = ['Empty', '1/4', '1/2', '3/4', 'Full'];
+  readonly accessoryOptions = ['Spare wheel', 'Jack', 'Wheel spanner', 'Locking wheel nut key', 'Service book', 'Radio code', 'Wheel caps'];
+  readonly intakeStatuses = ['G', 'D', 'N/C'];
+  readonly inspectionStatuses = ['OK', 'ATTN', 'URG', 'N/C'];
+  readonly tyreAndBrakeStatuses = ['OK', 'A', 'U', 'N/C'];
+  readonly recommendationPriorities = ['Monitor', 'Soon', 'Urgent'];
   readonly workshopManagementNav: WorkshopNavItem[] = [
     { id: 'dashboard', label: 'Dashboard', icon: 'fa-tachometer' },
     { id: 'calendar', label: 'Calendar', icon: 'fa-calendar' },
@@ -1892,6 +1950,7 @@ export class AppComponent implements OnDestroy, OnInit {
       partsNotes: this.workshopDraft.partsNotes.trim(),
       qualityNotes: this.workshopDraft.qualityNotes.trim(),
       notes: this.workshopDraft.notes.trim(),
+      inspection: this.normaliseWorkshopInspection(this.workshopDraft.inspection),
       attachments: this.workshopJobs.find(job => job.id === this.editingWorkshopJobId)?.attachments || [],
       createdAt: this.workshopJobs.find(job => job.id === this.editingWorkshopJobId)?.createdAt || now,
       updatedAt: now
@@ -1961,6 +2020,7 @@ export class AppComponent implements OnDestroy, OnInit {
       partsNotes: job.partsNotes,
       qualityNotes: job.qualityNotes,
       notes: job.notes,
+      inspection: this.normaliseWorkshopInspection(job.inspection),
       attachments: job.attachments
     };
   }
@@ -2316,6 +2376,7 @@ export class AppComponent implements OnDestroy, OnInit {
             partsNotes: job.partsNotes || '',
             qualityNotes: job.qualityNotes || '',
             notes: job.notes || '',
+            inspection: this.normaliseWorkshopInspection(job.inspection),
             mileage: Math.max(Number(job.mileage) || 0, 0),
             nextServiceMileage: Math.max(Number(job.nextServiceMileage) || 0, 0),
             attachments: Array.isArray(job.attachments)
@@ -2382,6 +2443,7 @@ export class AppComponent implements OnDestroy, OnInit {
             partsNotes: job.partsNotes || '',
             qualityNotes: job.qualityNotes || '',
             notes: job.notes || '',
+            inspection: this.normaliseWorkshopInspection(job.inspection),
             mileage: Math.max(Number(job.mileage) || 0, 0),
             nextServiceMileage: Math.max(Number(job.nextServiceMileage) || 0, 0),
             attachments: Array.isArray(job.attachments)
@@ -2477,8 +2539,80 @@ export class AppComponent implements OnDestroy, OnInit {
       partsNotes: '',
       qualityNotes: '',
       notes: '',
+      inspection: this.createEmptyWorkshopInspection(),
       attachments: []
     };
+  }
+
+  private createEmptyWorkshopInspection(): WorkshopInspection {
+    const blankRow = (): InspectionRow => ({ status: '', notes: '' });
+    const blankRows = (items: string[]): Record<string, InspectionRow> => Object.fromEntries(items.map(item => [item, blankRow()]));
+    return {
+      intake: blankRows([...this.intakeExteriorItems, ...this.intakeInteriorItems]),
+      warningLights: [],
+      existingDamage: '',
+      safety: blankRows(this.safetyInspectionItems),
+      underBonnet: blankRows(this.underBonnetItems),
+      underVehicle: blankRows(this.underVehicleItems),
+      tyres: Object.fromEntries(this.tyrePositions.map(position => [position, { status: '', tread: '', pressure: '', notes: '' }])),
+      tyreActions: [],
+      brakes: Object.fromEntries(this.brakePositions.map(position => [position, { status: '', pad: '', disc: '', notes: '' }])),
+      recommendedWork: Array.from({ length: 4 }, () => ({ priority: '', repair: '', estimate: '', decision: '' })),
+      finalQuality: []
+    };
+  }
+
+  private normaliseWorkshopInspection(inspection?: Partial<WorkshopInspection>): WorkshopInspection {
+    const defaults = this.createEmptyWorkshopInspection();
+    const rows = (items: string[], stored?: Record<string, InspectionRow>) => Object.fromEntries(items.map(item => [item, {
+      status: stored?.[item]?.status || '',
+      notes: stored?.[item]?.notes || ''
+    }]));
+    return {
+      intake: rows([...this.intakeExteriorItems, ...this.intakeInteriorItems], inspection?.intake),
+      warningLights: Array.isArray(inspection?.warningLights) ? inspection!.warningLights : [],
+      existingDamage: inspection?.existingDamage || '',
+      safety: rows(this.safetyInspectionItems, inspection?.safety),
+      underBonnet: rows(this.underBonnetItems, inspection?.underBonnet),
+      underVehicle: rows(this.underVehicleItems, inspection?.underVehicle),
+      tyres: Object.fromEntries(this.tyrePositions.map(position => [position, {
+        status: inspection?.tyres?.[position]?.status || '',
+        tread: inspection?.tyres?.[position]?.tread || '',
+        pressure: inspection?.tyres?.[position]?.pressure || '',
+        notes: inspection?.tyres?.[position]?.notes || ''
+      }])),
+      tyreActions: Array.isArray(inspection?.tyreActions) ? inspection!.tyreActions : [],
+      brakes: Object.fromEntries(this.brakePositions.map(position => [position, {
+        status: inspection?.brakes?.[position]?.status || '',
+        pad: inspection?.brakes?.[position]?.pad || '',
+        disc: inspection?.brakes?.[position]?.disc || '',
+        notes: inspection?.brakes?.[position]?.notes || ''
+      }])),
+      recommendedWork: Array.from({ length: 4 }, (_, index) => ({
+        priority: inspection?.recommendedWork?.[index]?.priority || '',
+        repair: inspection?.recommendedWork?.[index]?.repair || '',
+        estimate: inspection?.recommendedWork?.[index]?.estimate || '',
+        decision: inspection?.recommendedWork?.[index]?.decision || ''
+      })),
+      finalQuality: Array.isArray(inspection?.finalQuality) ? inspection!.finalQuality : defaults.finalQuality
+    };
+  }
+
+  toggleInspectionChoice(values: string[], value: string): string[] {
+    return values.includes(value) ? values.filter(item => item !== value) : [...values, value];
+  }
+
+  toggleDelimitedField(field: 'preferredContact' | 'fuelLevel' | 'accessoriesReceived', value: string): void {
+    const values = (this.workshopDraft[field] || '').split(',').map(item => item.trim()).filter(Boolean);
+    this.workshopDraft[field] = this.toggleInspectionChoice(values, value).join(', ');
+  }
+
+  selectDelimitedField(field: 'fuelLevel', value: string): void {
+    this.workshopDraft[field] = value;
+  }
+
+  fieldIncludes(field: 'preferredContact' | 'fuelLevel' | 'accessoriesReceived', value: string): boolean {
+    return (this.workshopDraft[field] || '').split(',').map(item => item.trim()).includes(value);
   }
 
   private createEmptyMechanicDraft(): Omit<WorkshopMechanic, 'id'> {
