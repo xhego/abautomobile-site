@@ -3,7 +3,7 @@
   "outputDirectory": "dist/abautomobile/browser",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/).*)",
       "destination": "/index.html"
     }
   ]
