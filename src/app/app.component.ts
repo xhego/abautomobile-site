@@ -2746,7 +2746,17 @@ export class AppComponent implements OnDestroy, OnInit {
     const document = await PDFDocument.create();
     const font = await document.embedFont(StandardFonts.Helvetica);
     const boldFont = await document.embedFont(StandardFonts.HelveticaBold);
-    this.buildDynamicWorkshopPack(document, job, documentType, font, boldFont, rgb);
+    const logoImage = await this.embedPdfAssetImage(document, '/assets/img/ab-auto-logo.png');
+    const vehiclePhoto = job.attachments?.find(attachment => attachment.type === 'Vehicle photo' && attachment.srcImg);
+    let vehicleImage: any = null;
+    if (vehiclePhoto) {
+      try {
+        vehicleImage = await this.embedWorkshopAttachment(document, vehiclePhoto);
+      } catch {
+        vehicleImage = null;
+      }
+    }
+    await this.buildDynamicWorkshopPack(document, job, documentType, font, boldFont, rgb, logoImage, vehicleImage);
     const termsPages = await document.copyPages(sourceDocument, [4, 5]);
     termsPages.forEach(page => document.addPage(page));
     const firstPage = document.getPage(0);
@@ -2824,7 +2834,8 @@ export class AppComponent implements OnDestroy, OnInit {
     this.appendOverflowNotes(document, overflowNotes, font, boldFont);
     */
 
-    await this.appendPdfEvidence(document, job, font, boldFont);
+    await this.appendPdfEvidence(document, job, font, boldFont, rgb);
+    this.addPdfBrandFooters(document, logoImage, font, rgb);
     const bytes = await document.save();
     const safeReference = this.getJobReference(job).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
     const fileBytes = new Uint8Array(bytes.length);
@@ -2832,10 +2843,15 @@ export class AppComponent implements OnDestroy, OnInit {
     return new File([fileBytes.buffer], safeReference + '-' + documentType.toLowerCase().replace(' ', '-') + '.pdf', { type: 'application/pdf' });
   }
 
-  private buildDynamicWorkshopPack(document: any, job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice', font: any, boldFont: any, rgb: any): void {
+  private async buildDynamicWorkshopPack(document: any, job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice', font: any, boldFont: any, rgb: any, logoImage: any, vehicleImage: any): Promise<void> {
     const red = rgb(0.55, 0.04, 0.08);
     const dark = rgb(0.09, 0.12, 0.15);
     const pale = rgb(0.94, 0.95, 0.96);
+    const white = rgb(1, 1, 1);
+    const green = rgb(0.16, 0.58, 0.31);
+    const amber = rgb(0.96, 0.68, 0.12);
+    const urgent = rgb(0.86, 0.11, 0.14);
+    const grey = rgb(0.82, 0.84, 0.86);
     const inspection = this.normaliseWorkshopInspection(job.inspection);
     const pageSize: [number, number] = [595.28, 841.89];
     let page: any;
@@ -2846,9 +2862,14 @@ export class AppComponent implements OnDestroy, OnInit {
       currentTitle = title;
       currentSubtitle = subtitle;
       page = document.addPage(pageSize);
-      page.drawText("AB's Auto Mobile Mechanic (Pty) Ltd", { x: 330, y: 810, size: 10, font: boldFont, color: dark });
-      page.drawText(title, { x: 45, y: 777, size: 19, font: boldFont, color: dark });
-      page.drawText(continuation ? subtitle + ' (continued)' : subtitle, { x: 45, y: 757, size: 9.5, font, color: dark });
+      page.drawRectangle({ x: 45, y: 770, width: 58, height: 43, color: pale, borderColor: grey, borderWidth: .5 });
+      if (logoImage) {
+        const scale = Math.min(48 / logoImage.width, 37 / logoImage.height);
+        page.drawImage(logoImage, { x: 50 + (48 - logoImage.width * scale) / 2, y: 773 + (37 - logoImage.height * scale) / 2, width: logoImage.width * scale, height: logoImage.height * scale });
+      }
+      page.drawText("AB's Auto Mobile Mechanic (Pty) Ltd", { x: 315, y: 810, size: 10, font: boldFont, color: dark });
+      page.drawText(title, { x: 115, y: 786, size: 18, font: boldFont, color: dark });
+      page.drawText(continuation ? subtitle + ' (continued)' : subtitle, { x: 115, y: 770, size: 9.5, font, color: dark });
       page.drawLine({ start: { x: 45, y: 746 }, end: { x: 550, y: 746 }, thickness: 1.4, color: red });
       y = 724;
     };
@@ -2860,7 +2881,7 @@ export class AppComponent implements OnDestroy, OnInit {
     const section = (label: string) => {
       ensure(28);
       page.drawRectangle({ x: 45, y: y - 20, width: 505, height: 20, color: red });
-      page.drawText(label, { x: 52, y: y - 14, size: 10, font: boldFont, color: rgb(1, 1, 1) });
+      page.drawText(label, { x: 52, y: y - 14, size: 10, font: boldFont, color: white });
       y -= 26;
     };
     const paragraph = (label: string, value: string) => {
@@ -2871,6 +2892,13 @@ export class AppComponent implements OnDestroy, OnInit {
       lines.forEach(line => { page.drawText(line, { x: 52, y, size: 9, font, color: dark }); y -= 12; });
       y -= 8;
     };
+    const statusStyle = (value: string) => {
+      const statusValue = value.toUpperCase();
+      if (['OK', 'G', 'CHECKED'].includes(statusValue)) return { fill: green, text: white };
+      if (['ATTN', 'A'].includes(statusValue)) return { fill: amber, text: dark };
+      if (['URG', 'U', 'D', 'DAMAGED'].includes(statusValue)) return { fill: urgent, text: white };
+      return { fill: grey, text: dark };
+    };
     const table = (headers: string[], rows: string[][], widths: number[]) => {
       const x = 45;
       const drawRow = (cells: string[], header = false) => {
@@ -2879,8 +2907,10 @@ export class AppComponent implements OnDestroy, OnInit {
         ensure(height + (header ? 22 : 0));
         let cursor = x;
         cells.forEach((_, index) => {
-          page.drawRectangle({ x: cursor, y: y - height, width: widths[index], height, color: header ? pale : rgb(1, 1, 1), borderColor: rgb(0.72, 0.75, 0.77), borderWidth: .5 });
-          lines[index].forEach((line, lineIndex) => page.drawText(line, { x: cursor + 4, y: y - 13 - lineIndex * 10, size: header ? 8.3 : 8, font: header ? boldFont : font, color: dark }));
+          const isStatus = ['Condition', 'Status', 'Result'].includes(headers[index]);
+          const style = !header && isStatus ? statusStyle(cells[index]) : { fill: header ? pale : white, text: dark };
+          page.drawRectangle({ x: cursor, y: y - height, width: widths[index], height, color: style.fill, borderColor: rgb(0.72, 0.75, 0.77), borderWidth: .5 });
+          lines[index].forEach((line, lineIndex) => page.drawText(line, { x: cursor + 4, y: y - 13 - lineIndex * 10, size: header ? 8.3 : 8, font: header ? boldFont : font, color: style.text }));
           cursor += widths[index];
         });
         y -= height;
@@ -2893,6 +2923,39 @@ export class AppComponent implements OnDestroy, OnInit {
     };
     const status = (value: string) => value || 'N/C';
     const money = (value: number) => value ? 'R ' + Number(value).toFixed(2) : 'R 0.00';
+    const inspectionLegend = () => {
+      ensure(31);
+      const legend = [
+        ['OK - Checked and satisfactory', green, white],
+        ['ATTN - May require attention', amber, dark],
+        ['URG - Immediate attention', urgent, white],
+        ['N/C - Not checked', grey, dark]
+      ];
+      const width = 505 / legend.length;
+      legend.forEach(([label, color, textColor], index) => {
+        page.drawRectangle({ x: 45 + index * width, y: y - 22, width, height: 22, color });
+        page.drawText(label as string, { x: 50 + index * width, y: y - 14, size: 6.7, font: boldFont, color: textColor });
+      });
+      y -= 29;
+    };
+    const vehicleRecord = () => {
+      ensure(106);
+      page.drawRectangle({ x: 45, y: y - 96, width: 505, height: 96, color: pale, borderColor: rgb(0.72, 0.75, 0.77), borderWidth: .5 });
+      page.drawText('VEHICLE RECORD', { x: 56, y: y - 17, size: 9.5, font: boldFont, color: red });
+      page.drawText((job.vehicleMake || job.vehicle) + ' ' + (job.vehicleModel || ''), { x: 56, y: y - 38, size: 12, font: boldFont, color: dark });
+      page.drawText('Registration: ' + (job.registration || 'Not recorded'), { x: 56, y: y - 55, size: 8.5, font, color: dark });
+      page.drawText('Mileage: ' + (job.mileage ? job.mileage.toLocaleString('en-ZA') + ' km' : 'Not recorded'), { x: 56, y: y - 70, size: 8.5, font, color: dark });
+      if (vehicleImage) {
+        const scale = Math.min(145 / vehicleImage.width, 78 / vehicleImage.height);
+        const width = vehicleImage.width * scale;
+        const height = vehicleImage.height * scale;
+        page.drawRectangle({ x: 392, y: y - 87, width: 145, height: 78, color: white, borderColor: grey, borderWidth: .5 });
+        page.drawImage(vehicleImage, { x: 392 + (145 - width) / 2, y: y - 87 + (78 - height) / 2, width, height });
+      } else {
+        page.drawText('No vehicle photo recorded', { x: 401, y: y - 50, size: 8, font, color: dark });
+      }
+      y -= 106;
+    };
 
     startPage('CUSTOMER JOB CARD', 'Workshop job card and customer authorisation');
     section('JOB DETAILS');
@@ -2900,6 +2963,7 @@ export class AppComponent implements OnDestroy, OnInit {
       this.getJobReference(job), this.formatClientPdfDate(job.bookingDate), job.bookingTime || 'To confirm',
       job.dueDate ? this.formatClientPdfDate(job.dueDate) : 'To confirm', job.assignedMechanic || 'Not assigned'
     ]], [105, 95, 72, 125, 108]);
+    vehicleRecord();
     section('CUSTOMER AND VEHICLE DETAILS');
     table(['Customer detail', 'Value', 'Vehicle detail', 'Value'], [
       ['Customer name', job.customerName, 'Make', job.vehicleMake || job.vehicle],
@@ -2922,6 +2986,7 @@ export class AppComponent implements OnDestroy, OnInit {
     paragraph('Authorisation', 'The customer authorises the recorded inspection, diagnosis and approved repair work. Approval method: ' + (job.approvalMethod || 'Not recorded') + '.');
 
     startPage('VEHICLE INSPECTION AND QUALITY CHECKLIST', 'Vehicle intake condition and existing damage');
+    inspectionLegend();
     section('A. VEHICLE INTAKE CONDITION - EXTERIOR');
     table(['Item', 'Condition', 'Notes'], this.intakeExteriorItems.map(item => [item, status(inspection.intake[item]?.status), inspection.intake[item]?.notes || '']), [205, 80, 220]);
     section('A. VEHICLE INTAKE CONDITION - INTERIOR');
@@ -2932,6 +2997,7 @@ export class AppComponent implements OnDestroy, OnInit {
     paragraph('Damage at intake', inspection.existingDamage);
 
     startPage('DETAILED MECHANICAL AND SAFETY INSPECTION', 'Safety, under-bonnet and under-vehicle checks');
+    inspectionLegend();
     const inspectionTable = (title: string, items: string[], rows: Record<string, InspectionRow>) => {
       section(title);
       table(['Inspection item', 'Status', 'Notes / measurements'], items.map(item => [item, status(rows[item]?.status), rows[item]?.notes || '']), [245, 80, 180]);
@@ -2941,6 +3007,7 @@ export class AppComponent implements OnDestroy, OnInit {
     inspectionTable('G. UNDER-VEHICLE CHECKS', this.underVehicleItems, inspection.underVehicle);
 
     startPage('TYRES, BRAKES AND RECOMMENDATIONS', 'Measurements, recommendations and final quality control');
+    inspectionLegend();
     section('H. TYRE CONDITION AND MEASUREMENTS');
     table(['Position', 'Status', 'Tread (mm)', 'Pressure (kPa)', 'Wear / recommendation'], this.tyrePositions.map(position => {
       const row = inspection.tyres[position];
@@ -3046,7 +3113,7 @@ export class AppComponent implements OnDestroy, OnInit {
     });
   }
 
-  private async appendPdfEvidence(document: any, job: WorkshopJob, font: any, boldFont: any): Promise<void> {
+  private async appendPdfEvidence(document: any, job: WorkshopJob, font: any, boldFont: any, rgb: any): Promise<void> {
     const attachments = job.attachments || [];
     const imageAttachments = attachments.filter(attachment => attachment.mimeType.startsWith('image/') && attachment.srcImg);
     const fileAttachments = attachments.filter(attachment => !attachment.mimeType.startsWith('image/'));
@@ -3055,6 +3122,7 @@ export class AppComponent implements OnDestroy, OnInit {
     }
     let page = document.addPage([595.28, 841.89]);
     let y = 790;
+    page.drawRectangle({ x: 45, y: 800, width: 505, height: 4, color: rgb(0.55, 0.04, 0.08) });
     this.drawPdfText(page, 'JOB CARD EVIDENCE', 45, y, 500, 16, boldFont);
     y -= 27;
     this.drawPdfText(page, this.getJobReference(job) + ' | ' + job.customerName + ' | ' + job.vehicle, 45, y, 500, 9, font);
@@ -3080,6 +3148,7 @@ export class AppComponent implements OnDestroy, OnInit {
           continue;
         }
         page = document.addPage([595.28, 841.89]);
+        page.drawRectangle({ x: 45, y: 800, width: 505, height: 4, color: rgb(0.55, 0.04, 0.08) });
         this.drawPdfText(page, 'JOB CARD EVIDENCE', 45, 795, 500, 14, boldFont);
         this.drawPdfText(page, attachment.type + ': ' + attachment.fileName, 45, 773, 500, 8.5, font);
         const maxWidth = 500;
@@ -3090,11 +3159,43 @@ export class AppComponent implements OnDestroy, OnInit {
         page.drawImage(embedded, { x: (595.28 - width) / 2, y: 55, width, height });
       } catch {
         page = document.addPage([595.28, 841.89]);
+        page.drawRectangle({ x: 45, y: 800, width: 505, height: 4, color: rgb(0.55, 0.04, 0.08) });
         this.drawPdfText(page, 'JOB CARD EVIDENCE', 45, 795, 500, 14, boldFont);
         this.drawPdfText(page, attachment.type + ': ' + attachment.fileName, 45, 766, 500, 9, font);
         this.drawPdfText(page, 'This image could not be embedded. The original file remains on the secure job card.', 45, 736, 500, 9, font);
       }
     }
+  }
+
+  private async embedPdfAssetImage(document: any, url: string): Promise<any | null> {
+    try {
+      const response = await fetch(url);
+      if (!response.ok) {
+        return null;
+      }
+      const bytes = await response.arrayBuffer();
+      const contentType = response.headers.get('content-type') || '';
+      return contentType.includes('png') || url.toLowerCase().endsWith('.png')
+        ? document.embedPng(bytes)
+        : document.embedJpg(bytes);
+    } catch {
+      return null;
+    }
+  }
+
+  private addPdfBrandFooters(document: any, logoImage: any, font: any, rgb: any): void {
+    const pages = document.getPages();
+    const dark = rgb(0.09, 0.12, 0.15);
+    pages.forEach((page: any, index: number) => {
+      const { width } = page.getSize();
+      page.drawLine({ start: { x: 45, y: 31 }, end: { x: width - 45, y: 31 }, thickness: .4, color: rgb(0.78, 0.8, 0.82) });
+      if (logoImage) {
+        const scale = Math.min(18 / logoImage.width, 15 / logoImage.height);
+        page.drawImage(logoImage, { x: 45, y: 11, width: logoImage.width * scale, height: logoImage.height * scale });
+      }
+      page.drawText("AB's Auto Mobile Mechanic (Pty) Ltd", { x: 67, y: 17, size: 6.5, font, color: dark });
+      page.drawText('Page ' + (index + 1) + ' of ' + pages.length, { x: width - 88, y: 17, size: 6.5, font, color: dark });
+    });
   }
 
   private async embedWorkshopAttachment(document: any, attachment: WorkshopAttachment) {
