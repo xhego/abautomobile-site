@@ -2800,14 +2800,16 @@ export class AppComponent implements OnDestroy, OnInit {
     mark(selected(job.accessoriesReceived, 'Wheel caps'), 412, 461);
     this.drawPdfText(firstPage, job.notes || job.jobType, 36, 425, 520, 7.2, font, 5);
     this.drawPdfText(firstPage, job.qualityNotes || job.partsNotes, 36, 328, 520, 7.2, font, 5);
-    draw(amount(job.diagnosticFee), 128, 248, 110);
-    draw(amount(job.labourEstimate), 389, 248, 110);
-    draw(amount(job.partsEstimate), 128, 227, 110);
-    draw(amount(job.consumablesEstimate), 389, 227, 110);
-    draw(amount(job.vatEstimate), 128, 206, 110);
-    draw(amount(total), 389, 206, 110, 8, true);
-    draw(amount(job.depositRequired), 128, 185, 110);
-    draw(documentType === 'Invoice' ? amount(job.paid) : amount(balance), 389, 185, 110, 8, true);
+    draw(amount(job.diagnosticFee), 142, 248, 96);
+    draw(amount(job.labourEstimate), 402, 248, 96);
+    draw(amount(job.partsEstimate), 142, 227, 96);
+    draw(amount(job.consumablesEstimate), 402, 227, 96);
+    draw(amount(job.vatEstimate), 142, 206, 96);
+    draw(amount(total), 402, 206, 96, 8, true);
+    draw(amount(job.depositRequired), 142, 185, 96);
+    draw(documentType === 'Invoice' ? amount(job.paid) : amount(balance), 402, 185, 96, 8, true);
+
+    this.drawInspectionMarks(document, job, font, boldFont);
 
     await this.appendPdfEvidence(document, job, font, boldFont);
     const bytes = await document.save();
@@ -2815,6 +2817,92 @@ export class AppComponent implements OnDestroy, OnInit {
     const fileBytes = new Uint8Array(bytes.length);
     fileBytes.set(bytes);
     return new File([fileBytes.buffer], safeReference + '-' + documentType.toLowerCase().replace(' ', '-') + '.pdf', { type: 'application/pdf' });
+  }
+
+  private drawInspectionMarks(document: any, job: WorkshopJob, font: any, boldFont: any): void {
+    const inspection = this.normaliseWorkshopInspection(job.inspection);
+    const mark = (page: any, active: boolean, x: number, y: number) => {
+      if (active) {
+        page.drawText('X', { x, y, size: 6.2, font: boldFont });
+      }
+    };
+    const value = (page: any, text: string, x: number, y: number, width: number, size = 6.4) => this.drawPdfText(page, text, x, y, width, size, font);
+    const pageTwo = document.getPage(1);
+    value(pageTwo, this.getJobReference(job), 70, 740, 90);
+    value(pageTwo, job.customerName, 212, 740, 85);
+    value(pageTwo, job.vehicle, 350, 740, 110);
+    value(pageTwo, job.registration, 477, 740, 70);
+    value(pageTwo, job.mileage ? job.mileage.toLocaleString('en-ZA') : '', 70, 710, 90);
+    value(pageTwo, job.bookingDate ? this.formatClientPdfDate(job.bookingDate) : '', 212, 710, 85);
+    value(pageTwo, job.assignedMechanic, 350, 710, 195);
+    this.intakeExteriorItems.forEach((item, index) => {
+      const status = inspection.intake[item]?.status;
+      const y = 639 - index * 17.1;
+      mark(pageTwo, status === 'G', 132, y);
+      mark(pageTwo, status === 'D', 156, y);
+      mark(pageTwo, status === 'N/C', 187, y);
+      value(pageTwo, inspection.intake[item]?.notes || '', 207, y, 75, 6);
+    });
+    this.intakeInteriorItems.forEach((item, index) => {
+      const status = inspection.intake[item]?.status;
+      const y = 625 - index * 17.1;
+      mark(pageTwo, status === 'G', 394, y);
+      mark(pageTwo, status === 'D', 418, y);
+      mark(pageTwo, status === 'N/C', 449, y);
+      value(pageTwo, inspection.intake[item]?.notes || '', 470, y, 75, 6);
+    });
+    const warningLightXs = [38, 99, 129, 166, 221, 260, 319, 354, 404];
+    this.dashboardWarningItems.forEach((item, index) => mark(pageTwo, inspection.warningLights.includes(item), warningLightXs[index], 367));
+    this.drawPdfText(pageTwo, inspection.existingDamage, 36, 337, 520, 7, font, 5);
+
+    const pageThree = document.getPage(2);
+    const drawDetailedRows = (items: string[], rows: Record<string, InspectionRow>, startY: number) => items.forEach((item, index) => {
+      const row = rows[item];
+      const y = startY - index * 17.1;
+      mark(pageThree, row?.status === 'OK', 193, y);
+      mark(pageThree, row?.status === 'ATTN', 225, y);
+      mark(pageThree, row?.status === 'URG', 258, y);
+      mark(pageThree, row?.status === 'N/C', 291, y);
+      value(pageThree, row?.notes || '', 309, y, 230, 6);
+    });
+    drawDetailedRows(this.safetyInspectionItems, inspection.safety, 613);
+    drawDetailedRows(this.underBonnetItems, inspection.underBonnet, 421);
+    drawDetailedRows(this.underVehicleItems, inspection.underVehicle, 179);
+
+    const pageFour = document.getPage(3);
+    this.tyrePositions.forEach((position, index) => {
+      const row = inspection.tyres[position];
+      const y = 600 - index * 20.2;
+      mark(pageFour, row?.status === 'OK', 88, y);
+      mark(pageFour, row?.status === 'A', 108, y);
+      mark(pageFour, row?.status === 'U', 128, y);
+      mark(pageFour, row?.status === 'N/C', 144, y);
+      value(pageFour, row?.tread || '', 199, y, 70);
+      value(pageFour, row?.pressure || '', 288, y, 55);
+      value(pageFour, row?.notes || '', 359, y, 180);
+    });
+    this.brakePositions.forEach((position, index) => {
+      const row = inspection.brakes[position];
+      const y = 431 - index * 20.2;
+      mark(pageFour, row?.status === 'OK', 88, y);
+      mark(pageFour, row?.status === 'A', 108, y);
+      mark(pageFour, row?.status === 'U', 128, y);
+      mark(pageFour, row?.status === 'N/C', 144, y);
+      value(pageFour, row?.pad || '', 199, y, 55);
+      value(pageFour, row?.disc || '', 261, y, 110);
+      value(pageFour, row?.notes || '', 386, y, 150);
+    });
+    inspection.recommendedWork.forEach((row, index) => {
+      const y = 329 - index * 20.2;
+      value(pageFour, row.priority, 21, y, 95, 6);
+      value(pageFour, row.repair, 127, y, 205, 6);
+      value(pageFour, row.estimate, 347, y, 70, 6);
+      value(pageFour, row.decision, 427, y, 110, 6);
+    });
+    this.finalQualityItems.forEach((item, index) => {
+      const row = Math.floor(index / 2);
+      mark(pageFour, inspection.finalQuality.includes(item), index % 2 ? 300 : 38, 240 - row * 16.8);
+    });
   }
 
   private async appendPdfEvidence(document: any, job: WorkshopJob, font: any, boldFont: any): Promise<void> {
