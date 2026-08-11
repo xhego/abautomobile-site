@@ -1709,6 +1709,28 @@ footer a {
   margin-top: 18px;
 }
 
+.booking-intake-section {
+  border-top: 1px solid #dce3e7;
+  display: grid;
+  gap: 14px;
+  padding-top: 17px;
+}
+
+.booking-intake-section header {
+  align-items: baseline;
+  display: flex;
+  gap: 10px;
+}
+
+.booking-intake-section .eyebrow { margin: 0; }
+.booking-intake-section h3 { color: #172029; font-size: 17px; margin: 0; }
+.booking-intake-grid { display: grid; gap: 14px; grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.booking-intake-grid .wide-field { grid-column: 1 / -1; }
+.booking-intake-grid .estimate-total input { background: #fff8e8; border-color: #e3b34c; font-weight: 800; }
+.booking-intake-optional { border: 1px solid #dce3e7; border-radius: 6px; padding: 0 16px 16px; }
+.booking-intake-optional summary { color: #26333d; cursor: pointer; font-size: 13px; font-weight: 800; padding: 15px 0; }
+.booking-intake-optional[open] summary { border-bottom: 1px solid #e3e8eb; margin-bottom: 15px; }
+
 .job-card-flow,
 .job-evidence-editor,
 .job-evidence {
@@ -2216,6 +2238,17 @@ footer a {
 .selected-payment-proof .attachment-remove { margin-left: auto; }
 .payment-record-form .workshop-form-actions { grid-column: 1 / -1; }
 
+.client-pdf-modal { max-width: 1040px; }
+.client-pdf-summary { background: #f5f7f8; border: 1px solid #d8e0e4; display: grid; gap: 3px; margin-bottom: 14px; padding: 12px 14px; }
+.client-pdf-summary span { color: #a76b00; font-size: 11px; font-weight: 800; text-transform: uppercase; }
+.client-pdf-summary strong { color: #172029; font-size: 15px; }
+.client-pdf-summary small, .client-pdf-help { color: #65737d; font-size: 12px; line-height: 1.45; }
+.client-pdf-frame { border: 1px solid #cfd8dd; display: block; height: min(68vh, 700px); width: 100%; }
+.client-pdf-actions { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 14px; }
+.client-pdf-actions button, .client-pdf-actions a { align-items: center; background: #172029; border: 0; border-radius: 5px; color: #fff; cursor: pointer; display: inline-flex; font: inherit; font-weight: 800; gap: 8px; justify-content: center; padding: 10px 12px; text-decoration: none; }
+.client-pdf-actions .document-secondary-action { background: #fff; border: 1px solid #aeb9c1; color: #26333d; }
+.client-pdf-help { margin: 12px 0 0; }
+
 .queued-evidence { display: flex; flex-wrap: wrap; gap: 8px; }
 .queued-evidence span { background: #edf2f4; border-radius: 5px; color: #34424e; font-size: 12px; font-weight: 800; padding: 7px 9px; }
 .queued-evidence i { margin-right: 6px; }
@@ -2568,6 +2601,13 @@ footer a {
   .payment-summary-grid { grid-template-columns: 1fr; }
   .payment-record-summary,
   .payment-record-form { grid-template-columns: 1fr; }
+
+  .booking-intake-grid { grid-template-columns: 1fr; }
+  .booking-intake-section header { align-items: flex-start; flex-direction: column; gap: 3px; }
+  .booking-intake-optional { padding-left: 12px; padding-right: 12px; }
+  .client-pdf-frame { height: 56vh; }
+  .client-pdf-actions { display: grid; grid-template-columns: 1fr 1fr; }
+  .client-pdf-actions button, .client-pdf-actions a { min-height: 44px; padding: 9px; text-align: center; }
 
   .booking-modal-backdrop { padding: 0; }
 

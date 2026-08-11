@@ -38,6 +38,11 @@
                 "output": "/assets/img/"
               },
               {
+                "glob": "AB_Auto_Mobile_Mechanic_Workshop_Pack_v1.pdf",
+                "input": "src/assets/documents",
+                "output": "/assets/documents/"
+              },
+              {
                 "glob": "dignostics.jpg",
                 "input": "src/assets/img/ABAuto",
                 "output": "/assets/img/ABAuto/"

@@ -1,4 +1,5 @@
 import { ChangeDetectorRef, Component, HostListener, OnDestroy, OnInit } from '@angular/core';
+import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { OperatingHoursEntry, StoredGalleryImage, SupabaseSiteService } from './supabase-site.service';
 
 interface GalleryImage {
@@ -32,9 +33,22 @@ interface WorkshopJob {
   id: string;
   customerName: string;
   customerContact: string;
+  customerEmail: string;
+  customerAddress: string;
+  customerId: string;
+  alternateContact: string;
+  preferredContact: string;
   vehicle: string;
+  vehicleMake: string;
+  vehicleModel: string;
+  vehicleYear: string;
   registration: string;
   vin: string;
+  engineNumber: string;
+  vehicleColour: string;
+  fuelLevel: string;
+  keysReceived: string;
+  accessoriesReceived: string;
   bookingType: string;
   mobileLocation: string;
   assignedMechanic: string;
@@ -44,6 +58,12 @@ interface WorkshopJob {
   customerApproval: string;
   approvalMethod: string;
   estimate: number;
+  diagnosticFee: number;
+  labourEstimate: number;
+  partsEstimate: number;
+  consumablesEstimate: number;
+  vatEstimate: number;
+  depositRequired: number;
   paid: number;
   paymentDate: string;
   bookingDate: string;
@@ -327,6 +347,13 @@ export class AppComponent implements OnDestroy, OnInit {
   readonly bookingsPerPage = 10;
   showBookingModal = false;
   showPaymentModal = false;
+  showClientPdfPreview = false;
+  isPreparingClientPdf = false;
+  clientPdfPreviewUrl: SafeResourceUrl | null = null;
+  private clientPdfObjectUrl = '';
+  clientPdfPreviewFile: File | null = null;
+  clientPdfPreviewJob: WorkshopJob | null = null;
+  clientPdfPreviewType: 'Job Card' | 'Estimate' | 'Invoice' = 'Job Card';
   paymentJobId: string | null = null;
   paymentDraft = {
     amount: 0,
@@ -347,7 +374,8 @@ export class AppComponent implements OnDestroy, OnInit {
 
   constructor(
     private readonly siteService: SupabaseSiteService,
-    private readonly changeDetector: ChangeDetectorRef
+    private readonly changeDetector: ChangeDetectorRef,
+    private readonly sanitizer: DomSanitizer
   ) {}
 
   ngOnInit(): void {
@@ -367,6 +395,7 @@ export class AppComponent implements OnDestroy, OnInit {
   ngOnDestroy(): void {
     this.clearAdminInactivityTimer();
     this.clearSignInSlowTimer();
+    this.clearClientPdfPreview();
   }
 
   get mapUrl(): string {
@@ -1234,6 +1263,24 @@ export class AppComponent implements OnDestroy, OnInit {
     }
   }
 
+  syncVehicleDescription(): void {
+    this.workshopDraft.vehicle = [
+      this.workshopDraft.vehicleMake,
+      this.workshopDraft.vehicleModel,
+      this.workshopDraft.vehicleYear
+    ].filter(Boolean).join(' ');
+  }
+
+  refreshEstimateTotal(): void {
+    this.workshopDraft.estimate = [
+      this.workshopDraft.diagnosticFee,
+      this.workshopDraft.labourEstimate,
+      this.workshopDraft.partsEstimate,
+      this.workshopDraft.consumablesEstimate,
+      this.workshopDraft.vatEstimate
+    ].reduce((total, value) => total + (Number(value) || 0), 0);
+  }
+
   saveMechanic(): void {
     this.markAdminActivity();
     const name = this.mechanicDraft.name.trim();
@@ -1307,53 +1354,91 @@ export class AppComponent implements OnDestroy, OnInit {
   }
 
   async openPrintableDocument(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): Promise<void> {
+    await this.openClientPdfPreview(job, documentType);
+  }
+
+  async openClientPdfPreview(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): Promise<void> {
     this.markAdminActivity();
     if (documentType === 'Invoice' && job.paid < job.estimate) {
       this.uploadError = 'Invoice can only be created after full payment. Send the estimate first.';
       return;
     }
-
-    const documentWindow = window.open('', '_blank');
-    if (!documentWindow) {
-      this.uploadError = 'Allow pop-ups to open the printable document.';
-      return;
-    }
-
+    this.isPreparingClientPdf = true;
+    this.uploadError = '';
     try {
       await this.refreshWorkshopAttachmentUrls();
-    } catch {
-      // A previously loaded image can still be used if refreshing its secure URL is unavailable.
+      const printableJob = this.workshopJobs.find(item => item.id === job.id)
+        || this.archivedWorkshopJobs.find(item => item.id === job.id)
+        || job;
+      const file = await this.createClientPdf(printableJob, documentType);
+      this.clearClientPdfPreview();
+      this.clientPdfPreviewFile = file;
+      this.clientPdfPreviewJob = printableJob;
+      this.clientPdfPreviewType = documentType;
+      this.clientPdfObjectUrl = URL.createObjectURL(file);
+      this.clientPdfPreviewUrl = this.sanitizer.bypassSecurityTrustResourceUrl(this.clientPdfObjectUrl);
+      this.showClientPdfPreview = true;
+    } catch (error) {
+      console.error('Unable to prepare the client PDF.', error);
+      this.uploadError = 'The client PDF could not be prepared. Please try again.';
+    } finally {
+      this.isPreparingClientPdf = false;
+      this.renderState();
     }
-    const printableJob = this.workshopJobs.find(item => item.id === job.id) || job;
+  }
 
-    let printStarted = false;
-    const printWhenReady = () => {
-      if (printStarted) {
+  closeClientPdfPreview(): void {
+    this.clearClientPdfPreview();
+    this.showClientPdfPreview = false;
+  }
+
+  downloadClientPdf(): void {
+    if (!this.clientPdfPreviewFile) {
+      return;
+    }
+    const url = URL.createObjectURL(this.clientPdfPreviewFile);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = this.clientPdfPreviewFile.name;
+    link.click();
+    URL.revokeObjectURL(url);
+    this.markAdminActivity();
+  }
+
+  async shareClientPdf(): Promise<void> {
+    const file = this.clientPdfPreviewFile;
+    const job = this.clientPdfPreviewJob;
+    if (!file || !job) {
+      return;
+    }
+    const navigatorWithShare = navigator as Navigator & { canShare?: (data: ShareData) => boolean };
+    if (navigatorWithShare.share && (!navigatorWithShare.canShare || navigatorWithShare.canShare({ files: [file] }))) {
+      try {
+        await navigatorWithShare.share({
+          title: "AB's Auto Mobile Mechanic (Pty) Ltd " + this.clientPdfPreviewType,
+          text: this.buildShareMessage(job, this.clientPdfPreviewType),
+          files: [file]
+        });
+        this.markAdminActivity();
         return;
+      } catch (error) {
+        if ((error as DOMException).name === 'AbortError') {
+          return;
+        }
       }
+    }
+    this.downloadClientPdf();
+    this.uploadError = 'PDF downloaded. Attach it to the WhatsApp or email message before sending.';
+  }
 
-      printStarted = true;
-      const images = Array.from(documentWindow.document.images);
-      const imageLoads = images.map(image => image.complete
-        ? Promise.resolve()
-        : new Promise<void>(resolve => {
-            image.addEventListener('load', () => resolve(), { once: true });
-            image.addEventListener('error', () => resolve(), { once: true });
-          }));
+  getClientPdfEmailHref(): string {
+    const job = this.clientPdfPreviewJob;
+    return job ? this.getDocumentEmailHref(job, this.clientPdfPreviewType) : '#';
+  }
 
-      Promise.race([
-        Promise.all(imageLoads),
-        new Promise<void>(resolve => documentWindow.setTimeout(resolve, 4000))
-      ]).finally(() => {
-        documentWindow.focus();
-        documentWindow.setTimeout(() => documentWindow.print(), 100);
-      });
-    };
-
-    documentWindow.addEventListener('load', printWhenReady, { once: true });
-    documentWindow.document.write(this.buildPrintableDocument(printableJob, documentType));
-    documentWindow.document.close();
-    documentWindow.setTimeout(printWhenReady, 500);
+  getClientPdfWhatsappHref(): string {
+    const job = this.clientPdfPreviewJob;
+    return job ? this.getDocumentWhatsappHref(job, this.clientPdfPreviewType) : '#';
   }
 
   getDocumentEmailHref(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): string {
@@ -1750,7 +1835,7 @@ export class AppComponent implements OnDestroy, OnInit {
   async saveWorkshopJob(): Promise<void> {
     this.markAdminActivity();
     const customerName = this.workshopDraft.customerName.trim();
-    const vehicle = this.workshopDraft.vehicle.trim();
+    const vehicle = (this.workshopDraft.vehicle || [this.workshopDraft.vehicleMake, this.workshopDraft.vehicleModel, this.workshopDraft.vehicleYear].filter(Boolean).join(' ')).trim();
 
     if (!customerName || !vehicle) {
       this.uploadError = 'Add at least the customer name and vehicle before saving the job.';
@@ -1766,9 +1851,22 @@ export class AppComponent implements OnDestroy, OnInit {
       id: this.editingWorkshopJobId || crypto.randomUUID(),
       customerName,
       customerContact: this.workshopDraft.customerContact.trim(),
+      customerEmail: this.workshopDraft.customerEmail.trim(),
+      customerAddress: this.workshopDraft.customerAddress.trim(),
+      customerId: this.workshopDraft.customerId.trim(),
+      alternateContact: this.workshopDraft.alternateContact.trim(),
+      preferredContact: this.workshopDraft.preferredContact,
       vehicle,
+      vehicleMake: this.workshopDraft.vehicleMake.trim(),
+      vehicleModel: this.workshopDraft.vehicleModel.trim(),
+      vehicleYear: this.workshopDraft.vehicleYear.trim(),
       registration: this.workshopDraft.registration.trim(),
       vin: this.workshopDraft.vin.trim().toUpperCase(),
+      engineNumber: this.workshopDraft.engineNumber.trim(),
+      vehicleColour: this.workshopDraft.vehicleColour.trim(),
+      fuelLevel: this.workshopDraft.fuelLevel,
+      keysReceived: this.workshopDraft.keysReceived.trim(),
+      accessoriesReceived: this.workshopDraft.accessoriesReceived.trim(),
       bookingType: this.workshopDraft.bookingType || this.bookingTypes[0],
       mobileLocation: this.workshopDraft.bookingType === 'Mobile booking' ? this.workshopDraft.mobileLocation.trim() : '',
       assignedMechanic: this.workshopDraft.assignedMechanic,
@@ -1778,6 +1876,12 @@ export class AppComponent implements OnDestroy, OnInit {
       customerApproval: this.workshopDraft.customerApproval || this.customerApprovalStatuses[0],
       approvalMethod: this.workshopDraft.approvalMethod,
       estimate: Number(this.workshopDraft.estimate) || 0,
+      diagnosticFee: Number(this.workshopDraft.diagnosticFee) || 0,
+      labourEstimate: Number(this.workshopDraft.labourEstimate) || 0,
+      partsEstimate: Number(this.workshopDraft.partsEstimate) || 0,
+      consumablesEstimate: Number(this.workshopDraft.consumablesEstimate) || 0,
+      vatEstimate: Number(this.workshopDraft.vatEstimate) || 0,
+      depositRequired: Number(this.workshopDraft.depositRequired) || 0,
       paid: Number(this.workshopDraft.paid) || 0,
       paymentDate: this.workshopDraft.paymentDate || '',
       bookingDate: this.workshopDraft.bookingDate || this.toDateInputValue(new Date()),
@@ -1816,9 +1920,22 @@ export class AppComponent implements OnDestroy, OnInit {
     this.workshopDraft = {
       customerName: job.customerName,
       customerContact: job.customerContact,
+      customerEmail: job.customerEmail || '',
+      customerAddress: job.customerAddress || '',
+      customerId: job.customerId || '',
+      alternateContact: job.alternateContact || '',
+      preferredContact: job.preferredContact || 'WhatsApp',
       vehicle: job.vehicle,
+      vehicleMake: job.vehicleMake || '',
+      vehicleModel: job.vehicleModel || '',
+      vehicleYear: job.vehicleYear || '',
       registration: job.registration,
       vin: job.vin,
+      engineNumber: job.engineNumber || '',
+      vehicleColour: job.vehicleColour || '',
+      fuelLevel: job.fuelLevel || '',
+      keysReceived: job.keysReceived || '',
+      accessoriesReceived: job.accessoriesReceived || '',
       bookingType: job.bookingType,
       mobileLocation: job.mobileLocation,
       assignedMechanic: job.assignedMechanic,
@@ -1828,6 +1945,12 @@ export class AppComponent implements OnDestroy, OnInit {
       customerApproval: job.customerApproval,
       approvalMethod: job.approvalMethod,
       estimate: job.estimate,
+      diagnosticFee: job.diagnosticFee || 0,
+      labourEstimate: job.labourEstimate || 0,
+      partsEstimate: job.partsEstimate || 0,
+      consumablesEstimate: job.consumablesEstimate || 0,
+      vatEstimate: job.vatEstimate || 0,
+      depositRequired: job.depositRequired || 0,
       paid: job.paid,
       paymentDate: job.paymentDate || '',
       bookingDate: job.bookingDate,
@@ -2160,6 +2283,25 @@ export class AppComponent implements OnDestroy, OnInit {
             ...job,
             estimate: Number(job.estimate) || 0,
             paid: Number(job.paid) || 0,
+            customerEmail: job.customerEmail || '',
+            customerAddress: job.customerAddress || '',
+            customerId: job.customerId || '',
+            alternateContact: job.alternateContact || '',
+            preferredContact: job.preferredContact || 'WhatsApp',
+            vehicleMake: job.vehicleMake || '',
+            vehicleModel: job.vehicleModel || '',
+            vehicleYear: job.vehicleYear || '',
+            engineNumber: job.engineNumber || '',
+            vehicleColour: job.vehicleColour || '',
+            fuelLevel: job.fuelLevel || '',
+            keysReceived: job.keysReceived || '',
+            accessoriesReceived: job.accessoriesReceived || '',
+            diagnosticFee: Number(job.diagnosticFee) || 0,
+            labourEstimate: Number(job.labourEstimate) || 0,
+            partsEstimate: Number(job.partsEstimate) || 0,
+            consumablesEstimate: Number(job.consumablesEstimate) || 0,
+            vatEstimate: Number(job.vatEstimate) || 0,
+            depositRequired: Number(job.depositRequired) || 0,
             paymentDate: job.paymentDate || '',
             bookingDate: job.bookingDate || job.dueDate || (job.createdAt || this.toDateInputValue(new Date())).slice(0, 10),
             bookingTime: job.bookingTime || '',
@@ -2207,6 +2349,25 @@ export class AppComponent implements OnDestroy, OnInit {
             ...job,
             estimate: Number(job.estimate) || 0,
             paid: Number(job.paid) || 0,
+            customerEmail: job.customerEmail || '',
+            customerAddress: job.customerAddress || '',
+            customerId: job.customerId || '',
+            alternateContact: job.alternateContact || '',
+            preferredContact: job.preferredContact || 'WhatsApp',
+            vehicleMake: job.vehicleMake || '',
+            vehicleModel: job.vehicleModel || '',
+            vehicleYear: job.vehicleYear || '',
+            engineNumber: job.engineNumber || '',
+            vehicleColour: job.vehicleColour || '',
+            fuelLevel: job.fuelLevel || '',
+            keysReceived: job.keysReceived || '',
+            accessoriesReceived: job.accessoriesReceived || '',
+            diagnosticFee: Number(job.diagnosticFee) || 0,
+            labourEstimate: Number(job.labourEstimate) || 0,
+            partsEstimate: Number(job.partsEstimate) || 0,
+            consumablesEstimate: Number(job.consumablesEstimate) || 0,
+            vatEstimate: Number(job.vatEstimate) || 0,
+            depositRequired: Number(job.depositRequired) || 0,
             paymentDate: job.paymentDate || '',
             bookingDate: job.bookingDate || (job.createdAt || this.toDateInputValue(new Date())).slice(0, 10),
             bookingTime: job.bookingTime || '',
@@ -2275,9 +2436,22 @@ export class AppComponent implements OnDestroy, OnInit {
     return {
       customerName: '',
       customerContact: '',
+      customerEmail: '',
+      customerAddress: '',
+      customerId: '',
+      alternateContact: '',
+      preferredContact: 'WhatsApp',
       vehicle: '',
+      vehicleMake: '',
+      vehicleModel: '',
+      vehicleYear: '',
       registration: '',
       vin: '',
+      engineNumber: '',
+      vehicleColour: '',
+      fuelLevel: '',
+      keysReceived: '',
+      accessoriesReceived: '',
       bookingType: 'Workshop booking',
       mobileLocation: '',
       assignedMechanic: '',
@@ -2287,6 +2461,12 @@ export class AppComponent implements OnDestroy, OnInit {
       customerApproval: 'Not requested',
       approvalMethod: '',
       estimate: 0,
+      diagnosticFee: 0,
+      labourEstimate: 0,
+      partsEstimate: 0,
+      consumablesEstimate: 0,
+      vatEstimate: 0,
+      depositRequired: 0,
       paid: 0,
       paymentDate: '',
       bookingDate: this.toDateInputValue(new Date()),
@@ -2414,15 +2594,190 @@ export class AppComponent implements OnDestroy, OnInit {
       : 'Estimated amount: R' + job.estimate;
     return [
       "AB's Auto Mobile Mechanic (Pty) Ltd",
-      documentType + ' for ' + job.vehicle,
-      'Customer: ' + job.customerName,
-      'Registration: ' + (job.registration || 'Not captured'),
-      'VIN: ' + (job.vin || 'Not captured'),
+      documentType + ': ' + this.getJobReference(job),
+      job.vehicle + (job.registration ? ' | ' + job.registration : ''),
       'Status: ' + job.status,
-      'Job card evidence: ' + job.attachments.length + ' file' + (job.attachments.length === 1 ? '' : 's'),
       amountLine,
-      'Please reply on WhatsApp if anything needs to be updated.'
+      'The PDF job pack and evidence are attached.'
     ].join('\n');
+  }
+
+  private async createClientPdf(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): Promise<File> {
+    const { PDFDocument, StandardFonts } = await import('pdf-lib');
+    const response = await fetch('/assets/documents/AB_Auto_Mobile_Mechanic_Workshop_Pack_v1.pdf');
+    if (!response.ok) {
+      throw new Error('Workshop pack template was unavailable.');
+    }
+    const document = await PDFDocument.load(await response.arrayBuffer());
+    const font = await document.embedFont(StandardFonts.Helvetica);
+    const boldFont = await document.embedFont(StandardFonts.HelveticaBold);
+    const firstPage = document.getPage(0);
+    const text = (value: unknown): string => String(value || '').trim();
+    const date = job.bookingDate ? this.formatClientPdfDate(job.bookingDate) : '';
+    const total = Math.max(Number(job.estimate) || 0, 0);
+    const balance = Math.max(total - (Number(job.paid) || 0), 0);
+    const amount = (value: number): string => value ? 'R ' + Number(value).toFixed(2) : '';
+    const draw = (value: unknown, x: number, y: number, width = 150, size = 7.2, bold = false) =>
+      this.drawPdfText(firstPage, text(value), x, y, width, size, bold ? boldFont : font);
+
+    // Page one remains the supplied form. Only the blank capture areas receive live job data.
+    draw(this.getJobReference(job), 141, 771, 96, 7, true);
+    draw(date, 359, 771, 68);
+    draw(job.bookingTime, 469, 771, 54);
+    draw(job.dueDate ? this.formatClientPdfDate(job.dueDate) : '', 142, 747, 96);
+    draw(job.assignedMechanic, 359, 747, 82);
+    draw(job.assignedMechanic, 471, 747, 54);
+    draw(job.customerName, 141, 698, 112);
+    draw(job.customerId, 141, 674, 112);
+    draw(job.customerContact, 141, 650, 112);
+    draw(job.alternateContact, 141, 626, 112);
+    draw(job.customerEmail, 141, 602, 112);
+    draw(job.customerAddress, 141, 578, 112);
+    draw(job.preferredContact, 194, 554, 60);
+    draw(job.vehicleMake || job.vehicle, 383, 698, 130);
+    draw(job.vehicleModel, 383, 674, 130);
+    draw(job.vehicleYear, 383, 650, 130);
+    draw(job.registration, 383, 626, 130);
+    draw(job.vin, 383, 602, 130, 6.3);
+    draw(job.engineNumber, 383, 578, 130);
+    draw(job.mileage ? job.mileage.toLocaleString('en-ZA') + ' km' : '', 383, 554, 130);
+    draw(job.vehicleColour, 383, 530, 130);
+    draw(job.fuelLevel, 383, 506, 130);
+    draw(job.keysReceived, 383, 482, 130);
+    draw(job.accessoriesReceived, 142, 430, 375, 7);
+    this.drawPdfText(firstPage, job.notes || job.jobType, 61, 395, 470, 7.2, font, 5);
+    this.drawPdfText(firstPage, job.qualityNotes || job.partsNotes, 61, 315, 470, 7.2, font, 5);
+    draw(amount(job.diagnosticFee), 360, 249, 115);
+    draw(amount(job.labourEstimate), 360, 233, 115);
+    draw(amount(job.partsEstimate), 360, 217, 115);
+    draw(amount(job.consumablesEstimate), 360, 201, 115);
+    draw(amount(job.vatEstimate), 360, 185, 115);
+    draw(amount(total), 360, 169, 115, 8, true);
+    draw(amount(job.depositRequired), 360, 153, 115);
+    draw(documentType === 'Invoice' ? amount(job.paid) : amount(balance), 360, 137, 115, 8, true);
+
+    await this.appendPdfEvidence(document, job, font, boldFont);
+    const bytes = await document.save();
+    const safeReference = this.getJobReference(job).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
+    const fileBytes = new Uint8Array(bytes.length);
+    fileBytes.set(bytes);
+    return new File([fileBytes.buffer], safeReference + '-' + documentType.toLowerCase().replace(' ', '-') + '.pdf', { type: 'application/pdf' });
+  }
+
+  private async appendPdfEvidence(document: any, job: WorkshopJob, font: any, boldFont: any): Promise<void> {
+    const attachments = job.attachments || [];
+    const imageAttachments = attachments.filter(attachment => attachment.mimeType.startsWith('image/') && attachment.srcImg);
+    const fileAttachments = attachments.filter(attachment => !attachment.mimeType.startsWith('image/'));
+    if (!attachments.length) {
+      return;
+    }
+    let page = document.addPage([595.28, 841.89]);
+    let y = 790;
+    this.drawPdfText(page, 'JOB CARD EVIDENCE', 45, y, 500, 16, boldFont);
+    y -= 27;
+    this.drawPdfText(page, this.getJobReference(job) + ' | ' + job.customerName + ' | ' + job.vehicle, 45, y, 500, 9, font);
+    y -= 30;
+    this.drawPdfText(page, 'Vehicle photos, supplier parts slips and payment records attached to this job.', 45, y, 500, 8.5, font);
+    y -= 28;
+    if (fileAttachments.length) {
+      this.drawPdfText(page, 'Files recorded', 45, y, 500, 10, boldFont);
+      y -= 17;
+      fileAttachments.forEach(attachment => {
+        this.drawPdfText(page, attachment.type + ': ' + attachment.fileName, 55, y, 475, 8, font);
+        y -= 15;
+      });
+    }
+    if (!imageAttachments.length) {
+      this.drawPdfText(page, 'No image evidence was attached to this job card.', 45, y - 8, 500, 9, font);
+      return;
+    }
+    for (const attachment of imageAttachments) {
+      try {
+        const embedded = await this.embedWorkshopAttachment(document, attachment);
+        if (!embedded) {
+          continue;
+        }
+        page = document.addPage([595.28, 841.89]);
+        this.drawPdfText(page, 'JOB CARD EVIDENCE', 45, 795, 500, 14, boldFont);
+        this.drawPdfText(page, attachment.type + ': ' + attachment.fileName, 45, 773, 500, 8.5, font);
+        const maxWidth = 500;
+        const maxHeight = 680;
+        const scale = Math.min(maxWidth / embedded.width, maxHeight / embedded.height, 1);
+        const width = embedded.width * scale;
+        const height = embedded.height * scale;
+        page.drawImage(embedded, { x: (595.28 - width) / 2, y: 55, width, height });
+      } catch {
+        page = document.addPage([595.28, 841.89]);
+        this.drawPdfText(page, 'JOB CARD EVIDENCE', 45, 795, 500, 14, boldFont);
+        this.drawPdfText(page, attachment.type + ': ' + attachment.fileName, 45, 766, 500, 9, font);
+        this.drawPdfText(page, 'This image could not be embedded. The original file remains on the secure job card.', 45, 736, 500, 9, font);
+      }
+    }
+  }
+
+  private async embedWorkshopAttachment(document: any, attachment: WorkshopAttachment) {
+    const response = await fetch(attachment.srcImg);
+    if (!response.ok) {
+      return null;
+    }
+    const bytes = await response.arrayBuffer();
+    if (attachment.mimeType === 'image/png') {
+      return document.embedPng(bytes);
+    }
+    if (attachment.mimeType === 'image/jpeg' || attachment.mimeType === 'image/jpg') {
+      return document.embedJpg(bytes);
+    }
+    const converted = await this.convertImageToPng(new Blob([bytes], { type: attachment.mimeType }));
+    return document.embedPng(converted);
+  }
+
+  private async convertImageToPng(blob: Blob): Promise<ArrayBuffer> {
+    const source = URL.createObjectURL(blob);
+    try {
+      const image = new Image();
+      image.src = source;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = image.naturalWidth;
+      canvas.height = image.naturalHeight;
+      canvas.getContext('2d')?.drawImage(image, 0, 0);
+      return await (await fetch(canvas.toDataURL('image/png'))).arrayBuffer();
+    } finally {
+      URL.revokeObjectURL(source);
+    }
+  }
+
+  private drawPdfText(page: any, value: string, x: number, y: number, width: number, size: number, font: any, maxLines = 1): void {
+    const words = value.split(/\s+/).filter(Boolean);
+    const lines: string[] = [];
+    let line = '';
+    for (const word of words) {
+      const candidate = line ? line + ' ' + word : word;
+      if (font.widthOfTextAtSize(candidate, size) > width && line) {
+        lines.push(line);
+        line = word;
+      } else {
+        line = candidate;
+      }
+    }
+    if (line) {
+      lines.push(line);
+    }
+    lines.slice(0, maxLines).forEach((item, index) => page.drawText(item, { x, y: y - index * (size + 2), size, font }));
+  }
+
+  private formatClientPdfDate(value: string): string {
+    return this.calendarDateFromIso(value).toLocaleDateString('en-ZA', { day: '2-digit', month: '2-digit', year: 'numeric' });
+  }
+
+  private clearClientPdfPreview(): void {
+    if (this.clientPdfObjectUrl) {
+      URL.revokeObjectURL(this.clientPdfObjectUrl);
+    }
+    this.clientPdfObjectUrl = '';
+    this.clientPdfPreviewUrl = null;
+    this.clientPdfPreviewFile = null;
+    this.clientPdfPreviewJob = null;
   }
 
   private buildPrintableDocument(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): string {

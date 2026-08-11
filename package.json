@@ -19,6 +19,7 @@
     "@angular/platform-browser-dynamic": "^22.0.5",
     "@angular/router": "^22.0.5",
     "@supabase/supabase-js": "^2.110.8",
+    "pdf-lib": "^1.17.1",
     "rxjs": "^7.8.2",
     "tslib": "^2.8.1",
     "zone.js": "~0.16.2"

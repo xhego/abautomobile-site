@@ -354,7 +354,7 @@
                     <div class="board-job-expected"><i class="fa fa-flag-checkered"></i><span>Expected end</span><strong>{{ job.dueDate ? (job.dueDate | date:'d MMM') : 'To confirm' }}</strong></div>
                     <button type="button" class="ready-client-badge" *ngIf="isReadyForCollection(job)" (click)="toggleReadyClientActions(job, $event)"><i class="fa fa-bell"></i> Client actions <i class="fa fa-chevron-down"></i></button>
                     <button type="button" class="archive-board-job" *ngIf="isCompletedJob(job)" (click)="archiveWorkshopJob(job, $event)"><i class="fa fa-archive"></i> Archive job</button>
-                    <div class="board-status-popover board-ready-popover" *ngIf="activeReadyClientActionsJobId === job.id" [style.top.px]="boardMenuTop" [style.left.px]="boardMenuLeft" (click)="$event.stopPropagation()"><strong>Ready for collection</strong><a [href]="getReadyNotificationWhatsappHref(job)" target="_blank" rel="noopener"><i class="fa fa-whatsapp"></i> Notify client</a><a [href]="getDocumentWhatsappHref(job, 'Estimate')" target="_blank" rel="noopener"><i class="fa fa-file-text-o"></i> Send estimate</a><button type="button" (click)="openPrintableDocument(job, 'Estimate')"><i class="fa fa-file-pdf-o"></i> Print / save estimate</button><button type="button" class="open-card-link" (click)="openBookingJobCard(job)">Open full job card</button></div>
+                    <div class="board-status-popover board-ready-popover" *ngIf="activeReadyClientActionsJobId === job.id" [style.top.px]="boardMenuTop" [style.left.px]="boardMenuLeft" (click)="$event.stopPropagation()"><strong>Ready for collection</strong><a [href]="getReadyNotificationWhatsappHref(job)" target="_blank" rel="noopener"><i class="fa fa-whatsapp"></i> Notify client</a><button type="button" (click)="openClientPdfPreview(job, 'Estimate')"><i class="fa fa-file-pdf-o"></i> Preview estimate</button><button type="button" class="open-card-link" (click)="openBookingJobCard(job)">Open full job card</button></div>
                     <div class="board-status-popover" *ngIf="activeBoardJobId === job.id && !isReadyForCollection(job) && !isCompletedJob(job)" [style.top.px]="boardMenuTop" [style.left.px]="boardMenuLeft" (click)="$event.stopPropagation()"><strong>Move {{ job.vehicle }}</strong><button type="button" *ngFor="let status of getElevatableStatuses(job.status)" [class.active]="status === job.status" (click)="updateBoardJobStatus(job, status)">{{ status }}</button><button type="button" class="open-card-link" (click)="openBookingJobCard(job)">Open full job card</button></div>
                   </article>
                 </div>
@@ -430,7 +430,7 @@
               <div class="completed-job-list" *ngIf="completedArchiveJobs.length; else noArchivedWorkshopJobs">
                 <article class="completed-job-card" *ngFor="let job of completedArchiveJobs">
                   <div><strong>{{ job.vehicle }}</strong><span>{{ job.customerName }} | {{ job.registration || 'Registration not captured' }}</span><small>Completed {{ (job.archivedAt || job.updatedAt) | date:'d MMM y, HH:mm' }} | {{ job.bookingType === 'Mobile booking' ? 'Mobile' : 'Workshop' }}</small></div>
-                  <div class="document-actions"><button type="button" (click)="openPrintableDocument(job, 'Job Card')"><i class="fa fa-file-pdf-o"></i> Job card PDF</button><button type="button" (click)="restoreArchivedWorkshopJob(job)"><i class="fa fa-undo"></i> Restore to complete</button></div>
+                  <div class="document-actions"><button type="button" (click)="openClientPdfPreview(job, 'Job Card')"><i class="fa fa-file-pdf-o"></i> Preview job card</button><button type="button" (click)="restoreArchivedWorkshopJob(job)"><i class="fa fa-undo"></i> Restore to complete</button></div>
                 </article>
               </div>
               <ng-template #noArchivedWorkshopJobs><div class="soft-empty">No completed jobs have been archived yet.</div></ng-template>
@@ -466,7 +466,7 @@
               <div class="workshop-jobs" *ngIf="paymentDueJobs.length; else noPaymentsDue">
                 <article class="workshop-job-card payment-job-card" *ngFor="let job of paymentDueJobs">
                   <div><strong>{{ job.vehicle }}</strong><span>{{ job.customerName }} | {{ job.customerContact || 'No contact captured' }}</span><small>Estimate R{{ job.estimate | number:'1.0-0' }} | Paid R{{ job.paid | number:'1.0-0' }} | Balance R{{ (job.estimate - job.paid) | number:'1.0-0' }}<ng-container *ngIf="job.paymentDate"> | Last payment {{ job.paymentDate | date:'d MMM y' }}</ng-container></small></div>
-                  <div class="document-actions"><button type="button" (click)="openPaymentEditor(job)"><i class="fa fa-credit-card"></i> Record payment</button><button type="button" class="document-secondary-action" (click)="openPrintableDocument(job, 'Estimate')"><i class="fa fa-file-pdf-o"></i> Print / save estimate</button><a [href]="getDocumentWhatsappHref(job, 'Estimate')" target="_blank" rel="noopener"><i class="fa fa-whatsapp"></i> Send estimate</a></div>
+                  <div class="document-actions"><button type="button" (click)="openPaymentEditor(job)"><i class="fa fa-credit-card"></i> Record payment</button><button type="button" class="document-secondary-action" (click)="openClientPdfPreview(job, 'Estimate')"><i class="fa fa-file-pdf-o"></i> Preview estimate</button></div>
                 </article>
               </div>
               <ng-template #noPaymentsDue><div class="empty-admin-state"><strong>No payments are currently outstanding.</strong><span>Invoices become available below once a job is paid in full.</span></div></ng-template>
@@ -552,110 +552,66 @@
           <span [class.done]="workshopDraft.attachments.length"><i class="fa" [ngClass]="workshopDraft.attachments.length ? 'fa-check' : 'fa-circle-o'"></i> Evidence</span>
         </div>
       </section>
-      <label>
-        Booking date
-        <input type="date" name="pageBookingDate" [(ngModel)]="workshopDraft.bookingDate" [disabled]="!!editingWorkshopJobId" required>
-        <small *ngIf="editingWorkshopJobId">Booking dates are locked after creation.</small>
-      </label>
-      <label>
-        Booking time
-        <input type="time" name="pageBookingTime" [(ngModel)]="workshopDraft.bookingTime" [disabled]="!!editingWorkshopJobId" required>
-      </label>
-      <label>
-        Customer name
-        <input type="text" name="pageCustomerName" [(ngModel)]="workshopDraft.customerName" placeholder="Customer name" required>
-      </label>
-      <label>
-        Customer contact
-        <input type="tel" name="pageCustomerContact" [(ngModel)]="workshopDraft.customerContact" placeholder="Phone or WhatsApp">
-      </label>
-      <label>
-        Vehicle
-        <input type="text" name="pageVehicle" [(ngModel)]="workshopDraft.vehicle" placeholder="Make, model and year" required>
-      </label>
-      <label>
-        Registration
-        <input type="text" name="pageRegistration" [(ngModel)]="workshopDraft.registration" placeholder="Licence plate">
-      </label>
-      <label>
-        VIN number
-        <input type="text" name="pageVin" [(ngModel)]="workshopDraft.vin" maxlength="17" placeholder="VIN / chassis number">
-      </label>
-      <label>
-        Booking type
-        <select name="pageBookingType" [(ngModel)]="workshopDraft.bookingType">
-          <option *ngFor="let type of bookingTypes" [value]="type">{{ type }}</option>
-        </select>
-      </label>
-      <label *ngIf="workshopDraft.bookingType === 'Mobile booking'">
-        Mobile location
-        <input type="text" name="pageMobileLocation" [(ngModel)]="workshopDraft.mobileLocation" placeholder="Customer address or pin location">
-      </label>
-      <label>
-        Mechanic
-        <select name="pageMechanic" [(ngModel)]="workshopDraft.assignedMechanic">
-          <option value="">Assign later</option>
-          <option *ngFor="let mechanic of activeMechanics" [value]="mechanic.name">{{ mechanic.name }}</option>
-        </select>
-      </label>
-      <label>
-        Job type
-        <input type="text" name="pageJobType" [(ngModel)]="workshopDraft.jobType" placeholder="Service, diagnosis, brakes, engine">
-      </label>
-      <label>
-        Expected completion date
-        <input type="date" name="pageDueDate" [(ngModel)]="workshopDraft.dueDate">
-      </label>
-      <label>
-        Current mileage (km)
-        <input type="number" min="0" name="pageMileage" [(ngModel)]="workshopDraft.mileage" (ngModelChange)="applyMileageServiceSuggestion()" placeholder="e.g. 125000">
-      </label>
-      <label>
-        Next service mileage (km)
-        <input type="number" min="0" name="pageNextServiceMileage" [(ngModel)]="workshopDraft.nextServiceMileage" placeholder="e.g. 135000">
-        <small *ngIf="workshopDraft.mileage">Suggested at {{ workshopDraft.mileage + 10000 | number }} km (10 000 km interval).</small>
-      </label>
-      <label>
-        Status
-        <select name="pageStatus" [(ngModel)]="workshopDraft.status">
-          <option *ngFor="let status of workshopStatuses" [value]="status">{{ status }}</option>
-        </select>
-      </label>
-      <label>
-        Priority
-        <select name="pagePriority" [(ngModel)]="workshopDraft.priority">
-          <option *ngFor="let priority of workshopPriorities" [value]="priority">{{ priority }}</option>
-        </select>
-      </label>
-      <label>
-        Customer approval
-        <select name="pageCustomerApproval" [(ngModel)]="workshopDraft.customerApproval">
-          <option *ngFor="let approval of customerApprovalStatuses" [value]="approval">{{ approval }}</option>
-        </select>
-      </label>
-      <label>
-        Approval method
-        <select name="pageApprovalMethod" [(ngModel)]="workshopDraft.approvalMethod" [disabled]="workshopDraft.customerApproval !== 'Approved'">
-          <option value="">Select when approved</option>
-          <option *ngFor="let method of approvalMethods" [value]="method">{{ method }}</option>
-        </select>
-      </label>
-      <label>
-        Estimate
-        <input type="number" min="0" name="pageEstimate" [(ngModel)]="workshopDraft.estimate" placeholder="0">
-      </label>
-      <label class="wide-field">
-        Notes and next steps
-        <textarea name="pageNotes" [(ngModel)]="workshopDraft.notes" rows="4" placeholder="Faults, parts, approval, supplier notes, collection instructions"></textarea>
-      </label>
-      <label class="wide-field">
-        Parts, suppliers and slip notes
-        <textarea name="pagePartsNotes" [(ngModel)]="workshopDraft.partsNotes" rows="4" placeholder="Parts needed, supplier details, reference number, or approval notes"></textarea>
-      </label>
-      <label class="wide-field">
-        Quality control notes
-        <textarea name="pageQualityNotes" [(ngModel)]="workshopDraft.qualityNotes" rows="4" placeholder="Test drive, warning lights, leaks, brakes, final checks"></textarea>
-      </label>
+      <section class="booking-intake-section wide-field">
+        <header><p class="eyebrow">1. Booking</p><h3>When and where</h3></header>
+        <div class="booking-intake-grid">
+          <label>Booking date<input type="date" name="pageBookingDate" [(ngModel)]="workshopDraft.bookingDate" [disabled]="!!editingWorkshopJobId" required><small *ngIf="editingWorkshopJobId">Locked after creation.</small></label>
+          <label>Booking time<input type="time" name="pageBookingTime" [(ngModel)]="workshopDraft.bookingTime" [disabled]="!!editingWorkshopJobId" required></label>
+          <label>Service type<select name="pageBookingType" [(ngModel)]="workshopDraft.bookingType"><option *ngFor="let type of bookingTypes" [value]="type">{{ type }}</option></select></label>
+          <label>Expected completion<input type="date" name="pageDueDate" [(ngModel)]="workshopDraft.dueDate"></label>
+          <label>Assigned mechanic<select name="pageMechanic" [(ngModel)]="workshopDraft.assignedMechanic"><option value="">Assign later</option><option *ngFor="let mechanic of activeMechanics" [value]="mechanic.name">{{ mechanic.name }}</option></select></label>
+          <label *ngIf="workshopDraft.bookingType === 'Mobile booking'">Mobile location<input type="text" name="pageMobileLocation" [(ngModel)]="workshopDraft.mobileLocation" placeholder="Customer address or pin location"></label>
+        </div>
+      </section>
+      <section class="booking-intake-section wide-field">
+        <header><p class="eyebrow">2. Customer and vehicle</p><h3>Capture the essentials</h3></header>
+        <div class="booking-intake-grid">
+          <label>Customer name<input type="text" name="pageCustomerName" [(ngModel)]="workshopDraft.customerName" placeholder="Customer name" required></label>
+          <label>Phone / WhatsApp<input type="tel" name="pageCustomerContact" [(ngModel)]="workshopDraft.customerContact" placeholder="Phone number"></label>
+          <label>Email<input type="email" name="pageCustomerEmail" [(ngModel)]="workshopDraft.customerEmail" placeholder="customer@email.com"></label>
+          <label>Registration<input type="text" name="pageRegistration" [(ngModel)]="workshopDraft.registration" placeholder="Licence plate"></label>
+          <label>Make<input type="text" name="pageVehicleMake" [(ngModel)]="workshopDraft.vehicleMake" (ngModelChange)="syncVehicleDescription()" placeholder="e.g. Toyota" required></label>
+          <label>Model<input type="text" name="pageVehicleModel" [(ngModel)]="workshopDraft.vehicleModel" (ngModelChange)="syncVehicleDescription()" placeholder="e.g. Corolla" required></label>
+          <label>Year<input type="text" inputmode="numeric" name="pageVehicleYear" [(ngModel)]="workshopDraft.vehicleYear" (ngModelChange)="syncVehicleDescription()" placeholder="e.g. 2018"></label>
+          <label>VIN number<input type="text" name="pageVin" [(ngModel)]="workshopDraft.vin" maxlength="17" placeholder="VIN / chassis number"></label>
+          <label>Current mileage (km)<input type="number" min="0" name="pageMileage" [(ngModel)]="workshopDraft.mileage" (ngModelChange)="applyMileageServiceSuggestion()" placeholder="e.g. 125000"></label>
+          <label>Next service mileage<input type="number" min="0" name="pageNextServiceMileage" [(ngModel)]="workshopDraft.nextServiceMileage" placeholder="e.g. 135000"><small *ngIf="workshopDraft.mileage">Suggested at {{ workshopDraft.mileage + 10000 | number }} km.</small></label>
+        </div>
+      </section>
+      <section class="booking-intake-section wide-field">
+        <header><p class="eyebrow">3. Work and estimate</p><h3>Explain the visit clearly</h3></header>
+        <div class="booking-intake-grid">
+          <label>Job type<input type="text" name="pageJobType" [(ngModel)]="workshopDraft.jobType" placeholder="Service, diagnosis, brakes, engine"></label>
+          <label>Diagnostic fee<input type="number" min="0" name="pageDiagnosticFee" [(ngModel)]="workshopDraft.diagnosticFee" (ngModelChange)="refreshEstimateTotal()" placeholder="0"></label>
+          <label>Labour estimate<input type="number" min="0" name="pageLabourEstimate" [(ngModel)]="workshopDraft.labourEstimate" (ngModelChange)="refreshEstimateTotal()" placeholder="0"></label>
+          <label>Parts estimate<input type="number" min="0" name="pagePartsEstimate" [(ngModel)]="workshopDraft.partsEstimate" (ngModelChange)="refreshEstimateTotal()" placeholder="0"></label>
+          <label>Consumables<input type="number" min="0" name="pageConsumablesEstimate" [(ngModel)]="workshopDraft.consumablesEstimate" (ngModelChange)="refreshEstimateTotal()" placeholder="0"></label>
+          <label>VAT<input type="number" min="0" name="pageVatEstimate" [(ngModel)]="workshopDraft.vatEstimate" (ngModelChange)="refreshEstimateTotal()" placeholder="0"></label>
+          <label>Deposit required<input type="number" min="0" name="pageDepositRequired" [(ngModel)]="workshopDraft.depositRequired" placeholder="0"></label>
+          <label class="estimate-total">Total estimate<input type="number" min="0" name="pageEstimate" [(ngModel)]="workshopDraft.estimate" placeholder="0"><small>Updated from the amounts above. Adjust if needed.</small></label>
+          <label class="wide-field">Customer complaint / requested work<textarea name="pageNotes" [(ngModel)]="workshopDraft.notes" rows="4" placeholder="Describe what the customer needs checked or repaired"></textarea></label>
+        </div>
+      </section>
+      <details class="booking-intake-optional wide-field">
+        <summary>Additional vehicle intake and workshop notes</summary>
+        <div class="booking-intake-grid">
+          <label>Customer ID<input type="text" name="pageCustomerId" [(ngModel)]="workshopDraft.customerId" placeholder="Optional"></label>
+          <label>Alternate contact<input type="tel" name="pageAlternateContact" [(ngModel)]="workshopDraft.alternateContact" placeholder="Optional"></label>
+          <label>Preferred contact<select name="pagePreferredContact" [(ngModel)]="workshopDraft.preferredContact"><option>WhatsApp</option><option>Phone</option><option>Email</option></select></label>
+          <label>Customer address<input type="text" name="pageCustomerAddress" [(ngModel)]="workshopDraft.customerAddress" placeholder="Optional"></label>
+          <label>Engine number<input type="text" name="pageEngineNumber" [(ngModel)]="workshopDraft.engineNumber"></label>
+          <label>Vehicle colour<input type="text" name="pageVehicleColour" [(ngModel)]="workshopDraft.vehicleColour"></label>
+          <label>Fuel level<input type="text" name="pageFuelLevel" [(ngModel)]="workshopDraft.fuelLevel" placeholder="e.g. Half"></label>
+          <label>Keys received<input type="text" name="pageKeysReceived" [(ngModel)]="workshopDraft.keysReceived" placeholder="e.g. 1 key"></label>
+          <label class="wide-field">Accessories received<textarea name="pageAccessories" [(ngModel)]="workshopDraft.accessoriesReceived" rows="2" placeholder="Tools, spare wheel, radio faceplate, documents"></textarea></label>
+          <label>Priority<select name="pagePriority" [(ngModel)]="workshopDraft.priority"><option *ngFor="let priority of workshopPriorities" [value]="priority">{{ priority }}</option></select></label>
+          <label>Status<select name="pageStatus" [(ngModel)]="workshopDraft.status"><option *ngFor="let status of workshopStatuses" [value]="status">{{ status }}</option></select></label>
+          <label>Customer approval<select name="pageCustomerApproval" [(ngModel)]="workshopDraft.customerApproval"><option *ngFor="let approval of customerApprovalStatuses" [value]="approval">{{ approval }}</option></select></label>
+          <label>Approval method<select name="pageApprovalMethod" [(ngModel)]="workshopDraft.approvalMethod" [disabled]="workshopDraft.customerApproval !== 'Approved'"><option value="">Select when approved</option><option *ngFor="let method of approvalMethods" [value]="method">{{ method }}</option></select></label>
+          <label class="wide-field">Technician findings / diagnosis<textarea name="pageQualityNotes" [(ngModel)]="workshopDraft.qualityNotes" rows="3" placeholder="Findings, test results and recommended repairs"></textarea></label>
+          <label class="wide-field">Parts, supplier and slip notes<textarea name="pagePartsNotes" [(ngModel)]="workshopDraft.partsNotes" rows="3" placeholder="Parts needed, supplier details, reference number or approval notes"></textarea></label>
+        </div>
+      </details>
       <section class="vehicle-history wide-field" *ngIf="getDraftVehicleServiceHistory().length">
         <p class="eyebrow">Vehicle history</p><h3>Previous visits</h3>
         <div class="history-list"><span *ngFor="let history of getDraftVehicleServiceHistory()"><strong>{{ history.bookingDate | date:'d MMM y' }}</strong>{{ history.jobType || 'Workshop visit' }}<small>{{ history.status }} | {{ history.mileage | number }} km</small></span></div>
@@ -746,6 +702,22 @@
     </div>
   </section>
 
+  <section class="booking-modal-backdrop client-pdf-backdrop" *ngIf="showClientPdfPreview" role="dialog" aria-modal="true" aria-labelledby="client-pdf-preview-title">
+    <div class="booking-modal client-pdf-modal">
+      <header class="booking-modal-header"><div><p class="eyebrow">Ready to send</p><h2 id="client-pdf-preview-title">{{ clientPdfPreviewType }} PDF preview</h2></div><button type="button" class="modal-close" (click)="closeClientPdfPreview()" aria-label="Close PDF preview"><i class="fa fa-times"></i></button></header>
+      <div class="client-pdf-summary" *ngIf="clientPdfPreviewJob as job"><span>{{ getJobReference(job) }}</span><strong>{{ job.customerName }} | {{ job.vehicle }}</strong><small>The original workshop pack, completed job details and job-card evidence are included.</small></div>
+      <iframe *ngIf="clientPdfPreviewUrl" class="client-pdf-frame" [src]="clientPdfPreviewUrl" title="Client PDF preview"></iframe>
+      <div class="client-pdf-actions">
+        <button type="button" (click)="shareClientPdf()"><i class="fa fa-share-alt"></i> Share PDF</button>
+        <button type="button" class="document-secondary-action" (click)="downloadClientPdf()"><i class="fa fa-download"></i> Download PDF</button>
+        <a [href]="getClientPdfWhatsappHref()" target="_blank" rel="noopener"><i class="fa fa-whatsapp"></i> WhatsApp message</a>
+        <a [href]="getClientPdfEmailHref()"><i class="fa fa-envelope-o"></i> Email message</a>
+      </div>
+      <p class="client-pdf-help">On a phone or tablet, Share PDF attaches the file directly where supported. Otherwise download it, then attach it to the prepared message.</p>
+      <p class="form-message" *ngIf="uploadError">{{ uploadError }}</p>
+    </div>
+  </section>
+
   <ng-template #workshopJobList>
     <div class="workshop-jobs" *ngIf="orderedWorkshopJobs.length; else noWorkshopJobsPage">
       <article class="workshop-job-card" *ngFor="let job of orderedWorkshopJobs">
@@ -786,11 +758,9 @@
           <span>Balance: R{{ (job.estimate || 0) - (job.paid || 0) }}</span>
         </div>
         <div class="document-actions">
-          <button type="button" (click)="openPrintableDocument(job, 'Job Card')"><i class="fa fa-download"></i> Job card PDF</button>
-          <button type="button" (click)="openPrintableDocument(job, 'Estimate')"><i class="fa fa-download"></i> Estimate PDF</button>
-          <button type="button" [disabled]="job.paid < job.estimate || !job.estimate" (click)="openPrintableDocument(job, 'Invoice')"><i class="fa fa-download"></i> Invoice PDF</button>
-          <a [href]="getDocumentWhatsappHref(job, 'Job Card')" target="_blank" rel="noopener"><i class="fa fa-whatsapp"></i> WhatsApp job card</a>
-          <a [href]="getDocumentEmailHref(job, 'Job Card')"><i class="fa fa-envelope-o"></i> Email</a>
+          <button type="button" (click)="openClientPdfPreview(job, 'Job Card')"><i class="fa fa-file-pdf-o"></i> Preview job card</button>
+          <button type="button" (click)="openClientPdfPreview(job, 'Estimate')"><i class="fa fa-file-pdf-o"></i> Preview estimate</button>
+          <button type="button" [disabled]="job.paid < job.estimate || !job.estimate" (click)="openClientPdfPreview(job, 'Invoice')"><i class="fa fa-file-pdf-o"></i> Preview invoice</button>
         </div>
         <div class="job-actions">
           <button type="button" (click)="editWorkshopJob(job); navigateToWorkshopManagement('bookings')">Edit</button>
@@ -821,9 +791,7 @@
         </div>
         <div class="document-actions">
           <button type="button" (click)="openBookingJobCard(job)"><i class="fa fa-folder-open-o"></i> Open job card</button>
-          <button type="button" class="document-secondary-action" (click)="openPrintableDocument(job, type)"><i class="fa fa-file-pdf-o"></i> Print / save {{ type }}</button>
-          <a [href]="getDocumentWhatsappHref(job, type)" target="_blank" rel="noopener"><i class="fa fa-whatsapp"></i> WhatsApp</a>
-          <a [href]="getDocumentEmailHref(job, type)"><i class="fa fa-envelope-o"></i> Email</a>
+          <button type="button" class="document-secondary-action" (click)="openClientPdfPreview(job, type)"><i class="fa fa-file-pdf-o"></i> Preview and send {{ type }}</button>
         </div>
       </article>
     </div>
