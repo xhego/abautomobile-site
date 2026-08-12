@@ -2937,14 +2937,13 @@ export class AppComponent implements OnDestroy, OnInit {
     section('CUSTOMER AND VEHICLE DETAILS');
     table(['Customer detail', 'Value', 'Vehicle detail', 'Value'], [
       ['Customer name', job.customerName, 'Make', job.vehicleMake || job.vehicle],
-      ['ID / passport number', job.customerId, 'Model', job.vehicleModel],
-      ['Cell number', job.customerContact, 'Year', job.vehicleYear],
-      ['Alternative number', job.alternateContact, 'Registration number', job.registration],
-      ['Email', job.customerEmail, 'VIN / chassis number', job.vin],
-      ['Address', job.customerAddress, 'Engine number', job.engineNumber],
-      ['Preferred contact', job.preferredContact, 'Mileage', job.mileage ? job.mileage.toLocaleString('en-ZA') + ' km' : 'Not recorded'],
-      ['Next estimated service', job.nextServiceMileage ? job.nextServiceMileage.toLocaleString('en-ZA') + ' km' : 'Not recorded', 'Fuel / keys', [job.fuelLevel, job.keysReceived].filter(Boolean).join(' | ')],
-      ['Accessories received', job.accessoriesReceived, '', '']
+      ['Cell number', job.customerContact, 'Model', job.vehicleModel],
+      ['Alternative number', job.alternateContact, 'Year', job.vehicleYear],
+      ['Email', job.customerEmail, 'Registration number', job.registration],
+      ['Address', job.customerAddress, 'VIN / chassis number', job.vin],
+      ['Preferred contact', job.preferredContact, 'Engine number', job.engineNumber],
+      ['Mileage', job.mileage ? job.mileage.toLocaleString('en-ZA') + ' km' : 'Not recorded', 'Fuel / keys', [job.fuelLevel, job.keysReceived].filter(Boolean).join(' | ')],
+      ['Next estimated service', job.nextServiceMileage ? job.nextServiceMileage.toLocaleString('en-ZA') + ' km' : 'Not recorded', 'Accessories received', job.accessoriesReceived]
     ], [105, 148, 105, 147]);
     section('REQUESTED WORK / CUSTOMER COMPLAINT');
     paragraph('Customer request', job.notes || job.jobType);
