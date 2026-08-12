@@ -3017,42 +3017,83 @@ export class AppComponent implements OnDestroy, OnInit {
   private buildWorkshopTerms(document: any, font: any, boldFont: any, rgb: any, logoImage: any): void {
     const dark = rgb(0.09, 0.12, 0.15);
     const red = rgb(0.55, 0.04, 0.08);
-    const white = rgb(1, 1, 1);
-    const terms = [
-      ['1. Quotes, estimates and authorisation', 'All prices given before work begins are estimates unless confirmed in writing as a final quote. No additional work, parts or labour will be carried out without customer approval. Approval may be given in person, by signature, telephone, SMS, WhatsApp or email, and has the same effect as signed authorisation.'],
-      ['2. Diagnostics and inspection', 'A diagnostic or inspection fee may apply and will be communicated before work starts. Diagnosis is based on the symptoms present at inspection. Further faults may only become visible after testing, dismantling or repair work.'],
-      ['3. Customer and vehicle information', 'The customer is responsible for providing accurate vehicle details, known faults and repair history. AB\'s Auto Mobile Mechanic (Pty) Ltd is not responsible for delays or incorrect diagnosis caused by missing or incorrect information.'],
-      ['4. Payment terms', 'Payment is due upon completion of the agreed work and before release of the vehicle unless agreed otherwise in writing. Vehicles, parts or keys may be retained until the outstanding balance is paid in full. Special-order parts may require a deposit before work begins.'],
-      ['5. Collection and storage', 'Customers must collect their vehicle within the agreed time after completion notice. A storage fee of R ' + this.storageFee.toFixed(2) + ' per day applies when a vehicle is not collected within the reasonable period communicated to the customer.'],
-      ['6. Replaced and customer-supplied parts', 'Where practical, replaced parts may be returned on request unless waived, subject to a warranty or core exchange, insurance requirement, or safe disposal. Customer-supplied parts may be fitted at the customer\'s request, but their quality, suitability and lifespan cannot be guaranteed.'],
-      ['7. Warranty on workmanship and parts', 'Workmanship and supplied parts are covered in line with applicable South African consumer protection law. Warranty claims are subject to inspection. Warranty does not cover misuse, neglect, overheating, lack of maintenance, accident damage, unauthorised modifications, racing, incorrect fluids, customer-supplied parts or third-party work after repair.'],
-      ['8. Mobile call-outs', 'Mobile services are subject to availability, travel distance, weather, safety and a suitable work area. The call-out fee will be agreed with the customer before travel to the location. If work cannot be done safely or properly on-site, the vehicle may need to move to the workshop or another suitable location.'],
-      ['9. Photos and electronic records', 'The customer authorises the workshop to photograph the vehicle, damaged components and completed repairs for quality control, insurance, warranty, quotations and service records.'],
-      ['10. Delays, safety and abandoned vehicles', 'Completion dates are estimates only. The workshop is not responsible for supplier or courier delays, weather, power failures, additional faults or other circumstances beyond reasonable control. The workshop may refuse unsafe or unlawful repairs. Vehicles left without communication for an extended period may be dealt with in accordance with applicable South African law after reasonable attempts to contact the owner.'],
-      ['11. Limitation of liability and acceptance', 'AB\'s Auto Mobile Mechanic (Pty) Ltd will take reasonable care when working on a vehicle but is not responsible for pre-existing faults, hidden damage, wear-and-tear issues, unrelated failures or faults caused by misuse, lack of maintenance or third-party work. By booking, approving a quote, leaving a vehicle, accepting a call-out or authorising work, the customer accepts these terms.']
-    ];
-    let page: any;
-    let y = 0;
-    const newPage = (continued = false) => {
-      page = document.addPage([595.28, 841.89]);
-      this.drawWorkshopPdfHeader(page, continued ? 'WORKSHOP TERMS AND CONDITIONS - CONTINUED' : 'WORKSHOP TERMS AND CONDITIONS', 'CUSTOMER TERMS AND CONDITIONS', logoImage, font, boldFont, rgb);
-      y = 700;
-    };
-    newPage();
-    terms.forEach(([heading, body]) => {
-      const lines = this.wrapPdfText(body, 488, 9, font);
-      const height = 30 + lines.length * 12;
-      if (y - height < 58) {
-        newPage(true);
+    const grey = rgb(0.94, 0.95, 0.96);
+    const storageFee = 'R ' + this.storageFee.toFixed(2) + ' per day';
+    const termsPage = (continued: boolean) => {
+      const page = document.addPage([595.28, 841.89]);
+      if (logoImage) {
+        const scale = Math.min(34 / logoImage.width, 34 / logoImage.height);
+        page.drawImage(logoImage, { x: 45 + (34 - logoImage.width * scale) / 2, y: 792 + (34 - logoImage.height * scale) / 2, width: logoImage.width * scale, height: logoImage.height * scale });
       }
-      page.drawRectangle({ x: 45, y: y - 20, width: 505, height: 20, color: red });
-      page.drawText(heading, { x: 52, y: y - 14, size: 9.5, font: boldFont, color: white });
-      y -= 34;
-      lines.forEach(line => {
-        page.drawText(line, { x: 52, y, size: 9, font, color: dark });
-        y -= 12;
+      page.drawText("AB's Auto Mobile Mechanic (Pty) Ltd", { x: 409, y: 816, size: 8, font: boldFont, color: dark });
+      page.drawText('WORKSHOP TERMS AND CONDITIONS', { x: 400, y: 804, size: 8, font: boldFont, color: red });
+      page.drawLine({ start: { x: 35, y: 781 }, end: { x: 560, y: 781 }, thickness: 1.3, color: red });
+      if (continued) {
+        page.drawText('WORKSHOP TERMS AND CONDITIONS - CONTINUED', { x: 38, y: 763, size: 8.6, font: boldFont, color: red });
+      } else {
+        page.drawText("AB's Auto Mobile Mechanic (Pty) Ltd", { x: 38, y: 763, size: 15.5, font: boldFont, color: dark });
+        page.drawText('Workshop Terms and Conditions', { x: 38, y: 746, size: 15.5, font: boldFont, color: dark });
+        page.drawText('Vehicle repairs, test drives, call-outs and workshop terms', { x: 38, y: 730, size: 8.2, font, color: dark });
+        page.drawText('|  AB-AMM-P001', { x: 287, y: 730, size: 8.2, font: boldFont, color: red });
+        page.drawRectangle({ x: 35, y: 689, width: 525, height: 34, color: grey, borderColor: rgb(0.78, 0.8, 0.82), borderWidth: .4 });
+        const intro = this.wrapPdfText("These terms apply to diagnostics, servicing, repairs, mobile call-outs and workshop work carried out by AB's Auto Mobile Mechanic (Pty) Ltd.", 510, 8.2, font);
+        intro.forEach((line, index) => page.drawText(line, { x: 40, y: 710 - index * 10, size: 8.2, font, color: dark }));
+      }
+      return { page, y: continued ? 741 : 672 };
+    };
+    const drawTerms = (page: any, startY: number, terms: Array<[string, string[]]>) => {
+      let y = startY;
+      terms.forEach(([heading, paragraphs]) => {
+        page.drawText(heading, { x: 38, y, size: 8.9, font: boldFont, color: red });
+        y -= 11;
+        paragraphs.forEach(paragraph => {
+          const lines = this.wrapPdfText(paragraph, 512, 8.1, font);
+          lines.forEach(line => { page.drawText(line, { x: 38, y, size: 8.1, font, color: dark }); y -= 9.5; });
+          y -= 2;
+        });
+        y -= 4;
       });
-      y -= 13;
+      return y;
+    };
+    const first = termsPage(false);
+    drawTerms(first.page, first.y, [
+      ['1. Quotes, estimates and authorisation', ['All prices given before work begins are estimates unless confirmed in writing as a final quote. If the expected cost changes after inspection or diagnosis, AB\'s Auto Mobile Mechanic (Pty) Ltd will contact the customer for approval before continuing.', 'No additional work, parts or labour will be carried out without customer approval. Approval may be given by signature, telephone, SMS, WhatsApp, email, written instruction or verbal instruction, and has the same effect as signed authorisation.']],
+      ['2. Diagnostics and inspection', ['A diagnostic, inspection or call-out fee may apply and will be communicated before the work is carried out. Any mobile call-out fee will be agreed with the customer before AB\'s Auto Mobile Mechanic (Pty) Ltd travels to the vehicle location.', 'Some faults may only become visible after further testing, dismantling or repair work.']],
+      ['3. Customer and vehicle information', ['The customer must provide accurate vehicle details, including make, model, year, licence number, VIN/chassis number where required, known faults and previous repair history. AB\'s Auto Mobile Mechanic (Pty) Ltd is not responsible for delays or incorrect diagnosis caused by missing or incorrect information supplied by the customer.']],
+      ['4. Payment terms', ['Payment is due upon completion of the agreed work and before release of the vehicle, keys or parts, unless otherwise agreed in writing. Vehicles, keys or parts may be retained until the outstanding balance is paid in full.', 'Any parts ordered specially for a customer may require a deposit before work begins.']],
+      ['5. Collection and storage', ['Customers must collect their vehicle within the agreed time after being notified that the work is complete. Storage is charged at ' + storageFee + ' if a vehicle is not collected within 2 days after completion notice, unless another collection arrangement is agreed in writing.', 'Vehicles left for an extended period without communication may be dealt with in accordance with applicable South African law after reasonable attempts have been made to contact the owner.']],
+      ['6. Replaced parts', ['Where practical, replaced parts removed from the vehicle may be returned to the customer on request, unless the customer waives this right, the part is subject to a warranty/core exchange claim, insurance requirement, or safe/environmental disposal is required.']],
+      ['7. Warranty on workmanship and parts', ['Workmanship and supplied parts are covered in line with applicable South African consumer protection laws. New or reconditioned parts may carry supplier or manufacturer warranties. Warranty claims are subject to inspection and confirmation of the fault.', 'Warranty does not apply where failure is caused by misuse, neglect, overheating, lack of maintenance, accident damage, unauthorised modifications, racing, incorrect fluids, customer-supplied parts, or work carried out by another person after the repair.']],
+      ['8. Customer-supplied parts', ['Where a customer supplies their own parts, AB\'s Auto Mobile Mechanic (Pty) Ltd may fit them at the customer\'s request, but cannot guarantee the quality, suitability or lifespan of those parts. Workmanship on fitting may be assessed separately, but faults caused by defective or incorrect customer-supplied parts are not covered.']]
+    ]);
+    const second = termsPage(true);
+    let y = drawTerms(second.page, second.y, [
+      ['9. Mobile call-outs', ['Mobile mechanic services are subject to availability, travel distance, weather, safety, parts availability and access to a suitable working area. The call-out fee will be agreed with the customer before travelling to the vehicle location.', 'The call-out fee may still be payable where the mechanic travels to the agreed location, even if the vehicle cannot be repaired on-site due to safety, access, missing parts, incorrect information, or faults requiring workshop equipment. If a vehicle cannot be repaired safely or properly on-site, it may need to be moved to the workshop or another suitable repair location.']],
+      ['10. Test drives', ['The customer authorises AB\'s Auto Mobile Mechanic (Pty) Ltd, its mechanic or authorised driver to test drive the vehicle where reasonably required for diagnosis, repair verification, road-safety checks or quality control.', 'Test drives will be carried out with reasonable care and only for work-related purposes. The business is not responsible for pre-existing faults, intermittent faults, wear-and-tear failures, or issues that arise during a test drive because of the vehicle\'s existing condition.']],
+      ['11. Photos and service records', ['The customer authorises AB\'s Auto Mobile Mechanic (Pty) Ltd to photograph the vehicle, damaged components, replaced parts and completed repairs for quality control, insurance, warranty, quotations and service records.']],
+      ['12. Delays and completion dates', ['Estimated completion dates are estimates only. AB\'s Auto Mobile Mechanic (Pty) Ltd is not responsible for delays caused by supplier delays, courier delays, weather, power failures, parts availability, additional faults discovered, or circumstances outside the workshop\'s reasonable control.']],
+      ['13. Safety and lawful repairs', ['AB\'s Auto Mobile Mechanic (Pty) Ltd reserves the right to refuse or stop repairs where the work, requested instruction, vehicle condition or repair method would be unsafe, unlawful or unsuitable for responsible road use.']],
+      ['14. Limitation of liability', ['AB\'s Auto Mobile Mechanic (Pty) Ltd will take reasonable care when working on a customer\'s vehicle. The business is not responsible for pre-existing faults, hidden damage, wear-and-tear issues, unrelated failures, or faults that occur after repair due to misuse, lack of maintenance or third-party work.']]
+    ]);
+    second.page.drawRectangle({ x: 35, y: y - 25, width: 525, height: 31, borderColor: red, borderWidth: .8 });
+    this.wrapPdfText('Nothing in these Terms and Conditions excludes or limits any right or liability that may not lawfully be excluded under South African law.', 510, 8.2, boldFont)
+      .forEach((line, index) => second.page.drawText(line, { x: 40, y: y - 10 - index * 10, size: 8.2, font: boldFont, color: dark }));
+    y -= 39;
+    y = drawTerms(second.page, y, [
+      ['15. Disputes and acceptance', ['AB\'s Auto Mobile Mechanic (Pty) Ltd aims to resolve concerns fairly and directly. If a matter cannot be resolved, customers may approach the Motor Industry Ombudsman of South Africa where applicable.', 'By booking a service, approving a quote, leaving a vehicle for repair, accepting mobile call-out assistance, authorising a test drive, or authorising work by phone, WhatsApp, email or in person, the customer accepts these Terms and Conditions.', 'These Terms and Conditions support clear communication between AB\'s Auto Mobile Mechanic (Pty) Ltd and its customers and do not remove any rights or responsibilities applying under South African law.']]
+    ]);
+    second.page.drawText('CUSTOMER ACKNOWLEDGEMENT', { x: 38, y, size: 9, font: boldFont, color: red });
+    y -= 11;
+    const columns = [66, 110, 47, 77, 67, 120, 51];
+    const labels = ['Customer Name', '', 'Signature', '', 'Date', '', 'Job Card Number'];
+    let x = 35;
+    columns.forEach((width, index) => {
+      second.page.drawRectangle({ x, y: y - 30, width, height: 30, color: grey, borderColor: rgb(0.72, 0.75, 0.77), borderWidth: .5 });
+      if (labels[index]) {
+        const labelLines = this.wrapPdfText(labels[index], width - 7, 6.7, boldFont);
+        labelLines.forEach((line, lineIndex) => second.page.drawText(line, { x: x + 4, y: y - 12 - lineIndex * 8, size: 6.7, font: boldFont, color: dark }));
+      }
+      x += width;
     });
   }
 
