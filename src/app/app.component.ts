@@ -3084,8 +3084,8 @@ export class AppComponent implements OnDestroy, OnInit {
     ]);
     second.page.drawText('CUSTOMER ACKNOWLEDGEMENT', { x: 38, y, size: 9, font: boldFont, color: red });
     y -= 11;
-    const columns = [66, 110, 47, 77, 67, 120, 51];
-    const labels = ['Customer Name', '', 'Signature', '', 'Date', '', 'Job Card Number'];
+    const columns = [70, 140, 52, 95, 70, 138];
+    const labels = ['Customer Name', '', 'Signature', '', 'Date', ''];
     let x = 35;
     columns.forEach((width, index) => {
       second.page.drawRectangle({ x, y: y - 30, width, height: 30, color: grey, borderColor: rgb(0.72, 0.75, 0.77), borderWidth: .5 });
