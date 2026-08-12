@@ -2848,10 +2848,10 @@ export class AppComponent implements OnDestroy, OnInit {
       }
     };
     const section = (label: string) => {
-      ensure(28);
+      ensure(36);
       page.drawRectangle({ x: 45, y: y - 20, width: 505, height: 20, color: red });
       page.drawText(label, { x: 52, y: y - 14, size: 10, font: boldFont, color: white });
-      y -= 26;
+      y -= 34;
     };
     const paragraph = (label: string, value: string) => {
       const lines = this.wrapPdfText(value || 'Not recorded.', 488, 9, font);
@@ -2914,6 +2914,7 @@ export class AppComponent implements OnDestroy, OnInit {
       page.drawText((job.vehicleMake || job.vehicle) + ' ' + (job.vehicleModel || ''), { x: 56, y: y - 38, size: 12, font: boldFont, color: dark });
       page.drawText('Registration: ' + (job.registration || 'Not recorded'), { x: 56, y: y - 55, size: 8.5, font, color: dark });
       page.drawText('Mileage: ' + (job.mileage ? job.mileage.toLocaleString('en-ZA') + ' km' : 'Not recorded'), { x: 56, y: y - 70, size: 8.5, font, color: dark });
+      page.drawText('Next estimated service: ' + (job.nextServiceMileage ? job.nextServiceMileage.toLocaleString('en-ZA') + ' km' : 'Not recorded'), { x: 56, y: y - 85, size: 8.5, font, color: dark });
       if (vehicleImage) {
         const scale = Math.min(145 / vehicleImage.width, 78 / vehicleImage.height);
         const width = vehicleImage.width * scale;
@@ -2942,7 +2943,8 @@ export class AppComponent implements OnDestroy, OnInit {
       ['Email', job.customerEmail, 'VIN / chassis number', job.vin],
       ['Address', job.customerAddress, 'Engine number', job.engineNumber],
       ['Preferred contact', job.preferredContact, 'Mileage', job.mileage ? job.mileage.toLocaleString('en-ZA') + ' km' : 'Not recorded'],
-      ['Accessories received', job.accessoriesReceived, 'Fuel / keys', [job.fuelLevel, job.keysReceived].filter(Boolean).join(' | ')]
+      ['Next estimated service', job.nextServiceMileage ? job.nextServiceMileage.toLocaleString('en-ZA') + ' km' : 'Not recorded', 'Fuel / keys', [job.fuelLevel, job.keysReceived].filter(Boolean).join(' | ')],
+      ['Accessories received', job.accessoriesReceived, '', '']
     ], [105, 148, 105, 147]);
     section('REQUESTED WORK / CUSTOMER COMPLAINT');
     paragraph('Customer request', job.notes || job.jobType);
