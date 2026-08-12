@@ -2738,11 +2738,6 @@ export class AppComponent implements OnDestroy, OnInit {
 
   private async createClientPdf(job: WorkshopJob, documentType: 'Job Card' | 'Estimate' | 'Invoice'): Promise<File> {
     const { PDFDocument, StandardFonts, rgb } = await import('pdf-lib');
-    const response = await fetch('/assets/documents/AB_Auto_Mobile_Mechanic_Workshop_Pack_v1.pdf');
-    if (!response.ok) {
-      throw new Error('Workshop pack template was unavailable.');
-    }
-    const sourceDocument = await PDFDocument.load(await response.arrayBuffer());
     const document = await PDFDocument.create();
     const font = await document.embedFont(StandardFonts.Helvetica);
     const boldFont = await document.embedFont(StandardFonts.HelveticaBold);
@@ -2757,28 +2752,9 @@ export class AppComponent implements OnDestroy, OnInit {
       }
     }
     await this.buildDynamicWorkshopPack(document, job, documentType, font, boldFont, rgb, logoImage, vehicleImage);
-    const termsStartPageIndex = document.getPageCount();
-    const termsPages = await document.copyPages(sourceDocument, [4, 5]);
-    termsPages.forEach(page => document.addPage(page));
-    const firstPage = document.getPage(0);
-    const text = (value: unknown): string => String(value || '').trim();
-    const date = job.bookingDate ? this.formatClientPdfDate(job.bookingDate) : '';
-    const total = Math.max(Number(job.estimate) || 0, 0);
-    const balance = Math.max(total - (Number(job.paid) || 0), 0);
-    const amount = (value: number): string => value ? Number(value).toFixed(2) : '';
-    const draw = (value: unknown, x: number, y: number, width = 150, size = 7.2, bold = false) =>
-      this.drawPdfText(firstPage, text(value), x, y, width, size, bold ? boldFont : font);
-    const mark = (selected: boolean, x: number, y: number) => {
-      if (selected) {
-        firstPage.drawText('X', { x, y, size: 6.2, font: boldFont });
-      }
-    };
-    const selected = (value: string, option: string) => value.split(',').map(item => item.trim()).includes(option);
+    this.buildWorkshopTerms(document, font, boldFont, rgb, logoImage);
 
-    /*
-     * The client pack is reflowing rather than an overlay. The source terms pages stay intact,
-     * while operational pages grow with the recorded notes and measurements.
-     */
+    /* Legacy fixed-template mapping retained for reference while all client packs use reflowing pages. */
     /*
     draw(this.getJobReference(job), 113, 753, 78, 6.2, true);
     draw(date, 299, 753, 73, 6.2);
@@ -2835,8 +2811,8 @@ export class AppComponent implements OnDestroy, OnInit {
     this.appendOverflowNotes(document, overflowNotes, font, boldFont);
     */
 
-    await this.appendPdfEvidence(document, job, font, boldFont, rgb);
-    this.addPdfBrandFooters(document, logoImage, font, rgb, termsStartPageIndex, termsPages.length);
+    await this.appendPdfEvidence(document, job, font, boldFont, rgb, logoImage);
+    this.addPdfBrandFooters(document, logoImage, font, rgb);
     const bytes = await document.save();
     const safeReference = this.getJobReference(job).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
     const fileBytes = new Uint8Array(bytes.length);
@@ -2863,15 +2839,7 @@ export class AppComponent implements OnDestroy, OnInit {
       currentTitle = title;
       currentSubtitle = subtitle;
       page = document.addPage(pageSize);
-      page.drawRectangle({ x: 45, y: 770, width: 58, height: 43, color: pale, borderColor: grey, borderWidth: .5 });
-      if (logoImage) {
-        const scale = Math.min(48 / logoImage.width, 37 / logoImage.height);
-        page.drawImage(logoImage, { x: 50 + (48 - logoImage.width * scale) / 2, y: 773 + (37 - logoImage.height * scale) / 2, width: logoImage.width * scale, height: logoImage.height * scale });
-      }
-      page.drawText("AB's Auto Mobile Mechanic (Pty) Ltd", { x: 315, y: 810, size: 10, font: boldFont, color: dark });
-      page.drawText(title, { x: 115, y: 786, size: 18, font: boldFont, color: dark });
-      page.drawText(continuation ? subtitle + ' (continued)' : subtitle, { x: 115, y: 770, size: 9.5, font, color: dark });
-      page.drawLine({ start: { x: 45, y: 746 }, end: { x: 550, y: 746 }, thickness: 1.4, color: red });
+      this.drawWorkshopPdfHeader(page, title, continuation ? subtitle + ' (continued)' : subtitle, logoImage, font, boldFont, rgb);
       y = 724;
     };
     const ensure = (height: number) => {
@@ -3028,6 +2996,64 @@ export class AppComponent implements OnDestroy, OnInit {
     table(['Quality check', 'Result'], this.finalQualityItems.map(item => [item, inspection.finalQuality.includes(item) ? 'Checked' : 'Not checked']), [350, 155]);
   }
 
+  private drawWorkshopPdfHeader(page: any, title: string, subtitle: string, logoImage: any, font: any, boldFont: any, rgb: any): void {
+    const dark = rgb(0.09, 0.12, 0.15);
+    const pale = rgb(0.94, 0.95, 0.96);
+    const grey = rgb(0.82, 0.84, 0.86);
+    const red = rgb(0.55, 0.04, 0.08);
+    page.drawRectangle({ x: 45, y: 770, width: 58, height: 43, color: pale, borderColor: grey, borderWidth: .5 });
+    if (logoImage) {
+      const scale = Math.min(48 / logoImage.width, 37 / logoImage.height);
+      page.drawImage(logoImage, { x: 50 + (48 - logoImage.width * scale) / 2, y: 773 + (37 - logoImage.height * scale) / 2, width: logoImage.width * scale, height: logoImage.height * scale });
+    }
+    page.drawText("AB's Auto Mobile Mechanic (Pty) Ltd", { x: 315, y: 810, size: 10, font: boldFont, color: dark });
+    page.drawText(title, { x: 115, y: 786, size: 18, font: boldFont, color: dark });
+    page.drawText(subtitle, { x: 115, y: 770, size: 9.5, font, color: dark });
+    page.drawLine({ start: { x: 45, y: 746 }, end: { x: 550, y: 746 }, thickness: 1.4, color: red });
+  }
+
+  private buildWorkshopTerms(document: any, font: any, boldFont: any, rgb: any, logoImage: any): void {
+    const dark = rgb(0.09, 0.12, 0.15);
+    const red = rgb(0.55, 0.04, 0.08);
+    const white = rgb(1, 1, 1);
+    const terms = [
+      ['1. Quotes, estimates and authorisation', 'All prices given before work begins are estimates unless confirmed in writing as a final quote. No additional work, parts or labour will be carried out without customer approval. Approval may be given in person, by signature, telephone, SMS, WhatsApp or email, and has the same effect as signed authorisation.'],
+      ['2. Diagnostics and inspection', 'A diagnostic or inspection fee may apply and will be communicated before work starts. Diagnosis is based on the symptoms present at inspection. Further faults may only become visible after testing, dismantling or repair work.'],
+      ['3. Customer and vehicle information', 'The customer is responsible for providing accurate vehicle details, known faults and repair history. AB\'s Auto Mobile Mechanic (Pty) Ltd is not responsible for delays or incorrect diagnosis caused by missing or incorrect information.'],
+      ['4. Payment terms', 'Payment is due upon completion of the agreed work and before release of the vehicle unless agreed otherwise in writing. Vehicles, parts or keys may be retained until the outstanding balance is paid in full. Special-order parts may require a deposit before work begins.'],
+      ['5. Collection and storage', 'Customers must collect their vehicle within the agreed time after completion notice. A storage fee of R ' + this.storageFee.toFixed(2) + ' per day applies when a vehicle is not collected within the reasonable period communicated to the customer.'],
+      ['6. Replaced and customer-supplied parts', 'Where practical, replaced parts may be returned on request unless waived, subject to a warranty or core exchange, insurance requirement, or safe disposal. Customer-supplied parts may be fitted at the customer\'s request, but their quality, suitability and lifespan cannot be guaranteed.'],
+      ['7. Warranty on workmanship and parts', 'Workmanship and supplied parts are covered in line with applicable South African consumer protection law. Warranty claims are subject to inspection. Warranty does not cover misuse, neglect, overheating, lack of maintenance, accident damage, unauthorised modifications, racing, incorrect fluids, customer-supplied parts or third-party work after repair.'],
+      ['8. Mobile call-outs', 'Mobile services are subject to availability, travel distance, weather, safety and a suitable work area. The call-out fee will be agreed with the customer before travel to the location. If work cannot be done safely or properly on-site, the vehicle may need to move to the workshop or another suitable location.'],
+      ['9. Photos and electronic records', 'The customer authorises the workshop to photograph the vehicle, damaged components and completed repairs for quality control, insurance, warranty, quotations and service records.'],
+      ['10. Delays, safety and abandoned vehicles', 'Completion dates are estimates only. The workshop is not responsible for supplier or courier delays, weather, power failures, additional faults or other circumstances beyond reasonable control. The workshop may refuse unsafe or unlawful repairs. Vehicles left without communication for an extended period may be dealt with in accordance with applicable South African law after reasonable attempts to contact the owner.'],
+      ['11. Limitation of liability and acceptance', 'AB\'s Auto Mobile Mechanic (Pty) Ltd will take reasonable care when working on a vehicle but is not responsible for pre-existing faults, hidden damage, wear-and-tear issues, unrelated failures or faults caused by misuse, lack of maintenance or third-party work. By booking, approving a quote, leaving a vehicle, accepting a call-out or authorising work, the customer accepts these terms.']
+    ];
+    let page: any;
+    let y = 0;
+    const newPage = (continued = false) => {
+      page = document.addPage([595.28, 841.89]);
+      this.drawWorkshopPdfHeader(page, 'WORKSHOP TERMS AND CONDITIONS', continued ? 'Terms and conditions (continued)' : 'Vehicle repairs, workshop work and mobile call-outs', logoImage, font, boldFont, rgb);
+      y = 724;
+    };
+    newPage();
+    terms.forEach(([heading, body]) => {
+      const lines = this.wrapPdfText(body, 488, 9, font);
+      const height = 30 + lines.length * 12;
+      if (y - height < 58) {
+        newPage(true);
+      }
+      page.drawRectangle({ x: 45, y: y - 20, width: 505, height: 20, color: red });
+      page.drawText(heading, { x: 52, y: y - 14, size: 9.5, font: boldFont, color: white });
+      y -= 34;
+      lines.forEach(line => {
+        page.drawText(line, { x: 52, y, size: 9, font, color: dark });
+        y -= 12;
+      });
+      y -= 13;
+    });
+  }
+
   private drawInspectionMarks(document: any, job: WorkshopJob, font: any, boldFont: any, overflowNotes: Array<{ title: string; value: string }>): void {
     const inspection = this.normaliseWorkshopInspection(job.inspection);
     const mark = (page: any, active: boolean, x: number, y: number) => {
@@ -3116,7 +3142,7 @@ export class AppComponent implements OnDestroy, OnInit {
     });
   }
 
-  private async appendPdfEvidence(document: any, job: WorkshopJob, font: any, boldFont: any, rgb: any): Promise<void> {
+  private async appendPdfEvidence(document: any, job: WorkshopJob, font: any, boldFont: any, rgb: any, logoImage: any): Promise<void> {
     const attachments = job.attachments || [];
     const imageAttachments = attachments.filter(attachment => attachment.mimeType.startsWith('image/') && attachment.srcImg);
     const fileAttachments = attachments.filter(attachment => !attachment.mimeType.startsWith('image/'));
@@ -3124,10 +3150,8 @@ export class AppComponent implements OnDestroy, OnInit {
       return;
     }
     let page = document.addPage([595.28, 841.89]);
-    let y = 790;
-    page.drawRectangle({ x: 45, y: 800, width: 505, height: 4, color: rgb(0.55, 0.04, 0.08) });
-    this.drawPdfText(page, 'JOB CARD EVIDENCE', 45, y, 500, 16, boldFont);
-    y -= 27;
+    this.drawWorkshopPdfHeader(page, 'JOB CARD EVIDENCE', 'Vehicle photos, parts slips and payment records', logoImage, font, boldFont, rgb);
+    let y = 724;
     this.drawPdfText(page, this.getJobReference(job) + ' | ' + job.customerName + ' | ' + job.vehicle, 45, y, 500, 9, font);
     y -= 30;
     this.drawPdfText(page, 'Vehicle photos, supplier parts slips and payment records attached to this job.', 45, y, 500, 8.5, font);
@@ -3151,9 +3175,7 @@ export class AppComponent implements OnDestroy, OnInit {
           continue;
         }
         page = document.addPage([595.28, 841.89]);
-        page.drawRectangle({ x: 45, y: 800, width: 505, height: 4, color: rgb(0.55, 0.04, 0.08) });
-        this.drawPdfText(page, 'JOB CARD EVIDENCE', 45, 795, 500, 14, boldFont);
-        this.drawPdfText(page, attachment.type + ': ' + attachment.fileName, 45, 773, 500, 8.5, font);
+        this.drawWorkshopPdfHeader(page, 'JOB CARD EVIDENCE', attachment.type + ': ' + attachment.fileName, logoImage, font, boldFont, rgb);
         const maxWidth = 500;
         const maxHeight = 680;
         const scale = Math.min(maxWidth / embedded.width, maxHeight / embedded.height, 1);
@@ -3162,10 +3184,8 @@ export class AppComponent implements OnDestroy, OnInit {
         page.drawImage(embedded, { x: (595.28 - width) / 2, y: 55, width, height });
       } catch {
         page = document.addPage([595.28, 841.89]);
-        page.drawRectangle({ x: 45, y: 800, width: 505, height: 4, color: rgb(0.55, 0.04, 0.08) });
-        this.drawPdfText(page, 'JOB CARD EVIDENCE', 45, 795, 500, 14, boldFont);
-        this.drawPdfText(page, attachment.type + ': ' + attachment.fileName, 45, 766, 500, 9, font);
-        this.drawPdfText(page, 'This image could not be embedded. The original file remains on the secure job card.', 45, 736, 500, 9, font);
+        this.drawWorkshopPdfHeader(page, 'JOB CARD EVIDENCE', attachment.type + ': ' + attachment.fileName, logoImage, font, boldFont, rgb);
+        this.drawPdfText(page, 'This image could not be embedded. The original file remains on the secure job card.', 45, 710, 500, 9, font);
       }
     }
   }
@@ -3186,13 +3206,10 @@ export class AppComponent implements OnDestroy, OnInit {
     }
   }
 
-  private addPdfBrandFooters(document: any, logoImage: any, font: any, rgb: any, termsStartPageIndex: number, termsPageCount: number): void {
+  private addPdfBrandFooters(document: any, logoImage: any, font: any, rgb: any): void {
     const pages = document.getPages();
     const dark = rgb(0.09, 0.12, 0.15);
     pages.forEach((page: any, index: number) => {
-      if (index >= termsStartPageIndex && index < termsStartPageIndex + termsPageCount) {
-        return;
-      }
       const { width } = page.getSize();
       page.drawLine({ start: { x: 45, y: 31 }, end: { x: width - 45, y: 31 }, thickness: .4, color: rgb(0.78, 0.8, 0.82) });
       if (logoImage) {
