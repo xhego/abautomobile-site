@@ -2840,7 +2840,7 @@ export class AppComponent implements OnDestroy, OnInit {
       currentSubtitle = subtitle;
       page = document.addPage(pageSize);
       this.drawWorkshopPdfHeader(page, title, continuation ? subtitle + ' (continued)' : subtitle, logoImage, font, boldFont, rgb);
-      y = 724;
+      y = 700;
     };
     const ensure = (height: number) => {
       if (y - height < 52) {
@@ -2927,7 +2927,7 @@ export class AppComponent implements OnDestroy, OnInit {
       y -= 106;
     };
 
-    startPage('CUSTOMER JOB CARD', 'Workshop job card and customer authorisation');
+    startPage('JOB DETAILS AND VEHICLE INFORMATION', 'CUSTOMER JOB CARD');
     section('JOB DETAILS');
     table(['Job card number', 'Date in', 'Time in', 'Estimated completion', 'Technician'], [[
       this.getJobReference(job), this.formatClientPdfDate(job.bookingDate), job.bookingTime || 'To confirm',
@@ -2951,14 +2951,14 @@ export class AppComponent implements OnDestroy, OnInit {
     section('TECHNICIAN FINDINGS / DIAGNOSIS');
     paragraph('Findings', job.qualityNotes || job.partsNotes);
 
-    startPage('QUOTATION AND AUTHORISATION', 'Costs, payment summary and approval record');
+    startPage('QUOTATION AND AUTHORISATION', 'CUSTOMER JOB CARD');
     section('QUOTATION SUMMARY');
     table(['Diagnostic fee', 'Labour', 'Parts', 'Consumables'], [[money(job.diagnosticFee), money(job.labourEstimate), money(job.partsEstimate), money(job.consumablesEstimate)]], [126, 126, 126, 127]);
     table(['VAT', 'Total estimate', 'Deposit required', documentType === 'Invoice' ? 'Invoice paid' : 'Balance due'], [[money(job.vatEstimate), money(job.estimate), money(job.depositRequired), money(documentType === 'Invoice' ? job.paid : Math.max(job.estimate - job.paid, 0))]], [126, 126, 126, 127]);
     section('CUSTOMER AUTHORISATION');
     paragraph('Authorisation', 'The customer authorises the recorded inspection, diagnosis and approved repair work. Approval method: ' + (job.approvalMethod || 'Not recorded') + '.');
 
-    startPage('VEHICLE INSPECTION AND QUALITY CHECKLIST', 'Vehicle intake condition and existing damage');
+    startPage('VEHICLE INTAKE CONDITION', 'VEHICLE INSPECTION AND QUALITY CHECKLIST');
     inspectionLegend();
     section('A. VEHICLE INTAKE CONDITION - EXTERIOR');
     table(['Item', 'Condition', 'Notes'], this.intakeExteriorItems.map(item => [item, status(inspection.intake[item]?.status), inspection.intake[item]?.notes || '']), [205, 80, 220]);
@@ -2969,7 +2969,7 @@ export class AppComponent implements OnDestroy, OnInit {
     section('C. EXISTING DAMAGE NOTES');
     paragraph('Damage at intake', inspection.existingDamage);
 
-    startPage('DETAILED MECHANICAL AND SAFETY INSPECTION', 'Safety, under-bonnet and under-vehicle checks');
+    startPage('DETAILED MECHANICAL AND SAFETY INSPECTION', 'VEHICLE INSPECTION AND QUALITY CHECKLIST');
     inspectionLegend();
     const inspectionTable = (title: string, items: string[], rows: Record<string, InspectionRow>) => {
       section(title);
@@ -2979,7 +2979,7 @@ export class AppComponent implements OnDestroy, OnInit {
     inspectionTable('F. UNDER-BONNET CHECKS', this.underBonnetItems, inspection.underBonnet);
     inspectionTable('G. UNDER-VEHICLE CHECKS', this.underVehicleItems, inspection.underVehicle);
 
-    startPage('TYRES, BRAKES AND RECOMMENDATIONS', 'Measurements, recommendations and final quality control');
+    startPage('TYRES, BRAKES AND RECOMMENDATIONS', 'VEHICLE INSPECTION AND QUALITY CHECKLIST');
     inspectionLegend();
     section('H. TYRE CONDITION AND MEASUREMENTS');
     table(['Position', 'Status', 'Tread (mm)', 'Pressure (kPa)', 'Wear / recommendation'], this.tyrePositions.map(position => {
@@ -3003,15 +3003,15 @@ export class AppComponent implements OnDestroy, OnInit {
     const pale = rgb(0.94, 0.95, 0.96);
     const grey = rgb(0.82, 0.84, 0.86);
     const red = rgb(0.55, 0.04, 0.08);
-    page.drawRectangle({ x: 45, y: 770, width: 58, height: 43, color: pale, borderColor: grey, borderWidth: .5 });
+    page.drawRectangle({ x: 35, y: 770, width: 42, height: 42, color: pale });
     if (logoImage) {
-      const scale = Math.min(48 / logoImage.width, 37 / logoImage.height);
-      page.drawImage(logoImage, { x: 50 + (48 - logoImage.width * scale) / 2, y: 773 + (37 - logoImage.height * scale) / 2, width: logoImage.width * scale, height: logoImage.height * scale });
+      const scale = Math.min(42 / logoImage.width, 42 / logoImage.height);
+      page.drawImage(logoImage, { x: 35 + (42 - logoImage.width * scale) / 2, y: 770 + (42 - logoImage.height * scale) / 2, width: logoImage.width * scale, height: logoImage.height * scale });
     }
-    page.drawText("AB's Auto Mobile Mechanic (Pty) Ltd", { x: 315, y: 810, size: 10, font: boldFont, color: dark });
-    page.drawText(title, { x: 115, y: 786, size: 18, font: boldFont, color: dark });
-    page.drawText(subtitle, { x: 115, y: 770, size: 9.5, font, color: dark });
-    page.drawLine({ start: { x: 45, y: 746 }, end: { x: 550, y: 746 }, thickness: 1.4, color: red });
+    page.drawText("AB's Auto Mobile Mechanic (Pty) Ltd", { x: 345, y: 806, size: 9.5, font: boldFont, color: dark });
+    page.drawText(subtitle.toUpperCase(), { x: Math.max(235, 550 - boldFont.widthOfTextAtSize(subtitle.toUpperCase(), 8.8)), y: 791, size: 8.8, font: boldFont, color: red });
+    page.drawLine({ start: { x: 18, y: 755 }, end: { x: 577, y: 755 }, thickness: 1.4, color: red });
+    page.drawText(title, { x: 18, y: 731, size: 17, font: boldFont, color: dark });
   }
 
   private buildWorkshopTerms(document: any, font: any, boldFont: any, rgb: any, logoImage: any): void {
@@ -3035,8 +3035,8 @@ export class AppComponent implements OnDestroy, OnInit {
     let y = 0;
     const newPage = (continued = false) => {
       page = document.addPage([595.28, 841.89]);
-      this.drawWorkshopPdfHeader(page, 'WORKSHOP TERMS AND CONDITIONS', continued ? 'Terms and conditions (continued)' : 'Vehicle repairs, workshop work and mobile call-outs', logoImage, font, boldFont, rgb);
-      y = 724;
+      this.drawWorkshopPdfHeader(page, continued ? 'WORKSHOP TERMS AND CONDITIONS - CONTINUED' : 'WORKSHOP TERMS AND CONDITIONS', 'CUSTOMER TERMS AND CONDITIONS', logoImage, font, boldFont, rgb);
+      y = 700;
     };
     newPage();
     terms.forEach(([heading, body]) => {
@@ -3152,8 +3152,8 @@ export class AppComponent implements OnDestroy, OnInit {
       return;
     }
     let page = document.addPage([595.28, 841.89]);
-    this.drawWorkshopPdfHeader(page, 'JOB CARD EVIDENCE', 'Vehicle photos, parts slips and payment records', logoImage, font, boldFont, rgb);
-    let y = 724;
+    this.drawWorkshopPdfHeader(page, 'SUPPORTING PHOTOS AND DOCUMENTS', 'JOB CARD EVIDENCE', logoImage, font, boldFont, rgb);
+    let y = 700;
     this.drawPdfText(page, this.getJobReference(job) + ' | ' + job.customerName + ' | ' + job.vehicle, 45, y, 500, 9, font);
     y -= 30;
     this.drawPdfText(page, 'Vehicle photos, supplier parts slips and payment records attached to this job.', 45, y, 500, 8.5, font);
@@ -3177,7 +3177,7 @@ export class AppComponent implements OnDestroy, OnInit {
           continue;
         }
         page = document.addPage([595.28, 841.89]);
-        this.drawWorkshopPdfHeader(page, 'JOB CARD EVIDENCE', attachment.type + ': ' + attachment.fileName, logoImage, font, boldFont, rgb);
+        this.drawWorkshopPdfHeader(page, attachment.type + ': ' + attachment.fileName, 'JOB CARD EVIDENCE', logoImage, font, boldFont, rgb);
         const maxWidth = 500;
         const maxHeight = 680;
         const scale = Math.min(maxWidth / embedded.width, maxHeight / embedded.height, 1);
@@ -3186,8 +3186,8 @@ export class AppComponent implements OnDestroy, OnInit {
         page.drawImage(embedded, { x: (595.28 - width) / 2, y: 55, width, height });
       } catch {
         page = document.addPage([595.28, 841.89]);
-        this.drawWorkshopPdfHeader(page, 'JOB CARD EVIDENCE', attachment.type + ': ' + attachment.fileName, logoImage, font, boldFont, rgb);
-        this.drawPdfText(page, 'This image could not be embedded. The original file remains on the secure job card.', 45, 710, 500, 9, font);
+        this.drawWorkshopPdfHeader(page, attachment.type + ': ' + attachment.fileName, 'JOB CARD EVIDENCE', logoImage, font, boldFont, rgb);
+        this.drawPdfText(page, 'This image could not be embedded. The original file remains on the secure job card.', 45, 690, 500, 9, font);
       }
     }
   }
