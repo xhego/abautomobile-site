@@ -2757,6 +2757,7 @@ export class AppComponent implements OnDestroy, OnInit {
       }
     }
     await this.buildDynamicWorkshopPack(document, job, documentType, font, boldFont, rgb, logoImage, vehicleImage);
+    const termsStartPageIndex = document.getPageCount();
     const termsPages = await document.copyPages(sourceDocument, [4, 5]);
     termsPages.forEach(page => document.addPage(page));
     const firstPage = document.getPage(0);
@@ -2835,7 +2836,7 @@ export class AppComponent implements OnDestroy, OnInit {
     */
 
     await this.appendPdfEvidence(document, job, font, boldFont, rgb);
-    this.addPdfBrandFooters(document, logoImage, font, rgb);
+    this.addPdfBrandFooters(document, logoImage, font, rgb, termsStartPageIndex, termsPages.length);
     const bytes = await document.save();
     const safeReference = this.getJobReference(job).replace(/[^a-z0-9]+/gi, '-').replace(/^-|-$/g, '');
     const fileBytes = new Uint8Array(bytes.length);
@@ -2979,6 +2980,8 @@ export class AppComponent implements OnDestroy, OnInit {
     paragraph('Customer request', job.notes || job.jobType);
     section('TECHNICIAN FINDINGS / DIAGNOSIS');
     paragraph('Findings', job.qualityNotes || job.partsNotes);
+
+    startPage('QUOTATION AND AUTHORISATION', 'Costs, payment summary and approval record');
     section('QUOTATION SUMMARY');
     table(['Diagnostic fee', 'Labour', 'Parts', 'Consumables'], [[money(job.diagnosticFee), money(job.labourEstimate), money(job.partsEstimate), money(job.consumablesEstimate)]], [126, 126, 126, 127]);
     table(['VAT', 'Total estimate', 'Deposit required', documentType === 'Invoice' ? 'Invoice paid' : 'Balance due'], [[money(job.vatEstimate), money(job.estimate), money(job.depositRequired), money(documentType === 'Invoice' ? job.paid : Math.max(job.estimate - job.paid, 0))]], [126, 126, 126, 127]);
@@ -3183,10 +3186,13 @@ export class AppComponent implements OnDestroy, OnInit {
     }
   }
 
-  private addPdfBrandFooters(document: any, logoImage: any, font: any, rgb: any): void {
+  private addPdfBrandFooters(document: any, logoImage: any, font: any, rgb: any, termsStartPageIndex: number, termsPageCount: number): void {
     const pages = document.getPages();
     const dark = rgb(0.09, 0.12, 0.15);
     pages.forEach((page: any, index: number) => {
+      if (index >= termsStartPageIndex && index < termsStartPageIndex + termsPageCount) {
+        return;
+      }
       const { width } = page.getSize();
       page.drawLine({ start: { x: 45, y: 31 }, end: { x: width - 45, y: 31 }, thickness: .4, color: rgb(0.78, 0.8, 0.82) });
       if (logoImage) {
